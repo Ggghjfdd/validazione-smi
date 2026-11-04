@@ -41,11 +41,23 @@ su Supabase (server in Europa, Francoforte; Supabase fornisce il DPA).
 
 4. CARICARE LO STORICO (una volta)
 ----------------------------------
- Accedi al sito come amministratore, apri "Efficienza e fermi" e trascina
- nel riquadro la cartella completa del PC della visione (quella dello zip
- "Nuova cartella"). Le letture da agosto vengono salvate nel database e
- servono sia a "Efficienza e fermi" sia ad "Andamento scarti".
+ Accedi al sito come amministratore, premi "Carica dati" e trascina nel
+ riquadro la cartella completa del PC della visione. Le letture da agosto
+ vengono salvate nel database e servono a "Come va la linea" e alle prove.
  Poi, ogni volta, basta la cartella creata da Copia_file_SMI.bat.
+ A ogni caricamento il sito confronta SMI_ANALYSIS.ini ed EI_SYSTEM.ini con
+ l'ultima volta e mostra le impostazioni cambiate.
+
+5. COM'È FATTO IL SITO
+---------------------
+ La pagina iniziale ha tre pulsanti:
+  - Fai una prova: quattro passi (prodotto, cassette, verifica, esito).
+  - Come va la linea: quattro numeri, un riassunto a parole, poi grafico,
+    giorni, prodotti e fermate su schede separate.
+  - Carica dati: dove si trascina la cartella della chiavetta.
+ Sotto: "Prodotti e prove" (stato di ogni ricetta, storico, export Excel)
+ e "Impostazioni" (criteri, sensore, soglie, cambio password).
+ La versione precedente resta su vecchia.html.
 
 DA SAPERE
 ---------
