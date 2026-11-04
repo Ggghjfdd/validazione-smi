@@ -1,0 +1,55 @@
+VALIDAZIONE SENSIBILITÀ SMI · SITO SU GITHUB PAGES + DATABASE SUPABASE
+=======================================================================
+
+Il sito sta su GitHub Pages (repository pubblico Ggghjfdd/validazione-smi).
+Prove, storico, efficienza e utenti stanno su Supabase, dietro login.
+Nel repository non ci sono dati di produzione.
+
+Prima di iniziare: chiedi all'IT se si possono tenere i dati di produzione
+su Supabase (server in Europa, Francoforte; Supabase fornisce il DPA).
+
+
+1. CREARE IL DATABASE (Supabase)
+--------------------------------
+ 1. https://supabase.com → crea un account → "New project":
+    nome "validazione-smi", password del database (conservala),
+    Region "Central EU (Frankfurt)".
+ 2. "SQL Editor" → "New query": incolla tutto supabase_setup.sql → "Run".
+ 3. "Authentication" → "Sign In / Providers" → "Email": lascia attivo Email
+    ma DISATTIVA "Allow new users to sign up" (entra solo chi crei tu).
+
+2. CREARE GLI UTENTI
+--------------------
+ 1. "Authentication" → "Users" → "Add user" → "Create new user":
+    email, password provvisoria, spunta "Auto Confirm User".
+ 2. Tutti partono in sola lettura. In "SQL Editor":
+      update public.profili set ruolo = 'admin', nome = 'Lorenzo'
+      where id = (select id from auth.users where email = 'tua@email.it');
+    'editor' = compilatore, 'lettore' = sola lettura.
+
+3. COLLEGARE IL SITO
+--------------------
+ 1. Supabase → "Project Settings" → "API": copia "Project URL" e la chiave
+    "anon public".
+ 2. Mandali a Claude, che li inserisce nel sito; oppure su GitHub apri
+    index.html → matita "Edit", cerca COLLEGAMENTO A SUPABASE, incolla i due
+    valori tra le virgolette e premi "Commit changes".
+    Mai la chiave "service_role".
+ 3. Supabase → "Authentication" → "URL Configuration" → "Site URL":
+      https://ggghjfdd.github.io/validazione-smi/
+    (serve per "Password dimenticata").
+
+4. CARICARE LO STORICO (una volta)
+----------------------------------
+ Accedi al sito come amministratore, apri "Efficienza e fermi" e trascina
+ nel riquadro la cartella completa del PC della visione (quella dello zip
+ "Nuova cartella"). Le letture da agosto vengono salvate nel database.
+ Poi, ogni volta, basta la cartella creata da Copia_file_SMI.bat.
+
+DA SAPERE
+---------
+ - Gli aggiornamenti del sito si pubblicano da soli 1-2 minuti dopo ogni
+   modifica nel repository.
+ - Piano gratuito Supabase: dopo 7 giorni senza accessi il progetto va in
+   pausa; si riattiva con "Restore". Il piano Pro (circa 25 $/mese) evita la
+   pausa e aggiunge i backup giornalieri.
