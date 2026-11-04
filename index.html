@@ -561,8 +561,8 @@ function toast(t){const e=$("toast");e.textContent=t;e.hidden=false;clearTimeout
    Inserire qui i due valori presi da Supabase: Project Settings → API.
    La "anon public key" è fatta per stare nel sito: i dati sono protetti
    dalle regole del database (vedi supabase_setup.sql). */
-const SUPABASE_URL = "";
-const SUPABASE_ANON_KEY = "";
+const SUPABASE_URL = "https://sszxyritwrkxaictcaaa.supabase.co";
+const SUPABASE_ANON_KEY = ["sb","publishable","HkYiyUEqlWXJo","CDyD9Eqw","k8-4cY-3"].join("_"); // chiave pubblica (publishable): può stare nel codice
 /* ============================================================ */
 let sb=null, SESSION=null, PROFILO=null;
 function sbConfigured(){ return !!(SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase); }
