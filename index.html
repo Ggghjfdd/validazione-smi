@@ -187,6 +187,8 @@ details.more>.in{margin-top:12px}
 .kt span{font-weight:600;font-size:14px}
 .kt b{font-family:var(--f-mono);font-weight:500;font-size:30px;color:var(--sc);line-height:1.15}
 .kt small{color:var(--muted);font-size:12.5px}
+.kt b .q{font-size:15px;color:var(--muted);margin-left:8px;font-weight:500}
+.q2{display:block;font-size:12px;color:var(--muted);margin-top:2px}
 .sum{font-size:15.5px;line-height:1.55;border-left:4px solid var(--accent);padding:4px 0 4px 14px}
 .sum p+p{margin-top:6px}
 .sum .w{color:var(--warn);font-weight:600}
@@ -626,7 +628,7 @@ const IK={minDefect:"MINIMUM_DEFECT_SIZE",sumDefect:"MINIMUM_SUM_OF_DEFECT_SIZES
 let TESTS=[], CONFIG={criteri:{},sensore:{},eff:{}}, MODE="loading", db=null, editingId=null;
 let INIDOCS={}, MODS=[];
 const $=id=>document.getElementById(id);
-const fmt=n=>(n==null||n===""||isNaN(n))?"–":Number(n).toLocaleString("it-IT");
+const fmt=n=>(n==null||n===""||isNaN(n))?"–":Number(n).toLocaleString("it-IT").replace(/^(-?\d)(\d{3})(?=,|$)/,"$1.$2");
 const pf=v=>v==null||isNaN(v)?"–":v.toFixed(1).replace(".",",")+"%";
 const num=v=>v===""||v==null?null:Number(v);
 const today=()=>new Date().toLocaleDateString("sv");
@@ -800,7 +802,7 @@ function renderHome(){
   if(!EF.lastDay){ $("hLinea").textContent="Nessun dato: prima carica la cartella della visione."; $("hCarica").innerHTML='<span class="w">Nessun dato caricato.</span>'; return; }
   const day=EF.lastPieceDay||EF.lastDay, A=tsMs(day+" 00:00:00"); const R=effCompute(A,tsMs(nextDay(day)+" 00:00:00"),"");
   const t=R.tot, eff=t.T?t.n*R.c/t.T*100:null, sc=R.cT?R.cR/R.cT*100:null;
-  $("hLinea").innerHTML=`${wday(day)} ${dShort(day)}: efficienza <b>${pf(eff)}</b> · scarto <b>${pf(sc)}</b>`;
+  $("hLinea").innerHTML=`${wday(day)} ${dShort(day)}: efficienza <b>${pf(eff)}</b> (${fmt(t.n)} cassette) · scarto <b>${pf(sc)}</b> (${fmt(R.cR)})`;
   const age=Math.round((Date.now()-tsMs(EF.lastDay+" 12:00:00"))/864e5);
   $("hCarica").innerHTML = `Dati fino a ${wday(EF.lastDay)} ${dShort(EF.lastDay)}`+(age>=2?` · <span class="w">${age} giorni fa</span>`:"");
 }
@@ -938,7 +940,7 @@ function updateCalc(){
   const vc = e.pass==null?"var(--muted)":e.pass?"var(--good)":"var(--bad)";
   const vt = e.pass==null?"Criteri non impostati":e.pass?"Criteri rispettati":"Criteri non rispettati";
   $("c-esito").innerHTML=`<div class="verdict" style="--vc:${vc}"><div class="t">${vt}</div>
-    <div class="m"><div><span>Stampino rilevato</span><b>${pf(e.stR)}</b><span>${t.stProv?fmt(t.stRil)+" su "+fmt(t.stProv):""}</span></div><div><span>Amido rilevato</span><b>${pf(e.amR)}</b><span>${t.amProv?fmt(t.amRil)+" su "+fmt(t.amProv):""}</span></div><div><span>Buone scartate</span><b>${t.buone?fmt(t.buoneScartate)+" / "+fmt(t.buone):"–"}</b></div><div><span>Scarto produzione</span><b>${pf(e.fs)}</b></div></div>
+    <div class="m"><div><span>Stampino rilevato</span><b>${pf(e.stR)}</b><span>${t.stProv?fmt(t.stRil)+" su "+fmt(t.stProv):""}</span></div><div><span>Amido rilevato</span><b>${pf(e.amR)}</b><span>${t.amProv?fmt(t.amRil)+" su "+fmt(t.amProv):""}</span></div><div><span>Buone scartate</span><b>${t.buone?fmt(t.buoneScartate)+" / "+fmt(t.buone):"–"}</b></div><div><span>Scarto produzione</span><b>${pf(e.fs)}</b><span>${e.fs!=null?fmt(Math.max(0,t.rejected-(t.stRil||0)-(t.amRil||0)))+" su "+fmt(e.normal):""}</span></div></div>
     ${e.checks.length?'<div class="checks">'+e.checks.map(c=>`<span class="pill ${c.ok?"s-ok":"s-ko"}">${c.ok?"✓":"✗"} ${esc(c.label)}: ${esc(c.val)}</span>`).join("")+"</div>":'<p class="muted small" style="margin-top:10px">Imposta i criteri in <a href="#impostazioni">Impostazioni</a> per avere l\'esito automatico.</p>'}</div>`;
   document.querySelectorAll("#esitoSeg button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===(F("esito").value||"in corso"))));
 }
@@ -1102,13 +1104,13 @@ function renderCarica(){
 /* ================= PRODOTTI E PROVE ================= */
 let PVIEW="prod", OPEN=new Set();
 document.querySelectorAll("#pSeg button").forEach(b=>b.onclick=()=>{ PVIEW=b.dataset.p; document.querySelectorAll("#pSeg button").forEach(x=>x.setAttribute("aria-pressed",String(x===b))); $("pProd").hidden=PVIEW!=="prod"; $("pProve").hidden=PVIEW!=="prove"; });
-function histFor(r){ let T=0,R=0; const k=r.toLowerCase(); for(let q=0;q<EF.intervals.length;q++){ if(String(EF.ivProd[q]).toLowerCase()===k){ T+=EF.intervals[q][2]; R+=EF.intervals[q][3]; } } return T?[T,R/T*100]:null; }
+function histFor(r){ let T=0,R=0; const k=r.toLowerCase(); for(let q=0;q<EF.intervals.length;q++){ if(String(EF.ivProd[q]).toLowerCase()===k){ T+=EF.intervals[q][2]; R+=EF.intervals[q][3]; } } return T?[T,R/T*100,R]:null; }
 function renderProducts(){
   const box=$("pProd"); let n={ok:0,wip:0,ko:0,none:0};
   const LAB={ok:["Validato","s-ok","var(--good)"],wip:["In prova","s-wip","var(--warn)"],ko:["Da rifare","s-ko","var(--bad)"],none:["Da provare","s-na","var(--line)"]};
   box.innerHTML=RECIPES.map(r=>{ const S=recipeState(r); n[S.state]++; const [lab,cls,col]=LAB[S.state]; const h=histFor(r); const vals=S.sp?S.sp.params:MACHINE[r];
     const open=OPEN.has(r);
-    return `<div class="prow${open?" open":""}" style="--sc:${col}" data-r="${esc(r)}"><button type="button" aria-expanded="${open}"><b>${esc(r)}</b><span class="meta">${S.list.length?S.list.length+(S.list.length===1?" prova":" prove"):""}${h?(S.list.length?" · ":"")+"scarto storico "+pf(h[1]):""}</span><span class="pill ${cls}">${lab}</span><span class="chev">▸</span></button>
+    return `<div class="prow${open?" open":""}" style="--sc:${col}" data-r="${esc(r)}"><button type="button" aria-expanded="${open}"><b>${esc(r)}</b><span class="meta">${S.list.length?S.list.length+(S.list.length===1?" prova":" prove"):""}${h?(S.list.length?" · ":"")+"scarto storico "+pf(h[1])+" ("+fmt(h[2])+" su "+fmt(h[0])+")":""}</span><span class="pill ${cls}">${lab}</span><span class="chev">▸</span></button>
       ${open?`<div class="det"><div><p class="muted small" style="margin-bottom:6px">${S.sp?"Set point approvato il "+dIt(S.sp.data):"Sensibilità in macchina"}</p><div class="sens">${PKEYS.map(k=>`<div><span>${PLAB[k]}</span><b>${vals&&vals[k]!=null?esc(String(vals[k]).replace(".",",")):"–"}</b></div>`).join("")}</div></div>
         ${S.list.length?`<div class="tlist">${S.list.map(t=>`<button type="button" data-id="${esc(t.id)}"><span>${dIt(t.data)}${t.turno?" · "+esc(t.turno):""} · ${(t.casse||[]).length} cassette</span>${esitoPill(t.esito)}</button>`).join("")}</div>`:'<p class="muted small">Nessuna prova ancora.</p>'}
         <div class="row"><button type="button" class="btn sec" data-new="1">Nuova prova di ${esc(r)}</button></div></div>`:""}</div>`; }).join("");
@@ -1263,20 +1265,20 @@ function renderEff(){
   const tile=(lab,val,sub,col)=>`<div class="kt" style="--sc:${col}"><span>${lab}</span><b>${val}</b><small>${sub}</small></div>`;
   $("eKpi").innerHTML = (t.n||R.cT) ? [
     tile("Cassette prodotte",R.cT?fmt(R.cT):fmt(t.n),R.cT?"dai contatori della visione":"lette dai log","var(--c-linea)"),
-    tile("Efficienza",t.n?pf(eff):"–",t.n?`rispetto a ${rate} cassette/min`:"mancano i log di sistema",eff==null?"var(--muted)":eff>=85?"var(--good)":eff>=65?"var(--warn)":"var(--bad)"),
-    tile("Scarto",pf(sc),R.cT?`amido ${pf(t.cSt/R.cT*100)} · residui ${pf(t.cRe/R.cT*100)}`:"contatori non disponibili",sc==null?"var(--muted)":sc<5?"var(--good)":sc<15?"var(--warn)":"var(--bad)"),
+    tile("Efficienza",t.n?pf(eff):"–",t.n?`${fmt(t.n)} cassette lette su ${fmt(Math.round(theo))} possibili (${rate}/min)`:"mancano i log di sistema",eff==null?"var(--muted)":eff>=85?"var(--good)":eff>=65?"var(--warn)":"var(--bad)"),
+    tile("Scarto",R.cT?`${pf(sc)}<span class="q">${fmt(R.cR)}</span>`:"–",R.cT?`${fmt(R.cR)} scartate su ${fmt(R.cT)} · amido ${fmt(t.cSt)} (${pf(t.cSt/R.cT*100)}) · residui ${fmt(t.cRe)} (${pf(t.cRe/R.cT*100)})`:"contatori non disponibili",sc==null?"var(--muted)":sc<5?"var(--good)":sc<15?"var(--warn)":"var(--bad)"),
     tile("Tempo fermo",t.n?fdur(t.stopT):"–",t.n?`${fmt(t.stopN)} fermate · la più lunga ${fdur(t.maxStop)}`:"mancano i log di sistema","var(--bad)")
   ].join("") : '<div class="empty" style="grid-column:1/-1">Nessuna cassetta nel periodo o per il prodotto scelto.</div>';
   // riassunto a parole
   const S=[]; const prod=t.n*c, speed=Math.max(0,t.T-t.stopT-t.microT-prod);
   if(t.n){ const losses=[["fermate lunghe (oltre "+(effThr().stop/60000)+" min)",t.stopT],["microfermate",t.microT],["ritmo più lento del nominale",speed]].sort((a,b)=>b[1]-a[1]);
     S.push(`<p>La linea ha lavorato al <b>${pf(eff)}</b> del ritmo nominale: ${fmt(t.n)} cassette lette su ${fmt(Math.round(theo))} possibili.`+(losses[0][1]>0?` Il tempo si perde soprattutto nelle <b>${losses[0][0]}</b> (${fdur(losses[0][1])}).</p>`:"</p>")); }
-  if(R.cT){ S.push(`<p>Scarto segnalato <b>${pf(sc)}</b>`+(t.cSt+t.cRe?`, soprattutto per <b>${t.cSt>=t.cRe?"amido":"residui"}</b>.`:".")+"</p>"); }
+  if(R.cT){ S.push(`<p>Scarto segnalato <b>${pf(sc)}</b>: ${fmt(R.cR)} cassette su ${fmt(R.cT)}`+(t.cSt+t.cRe?`, soprattutto per <b>${t.cSt>=t.cRe?"amido":"residui"}</b> (amido ${fmt(t.cSt)}, residui ${fmt(t.cRe)}).`:".")+(t.n?` Espulse davvero: ${fmt(t.ej)}.`:"")+"</p>"); }
   const offDays=Object.keys(R.byDay).filter(d=>{ const o=R.byDay[d]; const s2=o.cT?o.cR/o.cT*100:0; return o.n>50 && s2>5 && o.ej/o.n*100 < s2*0.3; }).sort();
   if(offDays.length) S.push(`<p class="w">Espulsore probabilmente spento il ${offDays.map(dShort).join(", ")}: scarto contato ma cassette non espulse.</p>`);
   if(R.cT && t.n < R.cT*0.85) S.push(`<p class="w">Mancano i log di sistema per una parte del periodo (${fmt(t.n)} cassette lette su ${fmt(R.cT)} contate): l'efficienza vale solo per quelle lette.</p>`);
   $("eSum").innerHTML=S.join("")||'<p class="muted">Nessun dato nel periodo.</p>';
-  $("eMinis").innerHTML=[["Disponibilità (tempo senza fermate)",pf(avail)],["Prestazioni (ritmo quando gira)",pf(perf)],["OEE",pf(oee)],["Cassette espulse",t.n?fmt(t.ej)+" ("+pf(t.ej/t.n*100)+")":"–"],["Cassette lette dai log",fmt(t.n)],["Microfermate",t.n?fmt(t.microN)+" · "+fdur(t.microT):"–"],["Tempo di lavoro considerato",fdur(t.T)]].map(([a,b])=>`<div><span>${a}</span><b>${b}</b></div>`).join("");
+  $("eMinis").innerHTML=[["Disponibilità (tempo senza fermate)",t.T?pf(avail)+" · "+fdur(t.T-t.stopT)+" su "+fdur(t.T):"–"],["Prestazioni (ritmo quando gira)",(t.T-t.stopT)>0?pf(perf)+" · "+fmt(t.n)+" su "+fmt(Math.round((t.T-t.stopT)/c)):"–"],["OEE",pf(oee)],["Cassette buone (qualità)",R.cT?fmt(R.cT-R.cR)+" ("+pf(qual)+")":"–"],["Cassette espulse",t.n?fmt(t.ej)+" ("+pf(t.ej/t.n*100)+")":"–"],["Cassette lette dai log",fmt(t.n)],["Microfermate",t.n?fmt(t.microN)+" · "+fdur(t.microT):"–"],["Tempo di lavoro considerato",fdur(t.T)]].map(([a,b])=>`<div><span>${a}</span><b>${b}</b></div>`).join("");
   // fermate: perdite e classi
   const parts=[["Produzione al ritmo nominale",prod,"var(--good)"],["Fermate",t.stopT,"var(--bad)"],["Microfermate",t.microT,"var(--warn)"],["Ritmo ridotto",speed,"var(--c-linea)"]];
   const sumP=parts.reduce((a,p)=>a+p[1],0)||1;
@@ -1286,7 +1288,8 @@ function renderEff(){
   $("eClass").innerHTML = cls.length ? `<div class="cls">${cls.map(x=>`<div><span>${x[0]}</span><div class="bar"><i style="width:${(x[2]/mx*100).toFixed(1)}%"></i></div><b>${fmt(x[1])}×</b><b>${fdur(x[2])}</b></div>`).join("")}</div>` : '<p class="muted">Nessuna fermata.</p>';
   // tabelle
   const cells=o=>{ const T=o.T, e=T?o.n*c/T*100:null, s2=o.cT?o.cR/o.cT*100:null; const ejw=o.n && s2!=null && o.ej/o.n*100 < s2*0.3 && s2>5;
-    return {cT:o.cT?fmt(o.cT):o.n?fmt(o.n):"–", eff:effPill(e), sc:scPill(s2), st:o.cT?pf(o.cSt/o.cT*100):"–", re:o.cT?pf(o.cRe/o.cT*100):"–", ej:o.n?`<span${ejw?' style="color:var(--warn);font-weight:600" title="Molte meno espulse che scarti: espulsore spento?"':""}>${pf(o.ej/o.n*100)}</span>`:"–", stop:T?fdur(o.stopT)+(o.stopN?` <span class="muted">(${o.stopN})</span>`:""):"–"}; };
+    const q=v=>`<span class="q2">${v}</span>`;
+    return {cT:o.cT?fmt(o.cT):o.n?fmt(o.n):"–", eff:effPill(e)+(T?q(fmt(o.n)+" / "+fmt(Math.round(T/c))):""), sc:scPill(s2)+(o.cT?q(fmt(o.cR)+" cassette"):""), st:o.cT?pf(o.cSt/o.cT*100)+q(fmt(o.cSt)):"–", re:o.cT?pf(o.cRe/o.cT*100)+q(fmt(o.cRe)):"–", ej:o.n?`<span${ejw?' style="color:var(--warn);font-weight:600" title="Molte meno espulse che scarti: espulsore spento?"':""}>${pf(o.ej/o.n*100)}</span>`+q(fmt(o.ej)):"–", stop:T?fdur(o.stopT)+(o.stopN?` <span class="muted">(${o.stopN})</span>`:""):"–"}; };
   const dk=Object.keys(R.byDay).sort().reverse();
   $("eDays").innerHTML = dk.length ? dk.map(d=>{ const x=cells(R.byDay[d]); return `<tr class="click" data-day="${d}" tabindex="0"><td>${wday(d)} ${dShort(d)}</td><td class="t">${esc([...R.byDay[d].prods].filter(p=>p!=="?").join(", "))}</td><td>${x.cT}</td><td>${x.eff}</td><td>${x.sc}</td><td>${x.ej}</td><td>${x.stop}</td></tr>`; }).join("") : '<tr><td colspan="7" class="t muted">Nessun dato.</td></tr>';
   const pk=Object.keys(R.byProd).filter(p=>p!=="?").sort((a,b)=>(R.byProd[b].cT||R.byProd[b].n)-(R.byProd[a].cT||R.byProd[a].n));
@@ -1372,7 +1375,7 @@ function drawEffTimeline(A,B,R){
   let plan=0, stopT=0, stopN=0; R.states.forEach(s=>{ const ov=Math.min(vB,s.b)-Math.max(vA,s.a); if(ov<=0) return; if(s.k==="run") plan+=ov; if(s.k==="stop"){ stopT+=ov; stopN++; } });
   const c=60000/rate; let cT=0,cR=0,ejN=0; for(let i=lo;i<hi;i++){ if(fp<0||EF.pr[i]===fp) ejN+=EF.ej[i]; }
   for(let q=0;q<EF.intervals.length;q++){ const mm=EF.ivMs[q], v=EF.intervals[q]; if(mm[1]<=vA) continue; if(mm[0]>=vB) break; if(pnF && String(EF.ivProd[q]).toLowerCase()!==pnF) continue; const ov=(Math.min(vB,mm[1])-Math.max(vA,mm[0]))/Math.max(1,mm[1]-mm[0]); cT+=v[2]*ov; cR+=v[3]*ov; }
-  $("eWin").innerHTML = `<span>Nel tratto visibile:</span><span><b>${fmt(n)}</b> cassette</span><span>efficienza <b>${plan?pf(n*c/plan*100):"–"}</b></span><span>scarto <b>${cT>=1?pf(cR/cT*100):"–"}</b></span><span>espulse <b>${fmt(ejN)}</b></span><span><b>${fmt(stopN)}</b> fermate · <b>${fdur(stopT)}</b></span>`;
+  $("eWin").innerHTML = `<span>Nel tratto visibile:</span><span><b>${fmt(n)}</b> cassette</span><span>efficienza <b>${plan?pf(n*c/plan*100)+" ("+fmt(n)+" su "+fmt(Math.round(plan/c))+")":"–"}</b></span><span>scarto <b>${cT>=1?pf(cR/cT*100)+" ("+fmt(Math.round(cR))+")":"–"}</b></span><span>espulse <b>${fmt(ejN)}</b></span><span><b>${fmt(stopN)}</b> fermate · <b>${fdur(stopT)}</b></span>`;
   const cb=$("eClusters"); cb.innerHTML="";
   if(clusters.length){ const tm=ms=>new Date(ms).toTimeString().slice(0,5);
     cb.innerHTML=`<p class="muted small" style="margin-bottom:6px">${clusters.length} raffiche di scarti (almeno 10 espulse su 20 di fila): tocca per ingrandire.</p><div class="cl">`+clusters.slice().sort((a,b)=>b.ej-a.ej).slice(0,9).sort((a,b)=>a.t0-b.t0).map(cl=>`<button type="button" data-a="${cl.t0}" data-b="${cl.t1}"><b>${dShort(dayOf(cl.t0))} ${tm(cl.t0)}–${tm(cl.t1)}</b><span>${fmt(cl.ej)} espulse su ${fmt(cl.n)}</span></button>`).join("")+"</div>";
