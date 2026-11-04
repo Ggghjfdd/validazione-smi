@@ -119,75 +119,14 @@ label.btn{display:inline-block}
 .zb:hover:not(:disabled){border-color:var(--c2);color:var(--c2)}
 .zb:disabled{opacity:.45;cursor:default}
 .zsel{position:absolute;top:0;bottom:28px;background:color-mix(in srgb,var(--c2) 18%,transparent);border-left:1px solid var(--c2);border-right:1px solid var(--c2);pointer-events:none}
+.cl{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+.cl button{text-align:left;border:1px solid var(--line);border-left:3px solid var(--bad);background:var(--panel);color:var(--fg);border-radius:6px;padding:7px 10px;font:inherit;cursor:pointer}
+.cl button b{font-family:var(--f-mono);font-weight:500}
+.cl button span{display:block;color:var(--muted);font-size:12px}
 .ewin{display:flex;flex-wrap:wrap;gap:4px 16px;margin-top:8px;padding:8px 10px;background:var(--tint);border-radius:7px;font-size:13px;color:var(--muted)}
 .ewin b{color:var(--fg);font-family:var(--f-mono);font-weight:500}
 #eDays tr.click,#eStops tr.click{cursor:pointer}
-#v-andamento > header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px;margin-bottom:20px}
-#v-andamento h1{font-family:var(--f-display);font-size:24px;font-weight:700;margin:0;letter-spacing:-.01em;text-wrap:balance}
-#v-andamento .sub{color:var(--muted);margin:4px 0 0;max-width:70ch}
-#v-andamento .controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-#v-andamento .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel)}
-#v-andamento .seg button{border:0;background:none;color:var(--muted);font:500 13px var(--f-body);padding:7px 12px;cursor:pointer}
-#v-andamento .seg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent)}
-#v-andamento .seg button:focus-visible,#v-andamento .aprod:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
-#v-andamento label.chk{display:inline-flex;gap:6px;align-items:center;color:var(--muted);font-size:13px;cursor:pointer}
-#v-andamento .agrid{display:grid;grid-template-columns:minmax(280px,360px) minmax(0,1fr);gap:20px;align-items:start}
-@media (max-width:860px){#v-andamento .agrid{grid-template-columns:minmax(0,1fr)}}
-#v-andamento .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px}
-#v-andamento .list{max-height:78vh;overflow:auto}
-@media (max-width:860px){#v-andamento .list{max-height:46vh}}
-#v-andamento .lh{display:grid;grid-template-columns:1fr 70px 64px;gap:8px;padding:10px 14px;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel)}
-#v-andamento .aprod{display:grid;grid-template-columns:1fr 70px 64px;gap:8px;align-items:center;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);background:none;color:var(--fg);padding:9px 14px;cursor:pointer;font:inherit}
-#v-andamento .aprod:hover{background:var(--bg)}
-#v-andamento .aprod[aria-selected="true"]{background:var(--accent-soft)}
-#v-andamento .aprod .n{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#v-andamento .aprod .n small{display:block;font-weight:400;color:var(--muted);font-size:11.5px}
-#v-andamento .num{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:12.5px;text-align:right}
-#v-andamento .pill{display:inline-block;min-width:52px;text-align:center;padding:2px 6px;border-radius:999px;font-family:var(--f-mono);font-size:12px;font-variant-numeric:tabular-nums}
-#v-andamento .p-good{background:color-mix(in srgb,var(--good) 16%,transparent);color:var(--good)}
-#v-andamento .p-warn{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
-#v-andamento .p-bad{background:color-mix(in srgb,var(--bad) 16%,transparent);color:var(--bad)}
-#v-andamento .detail{display:flex;flex-direction:column;gap:16px;min-width:0}
-#v-andamento .dhead{padding:18px 20px;display:flex;flex-direction:column;gap:14px}
-#v-andamento .dhead h2{font-family:var(--f-display);font-size:22px;margin:0}
-#v-andamento .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
-#v-andamento .kpi{border-left:3px solid var(--line);padding:2px 0 2px 10px}
-#v-andamento .kpi b{display:block;font-family:var(--f-mono);font-size:20px;font-weight:500;font-variant-numeric:tabular-nums}
-#v-andamento .kpi span{color:var(--muted);font-size:12px}
-#v-andamento .chartbox{padding:16px 16px 10px;min-width:0}
-#v-andamento .chartbox h3,#v-andamento .tbl h3{margin:0 0 8px;font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
-#v-andamento .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12.5px;color:var(--muted);margin-bottom:6px}
-#v-andamento .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
-#v-andamento .svgwrap{overflow-x:auto}
-#v-andamento svg text{fill:var(--muted);font-family:var(--f-mono);font-size:10.5px}
-#v-andamento .tbl{padding:16px 16px 6px;min-width:0}
-#v-andamento .tscroll{overflow-x:auto}
-#v-andamento table{border-collapse:collapse;width:100%;min-width:560px}
-#v-andamento th,#v-andamento td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums}
-#v-andamento th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
-#v-andamento th:first-child,#v-andamento td:first-child{text-align:left}
-#v-andamento td{font-family:var(--f-mono);font-size:12.5px}
-#v-andamento .na{color:var(--muted)}
-#v-andamento .dates{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13px}
-#v-andamento .dates input{font:500 13px var(--f-body);color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:5px 8px}
-#v-andamento .dates input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-#v-andamento .tl{margin-bottom:20px}
-#v-andamento .tl .legend button{border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:999px;padding:3px 10px 3px 8px;font:500 12.5px var(--f-body);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
-#v-andamento .tl .legend button[aria-pressed="true"]{border-color:var(--fg)}
-#v-andamento .tl .legend button i{margin:0;border-radius:3px}
-#v-andamento .hint{color:var(--muted);font-size:12.5px;margin:6px 0 0}
-#v-andamento .days{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
-#v-andamento .days button{border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:8px;padding:4px 10px;font:500 12.5px var(--f-body);cursor:pointer}
-#v-andamento .days button[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
-#v-andamento .days button:focus-visible{outline:2px solid var(--accent)}
-#v-andamento .hatch{background:repeating-linear-gradient(45deg,var(--muted) 0 2px,transparent 2px 5px)!important;opacity:.6}
-#v-andamento .canvwrap{position:relative;width:100%}
-#v-andamento #pcs{width:100%;height:260px;display:block;cursor:crosshair}
-#v-andamento .cl{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;margin-top:10px}
-#v-andamento .cl button{text-align:left;border:1px solid var(--line);border-left:3px solid var(--bad);background:var(--panel);color:var(--fg);border-radius:6px;padding:7px 10px;font:inherit;cursor:pointer}
-#v-andamento .cl button b{font-family:var(--f-mono);font-weight:500}
-#v-andamento .cl button span{display:block;color:var(--muted);font-size:12px}
-#v-andamento .note{color:var(--muted);font-size:12.5px;max-width:80ch;margin:18px 0 0}
+
 .steps{display:flex;flex-wrap:wrap;gap:8px;margin:-4px 0 14px}
 .steps a{display:inline-flex;align-items:center;gap:8px;text-decoration:none;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 14px 5px 5px;font-weight:500;font-size:13px}
 .steps a b{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--c1);color:var(--panel);font-size:12px}
@@ -223,7 +162,7 @@ tr.mism td{background:color-mix(in srgb,var(--bad) 7%,transparent)}
 .casum b{font-family:var(--f-mono);font-weight:500;font-size:20px;color:var(--cc)}
 .casum small{font-size:12px;color:var(--muted)}
 .warnline{grid-column:1/-1;margin:0;color:var(--warn);font-size:13px;font-weight:600}
-table.et{min-width:860px}
+table.et{min-width:1100px}
 table.et th:nth-child(2),table.et td:nth-child(2),table.et th:nth-child(3),table.et td:nth-child(3){text-align:right}
 table.et th:first-child,table.et td:first-child{text-align:left}
 #eStops td:nth-child(4),#eStops td:nth-child(6),#eDays td:nth-child(2){text-align:left;white-space:normal}
@@ -296,8 +235,7 @@ tr.click:hover td{background:var(--field)}
     <a href="#prodotti" data-v="prodotti">Prodotti</a>
     <a href="#prova" data-v="prova">Nuova prova</a>
     <a href="#storico" data-v="storico">Storico</a>
-    <a href="#andamento" data-v="andamento">Andamento scarti</a>
-    <a href="#efficienza" data-v="efficienza">Efficienza e fermi</a>
+    <a href="#efficienza" data-v="efficienza">Andamento linea</a>
     <a href="#criteri" data-v="criteri">Criteri e sensore</a>
   </nav>
   <button class="help" id="helpBtn" type="button" style="margin-left:auto">Guida</button>
@@ -479,99 +417,10 @@ tr.click:hover td{background:var(--field)}
       </fieldset>
     </div>
   </section>
-<section id="v-andamento" hidden>
-  <header>
-    <div>
-      <h1>Andamento scarti per prodotto</h1>
-      <p class="sub" id="a-sub">Andamento della produzione nel periodo scelto, poi pezzi ispezionati e scarti giorno per giorno, divisi tra difetto amido e residui.</p>
-    </div>
-    <div class="controls">
-      <div class="dates">
-        <label for="a-dFrom">Dal</label><input type="date" id="a-dFrom">
-        <label for="a-dTo">al</label><input type="date" id="a-dTo">
-      </div>
-      <div class="seg aseg" role="group" aria-label="Periodo rapido">
-        <button id="a-p-7" data-p="7">Ultima settimana</button>
-        <button id="a-p-30" data-p="30">30 giorni</button>
-        <button id="a-p-all" data-p="all">Tutto</button>
-      </div>
-      <label class="chk"><input type="checkbox" id="a-hideTest" checked> Nascondi ricette di test</label>
-    </div>
-  </header>
-
-  <div class="drop" id="aDrop" style="margin-bottom:16px">
-    <div><strong>Aggiorna con nuovi dati:</strong> trascina qui la cartella copiata dalla chiavetta <span class="muted">oppure</span></div>
-    <div class="row">
-      <label class="btn sec" for="a-dir">Scegli cartella</label><input type="file" id="a-dir" webkitdirectory multiple class="vh">
-      <label class="btn sec" for="a-files">Scegli file</label><input type="file" id="a-files" multiple accept=".log" class="vh">
-    </div>
-    <span class="muted" style="font-size:12.5px">Servono event.log (contatori e scarti) e i log di sistema (letture delle singole cassette). I dati vengono salvati e valgono anche per Efficienza e fermi.</span>
-    <div id="aLoad" class="loadst" hidden></div>
-  </div>
-  <section class="panel chartbox tl">
-    <h3>Andamento produzione nel periodo</h3>
-    <div class="legend" id="a-tlLegend"></div>
-    <div class="legend">
-      <span><i style="background:var(--muted);opacity:.5"></i>Barre: pezzi ispezionati ogni 15 minuti, colore del prodotto in lavorazione</span>
-      <span><i style="background:var(--bad);height:3px;vertical-align:3px"></i>Linea: scarto % segnalato</span>
-      <span><i style="background:var(--fg);width:2px"></i>Riavvio PC</span>
-    </div>
-    <div class="svgwrap" id="a-tlWrap"><svg id="a-tl" role="img" aria-label="Pezzi ispezionati nel tempo, colorati per prodotto"></svg></div>
-    <p class="hint" id="a-tlHint"></p>
-  </section>
-
-  <div class="agrid">
-    <div class="panel list" id="a-list" role="listbox" aria-label="Prodotti">
-      <div class="lh"><span>Prodotto</span><span style="text-align:right">Pezzi</span><span style="text-align:right">Scarto</span></div>
-      <div id="a-rows"></div>
-    </div>
-    <div class="detail">
-      <div class="panel dhead">
-        <h2 id="a-pname"></h2>
-        <div class="kpis" id="a-kpis"></div>
-      </div>
-      <div class="panel chartbox" id="a-pcsBox">
-        <h3>Letture pezzo per pezzo</h3>
-        <div class="days" id="a-pcsDays"></div>
-        <div class="legend">
-          <span><i style="background:var(--bad)"></i>Pezzo espulso</span>
-          <span><i style="background:var(--muted);opacity:.45"></i>Pezzo accettato</span>
-          <span><i style="background:var(--fg);height:3px;vertical-align:3px"></i>% espulsi sugli ultimi 50 pezzi</span>
-          <span><i class="hatch"></i>Espulsore disattivato: esito pezzo per pezzo non registrato</span>
-        </div>
-        <div class="canvwrap"><canvas id="a-pcs" height="260"></canvas></div>
-        <p class="hint" id="a-pcsHint"></p>
-        <div id="a-clusters"></div>
-      </div>
-      <div class="panel chartbox">
-        <h3>Scarto % per giorno</h3>
-        <div class="legend">
-          <span><i style="background:var(--starch)"></i>Amido</span>
-          <span><i style="background:var(--resid)"></i>Residui</span>
-          <span><i style="background:var(--eject);border-radius:50%"></i>Espulsi davvero (dove c'è il log)</span>
-        </div>
-        <div class="svgwrap"><svg id="a-chart1" role="img" aria-label="Scarto percentuale per giorno"></svg></div>
-      </div>
-      <div class="panel chartbox">
-        <h3>Pezzi ispezionati per giorno</h3>
-        <div class="svgwrap"><svg id="a-chart2" role="img" aria-label="Pezzi ispezionati per giorno"></svg></div>
-      </div>
-      <div class="panel tbl">
-        <h3>Dettaglio giorni</h3>
-        <div class="tscroll"><table>
-          <thead><tr><th>Giorno</th><th>Pezzi</th><th>Scarti</th><th>Scarto %</th><th>Amido</th><th>Residui</th><th>Non ispez.</th><th>Espulsi</th></tr></thead>
-          <tbody id="a-tbody"></tbody>
-        </table></div>
-      </div>
-    </div>
-  </div>
-  <p class="note">Lo scarto % comprende anche le ore di prova e apprendimento, quando il sistema scarta quasi tutto. "Espulsi" conta i comandi di espulsione registrati nei log di sistema; è disponibile solo per i giorni in cui quei log coprono almeno l'80% dei pezzi (da fine agosto 2026). Quando gli espulsi sono molto meno degli scarti, l'espulsore era disattivato.</p>
-</section>
-
   <!-- EFFICIENZA -->
   <section id="v-efficienza" hidden>
-    <h1>Efficienza e fermi</h1>
-    <p class="lead">Calcolata da ogni cassetta letta dalla visione, confrontata con il ritmo nominale. Le pause tra una cassetta e l'altra diventano microfermate o fermate in base alle soglie qui sotto.</p>
+    <h1>Andamento linea</h1>
+    <p class="lead">Efficienza, fermate e scarto insieme, per il periodo e il prodotto che scegli. L'efficienza viene da ogni cassetta letta dalla visione confrontata con il ritmo nominale; lo scarto dai contatori della visione (amido e residui).</p>
 
     <div class="panel effctl">
       <div class="f"><label for="e-from">Dal</label><input type="date" id="e-from"></div>
@@ -606,14 +455,15 @@ tr.click:hover td{background:var(--field)}
     <div class="kpi5" id="eKpi"></div>
 
     <div class="panel chartbox" style="margin-top:14px">
-      <h3>Andamento nel periodo</h3>
+      <h3>Prodotto, efficienza, fermate e scarto nel tempo</h3>
       <div class="legend">
         <span><i style="background:var(--good)"></i>In marcia</span>
         <span><i style="background:var(--warn)"></i>Microfermata</span>
         <span><i style="background:var(--bad)"></i>Fermata</span>
         <span><i class="hatch"></i>Log mancante</span>
         <span><i style="background:var(--line)"></i>Fuori turno</span>
-        <span><i style="background:var(--c2)"></i>Barre: efficienza oraria</span>
+        <span><i style="background:var(--muted);opacity:.6"></i>Barre: efficienza, nel colore del prodotto</span>
+        <span><i style="background:var(--bad);height:3px;vertical-align:3px"></i>Linea: scarto segnalato</span>
       </div>
       <div class="zbar">
         <div class="row" style="gap:6px">
@@ -627,6 +477,7 @@ tr.click:hover td{background:var(--field)}
       </div>
       <div class="canvwrap"><canvas id="eTl" height="290"></canvas><div class="zsel" id="eSel" hidden></div></div>
       <div class="ewin" id="eWin"></div>
+      <div id="eClusters"></div>
       <p class="fhint" style="margin:6px 0 0">Trascina sul grafico per ingrandire un tratto, doppio clic per tornare al periodo intero. Con Ctrl + rotellina avvicini dove punti il mouse. Sotto le tre ore compare ogni singola cassetta (in rosso quelle espulse). Clicca una fermata o un giorno nelle tabelle qui sotto per portare lì il grafico.</p>
     </div>
 
@@ -643,12 +494,12 @@ tr.click:hover td{background:var(--field)}
 
     <div class="panel tbl" style="margin-top:14px">
       <h3>Giorno per giorno</h3>
-      <div class="tscroll"><table class="et"><thead><tr><th>Giorno</th><th>Prodotti</th><th>Cassette</th><th>Teoriche</th><th>Efficienza</th><th>Disponibilità</th><th>Fermate</th><th>Tempo fermo</th><th>Fermata più lunga</th><th>Microfermate</th></tr></thead><tbody id="eDays"></tbody></table></div>
+      <div class="tscroll"><table class="et"><thead><tr><th>Giorno</th><th>Prodotti</th><th>Cassette</th><th>Efficienza</th><th>Disponibilità</th><th>Scarto</th><th>Amido</th><th>Residui</th><th>Espulsi</th><th>Fermate</th><th>Tempo fermo</th><th>Fermata più lunga</th><th>Microfermate</th></tr></thead><tbody id="eDays"></tbody></table></div>
     </div>
 
     <div class="panel tbl" style="margin-top:14px">
       <h3>Per prodotto</h3>
-      <div class="tscroll"><table class="et"><thead><tr><th>Prodotto</th><th></th><th>Cassette</th><th>Teoriche</th><th>Efficienza</th><th>Disponibilità</th><th>Fermate</th><th>Tempo fermo</th><th>Fermata più lunga</th><th>Microfermate</th></tr></thead><tbody id="eProds"></tbody></table></div>
+      <div class="tscroll"><table class="et"><thead><tr><th>Prodotto</th><th></th><th>Cassette</th><th>Efficienza</th><th>Disponibilità</th><th>Scarto</th><th>Amido</th><th>Residui</th><th>Espulsi</th><th>Fermate</th><th>Tempo fermo</th><th>Fermata più lunga</th><th>Microfermate</th></tr></thead><tbody id="eProds"></tbody></table></div>
     </div>
 
     <div class="panel tbl" style="margin-top:14px">
@@ -860,9 +711,9 @@ const passPill=r=> r.pass==null?'<span class="pill s-na">Criteri non impostati</
 const esitoPill=e=> e==="approvato"?'<span class="pill s-ok">Approvato</span>': e==="da rifare"?'<span class="pill s-ko">Da rifare</span>':'<span class="pill s-wip">In corso</span>';
 
 /* ---------- viste ---------- */
-const VIEWS=["prodotti","prova","storico","andamento","efficienza","criteri"];
+const VIEWS=["prodotti","prova","storico","efficienza","criteri"];
 function route(){ let v=(location.hash||"#prodotti").slice(1); if(!VIEWS.includes(v)) v="prodotti";
-  VIEWS.forEach(x=>{$("v-"+x).hidden=x!==v;}); if(v==="efficienza") setTimeout(renderEff,0); if(v==="andamento" && window.__and) setTimeout(()=>window.__and.show(),0); document.querySelectorAll("nav a").forEach(a=>a.setAttribute("aria-current",a.dataset.v===v?"page":"false")); window.scrollTo(0,0); }
+  VIEWS.forEach(x=>{$("v-"+x).hidden=x!==v;}); if(v==="efficienza") setTimeout(renderEff,0); document.querySelectorAll("nav a").forEach(a=>a.setAttribute("aria-current",a.dataset.v===v?"page":"false")); window.scrollTo(0,0); }
 addEventListener("hashchange",route);
 
 function renderAll(){ renderSensor(); renderProducts(); renderHistory(); renderCriteria(); updateCalc(); if(typeof renderEff==="function") renderEff(); }
@@ -1139,9 +990,8 @@ $("f-dir").onchange=e=>{ handleFiles(e.target.files); e.target.value=""; };
 $("f-files").onchange=e=>{ handleFiles(e.target.files); e.target.value=""; };
 $("e-dir").onchange=e=>{ handleFiles(e.target.files,"eff"); e.target.value=""; };
 $("e-files").onchange=e=>{ handleFiles(e.target.files,"eff"); e.target.value=""; };
-$("a-dir").onchange=e=>{ handleFiles(e.target.files,"and"); e.target.value=""; };
-$("a-files").onchange=e=>{ handleFiles(e.target.files,"and"); e.target.value=""; };
-[["drop",""],["eDrop","eff"],["aDrop","and"]].forEach(([id,where])=>{ const d=$(id);
+
+[["drop",""],["eDrop","eff"]].forEach(([id,where])=>{ const d=$(id);
   const walk=(entry,out)=>new Promise(res=>{ if(entry.isFile){ entry.file(f=>{out.push(f);res();},()=>res()); }
     else if(entry.isDirectory){ const rd=entry.createReader(); const all=[]; const next=()=>rd.readEntries(async es=>{ if(!es.length){ for(const x of all) await walk(x,out); res(); } else { all.push(...es); next(); } },()=>res()); next(); } else res(); });
   ["dragenter","dragover"].forEach(t=>d.addEventListener(t,e=>{e.preventDefault();d.classList.add("over");}));
@@ -1211,6 +1061,7 @@ function effRebuild(){
   const mk=Object.keys(months).sort(); EF.segs=[]; EF.intervals=[]; EF.events=[];
   mk.forEach(k=>{ const v=months[k]; EF.segs.push(...(v.segs||[])); EF.intervals.push(...(v.intervals||[])); EF.events.push(...(v.events||[])); });
   EF.segs.sort((a,b)=>a[0].localeCompare(b[0])); EF.intervals.sort((a,b)=>a[0].localeCompare(b[0])); EF.events.sort((a,b)=>a[0].localeCompare(b[0]));
+  const ivDays=EF.intervals.map(v=>v[0].slice(0,10)); if(ivDays.length){ const lo=ivDays[0], hi=ivDays[ivDays.length-1]; if(!EF.firstDay||lo<EF.firstDay) EF.firstDay=lo; if(!EF.lastDay||hi>EF.lastDay) EF.lastDay=hi; }
   EF.segMs=EF.segs.map(s=>tsMs(s[0])); EF.ivMs=EF.intervals.map(v=>[tsMs(v[0]),tsMs(v[1]),v[2],v[3]]); EF.evMs=EF.events.map(e=>[tsMs(e[0]),e[1],e[2]]);
   // prodotto di ogni cassetta
   const names=[], idx={}; const pid=p=>{ const k=(p||"?"); if(!(k.toLowerCase() in idx)){ idx[k.toLowerCase()]=names.length; names.push(k); } return idx[k.toLowerCase()]; };
@@ -1218,8 +1069,8 @@ function effRebuild(){
   for(let i=0;i<n;i++){ while(j+1<EF.segMs.length && EF.segMs[j+1]<=ts[i]) j++; pr[i]= j>=0 ? pid(EF.segs[j][1]) : pid("?"); }
   EF.pr=pr; EF.prods=names;
   const sel=$("e-prod"), cur=sel.value; sel.innerHTML='<option value="">Tutti</option>'+names.filter(x=>x!=="?").sort((a,b)=>a.localeCompare(b)).map(p=>`<option${p===cur?" selected":""}>${esc(p)}</option>`).join("");
-  if(window.__and) window.__and.refresh();
-  $("eInfo").textContent = n ? `Dati disponibili: ${fmt(n)} cassette dal ${dIt(EF.firstDay)} al ${dIt(EF.lastDay)}. Carica i nuovi log per aggiungere i giorni successivi: vengono conservati.` : "Nessun dato: carica la cartella con i log di sistema.";
+  const lastPiece=keys[keys.length-1];
+  $("eInfo").textContent = EF.lastDay ? `Dati disponibili dal ${dIt(EF.firstDay)} al ${dIt(EF.lastDay)}: contatori e scarti fino al ${dIt(EF.lastDay)}, letture delle singole cassette (efficienza) fino al ${lastPiece?dIt(lastPiece):"–"}. Carica i nuovi log per aggiungere i giorni successivi: vengono conservati.` : "Nessun dato: carica la cartella copiata dal PC della visione.";
 }
 
 /* ---- calcolo ---- */
@@ -1230,7 +1081,7 @@ function effCompute(A,B,prodName){
   const T=effThr(), c=60000/T.rate, ts=EF.ts, pr=EF.pr;
   const fp = prodName ? EF.prods.findIndex(p=>p.toLowerCase()===prodName.toLowerCase()) : -1;
   const lo=lbound(ts,A), hi=lbound(ts,B);
-  const acc=()=>({n:0,T:0,stopT:0,stopN:0,microT:0,microN:0,maxStop:0,prods:new Set()});
+  const acc=()=>({n:0,T:0,stopT:0,stopN:0,microT:0,microN:0,maxStop:0,prods:new Set(),ej:0,cT:0,cR:0,cSt:0,cRe:0});
   const tot=acc(), byDay={}, byProd={}, stops=[], states=[], hours={};
   const add=(o,k)=>o[k]||(o[k]=acc());
   let sessStart=null;
@@ -1238,7 +1089,7 @@ function effCompute(A,B,prodName){
     const p=pr[i]; if(fp>=0 && p!==fp){ continue; }
     const d=dayOf(ts[i]), pn=EF.prods[p];
     const D=add(byDay,d), P=add(byProd,pn);
-    [tot,D,P].forEach(o=>{o.n++; o.prods.add(pn);});
+    [tot,D,P].forEach(o=>{o.n++; o.prods.add(pn); o.ej+=EF.ej[i];});
     const hk=Math.floor(ts[i]/3600000); hours[hk]=(hours[hk]||0)+1;
     if(sessStart===null) sessStart=ts[i];
     const nx = i+1<hi ? i+1 : -1;
@@ -1266,8 +1117,12 @@ function effCompute(A,B,prodName){
     }
   }
   // qualità dai contatori
-  let cT=0,cR=0; for(const v of EF.ivMs){ if(v[1]<=A) continue; if(v[0]>=B) break; if(fp>=0){ const j=lbound(EF.segMs,v[0]+1)-1; if(j<0||EF.segs[j][1].toLowerCase()!==prodName.toLowerCase()) continue; } cT+=v[2]; cR+=v[3]; }
-  return {c,T,tot,byDay,byProd,stops,states,hours,cT,cR};
+  for(let q=0;q<EF.intervals.length;q++){ const m=EF.ivMs[q], v=EF.intervals[q]; if(m[1]<=A) continue; if(m[0]>=B) break;
+    const j=lbound(EF.segMs,m[0]+1)-1; const pn=j>=0?EF.segs[j][1]:"?"; if(fp>=0 && pn.toLowerCase()!==prodName.toLowerCase()) continue;
+    const pk=EF.prods.find(x=>x.toLowerCase()===pn.toLowerCase())||pn;
+    const D=add(byDay,v[0].slice(0,10)), P=add(byProd,pk);
+    [tot,D,P].forEach(o=>{ o.cT+=v[2]; o.cR+=v[3]; o.cSt+=v[5]; o.cRe+=v[6]; o.prods.add(pk); }); }
+  return {c,T,tot,byDay,byProd,stops,states,hours,cT:tot.cT,cR:tot.cR};
 }
 const fdur=ms=>{ if(ms==null) return "–"; const s=Math.round(ms/1000); if(s<60) return s+" s"; const m=Math.floor(s/60), h=Math.floor(m/60); if(h) return h+" h "+String(m%60).padStart(2,"0")+" min"; return m+" min"+(s%60&&m<10?" "+String(s%60).padStart(2,"0")+" s":""); };
 const effPill=v=> v==null?"–":`<span class="pill ${v>=85?"s-ok":v>=65?"s-wip":"s-ko"}">${pf(v)}</span>`;
@@ -1289,11 +1144,12 @@ function renderEff(){
   const theo=t.T/c, eff=t.T?t.n*c/t.T*100:null, avail=t.T?(t.T-t.stopT)/t.T*100:null, perf=(t.T-t.stopT)>0?t.n*c/(t.T-t.stopT)*100:null, qual=R.cT?(1-R.cR/R.cT)*100:null;
   const oee=(avail!=null&&perf!=null&&qual!=null)?avail*perf*qual/10000:null;
   const tile=(lab,val,sub,col)=>`<div class="kt" style="--sc:${col}"><b>${val}</b><span>${lab}</span>${sub?`<small>${sub}</small>`:""}</div>`;
-  $("eKpi").innerHTML = t.n ? [
+  $("eKpi").innerHTML = (t.n||R.cT) ? [
     tile("Efficienza",pf(eff),`${fmt(t.n)} cassette su ${fmt(Math.round(theo))} teoriche`,eff>=85?"var(--good)":eff>=65?"var(--warn)":"var(--bad)"),
     tile("Disponibilità",pf(avail),"tempo senza fermate","var(--c2)"),
     tile("Prestazioni",pf(perf),"ritmo quando gira, microfermate incluse","var(--c3)"),
-    tile("Qualità",pf(qual),R.cT?`scarto segnalato ${pf(100-qual)}`:"contatori non disponibili","var(--c4)"),
+    tile("Scarto segnalato",R.cT?pf(R.cR/R.cT*100):"–",R.cT?`amido ${pf(t.cSt/R.cT*100)} · residui ${pf(t.cRe/R.cT*100)} su ${fmt(R.cT)} cassette contate`:"contatori non disponibili",R.cT&&R.cR/R.cT<0.1?"var(--good)":R.cT&&R.cR/R.cT<0.25?"var(--warn)":"var(--bad)"),
+    tile("Espulsi davvero",t.n?pf(t.ej/t.n*100):"–",t.n?`${fmt(t.ej)} cassette espulse su ${fmt(t.n)} lette`:"servono i log di sistema","var(--c4)"),
     tile("OEE",pf(oee),"disponibilità × prestazioni × qualità","var(--c1)"),
     tile("Fermate",fmt(t.stopN),`${fdur(t.stopT)} in totale, la più lunga ${fdur(t.maxStop)}`,"var(--bad)"),
     tile("Microfermate",fmt(t.microN),`${fdur(t.microT)} in totale`,"var(--warn)"),
@@ -1310,12 +1166,14 @@ function renderEff(){
   const mx=Math.max(1,...cls.map(x=>x[2]));
   $("eClass").innerHTML = cls.length ? `<div class="cls">${cls.map(x=>`<div><span>${x[0]}</span><div class="bar"><i style="width:${(x[2]/mx*100).toFixed(1)}%"></i></div><b class="mono">${fmt(x[1])}×</b><b class="mono">${fdur(x[2])}</b></div>`).join("")}</div><p class="fhint" style="margin:8px 0 0">Barra = tempo totale perso in quella fascia; il numero è quante fermate.</p>` : '<p class="muted">Nessuna fermata nel periodo.</p>';
   // tabelle
-  const rowOf=(name,o,extra)=>{ const T=o.T, e=T?o.n*c/T*100:null, av=T?(T-o.stopT)/T*100:null;
-    return `<tr><td class="t">${name}</td><td class="t muted">${extra}</td><td>${fmt(o.n)}</td><td>${fmt(Math.round(T/c))}</td><td>${effPill(e)}</td><td>${pf(av)}</td><td>${fmt(o.stopN)}</td><td>${fdur(o.stopT)}</td><td>${o.maxStop?fdur(o.maxStop):"–"}</td><td>${fmt(o.microN)} · ${fdur(o.microT)}</td></tr>`; };
+  const scPill=v=> v==null?"–":`<span class="pill ${v<10?"s-ok":v<25?"s-wip":"s-ko"}">${pf(v)}</span>`;
+  const rowOf=(name,o,extra)=>{ const T=o.T, e=T?o.n*c/T*100:null, av=T?(T-o.stopT)/T*100:null, sc=o.cT?o.cR/o.cT*100:null;
+    const ejw = o.n && sc!=null && o.ej/o.n*100 < sc*0.3 && sc>5;
+    return `<tr><td class="t">${name}</td><td class="t muted">${extra}</td><td>${o.n?fmt(o.n):"–"}</td><td>${effPill(e)}</td><td>${T?pf(av):"–"}</td><td>${scPill(sc)}</td><td>${o.cT?pf(o.cSt/o.cT*100):"–"}</td><td>${o.cT?pf(o.cRe/o.cT*100):"–"}</td><td${ejw?' title="Molti meno espulsi che scarti: espulsore probabilmente disattivato" style="color:var(--warn);font-weight:600"':""}>${o.n?pf(o.ej/o.n*100):"–"}</td><td>${T?fmt(o.stopN):"–"}</td><td>${T?fdur(o.stopT):"–"}</td><td>${o.maxStop?fdur(o.maxStop):"–"}</td><td>${T?fmt(o.microN)+" · "+fdur(o.microT):"–"}</td></tr>`; };
   const dk=Object.keys(R.byDay).sort().reverse();
-  $("eDays").innerHTML = dk.length ? dk.map(d=>{ const day=["dom","lun","mar","mer","gio","ven","sab"][new Date(d+"T12:00").getDay()]; return rowOf(day+" "+dIt(d),R.byDay[d],esc([...R.byDay[d].prods].join(", "))).replace("<tr>",`<tr class="click" data-day="${d}" tabindex="0" title="Mostra questo giorno nel grafico">`); }).join("") : '<tr><td colspan="10" class="empty t">Nessun dato nel periodo.</td></tr>';
-  const pk=Object.keys(R.byProd).sort((a,b)=>R.byProd[b].n-R.byProd[a].n);
-  $("eProds").innerHTML = pk.length ? pk.map(p=>rowOf(esc(p),R.byProd[p],"")).join("") : '<tr><td colspan="10" class="empty t">Nessun dato nel periodo.</td></tr>';
+  $("eDays").innerHTML = dk.length ? dk.map(d=>{ const day=["dom","lun","mar","mer","gio","ven","sab"][new Date(d+"T12:00").getDay()]; return rowOf(day+" "+dIt(d),R.byDay[d],esc([...R.byDay[d].prods].join(", "))).replace("<tr>",`<tr class="click" data-day="${d}" tabindex="0" title="Mostra questo giorno nel grafico">`); }).join("") : '<tr><td colspan="13" class="empty t">Nessun dato nel periodo.</td></tr>';
+  const pk=Object.keys(R.byProd).filter(p=>p!=="?").sort((a,b)=>(R.byProd[b].cT||R.byProd[b].n)-(R.byProd[a].cT||R.byProd[a].n));
+  $("eProds").innerHTML = pk.length ? pk.map(p=>rowOf(esc(p),R.byProd[p],"")).join("") : '<tr><td colspan="13" class="empty t">Nessun dato nel periodo.</td></tr>';
   // elenco fermate
   const ord=$("e-sort").value, list=R.stops.slice().sort(ord==="dur"?(a,b)=>b.g-a.g:(a,b)=>a.a-b.a);
   const show=EF.showAll?list:list.slice(0,40);
@@ -1365,12 +1223,24 @@ function drawEffTimeline(A,B,R){
   // barre di efficienza: larghezza in base allo zoom
   const rate=effThr().rate;
   const m=[1,2,5,10,15,30,60,120,240].find(mm=>span/(mm*60000)<=PW/6)||240, bm=m*60000;
-  const bins=new Map(); const b0=Math.floor(vA/bm)*bm;
-  for(let i=lo;i<hi;i++){ if(fp>=0&&EF.pr[i]!==fp) continue; const k=Math.floor((EF.ts[i]-b0)/bm); bins.set(k,(bins.get(k)||0)+1); }
+  const bins=new Map(), binP=new Map(); const b0=Math.floor(vA/bm)*bm;
+  for(let i=lo;i<hi;i++){ if(fp>=0&&EF.pr[i]!==fp) continue; const k=Math.floor((EF.ts[i]-b0)/bm); bins.set(k,(bins.get(k)||0)+1); if(!binP.has(k)) binP.set(k,EF.prods[EF.pr[i]]); }
   const bw=Math.max(1,bm/span*PW*0.82);
   bins.forEach((nn,k)=>{ const ms=b0+k*bm; const v=nn/(rate*m)*100; const yy=yB+hB*(1-Math.min(100,v)/100);
-    ctx.fillStyle=v>=85?C("--c2"):v>=50?C("--warn"):C("--bad"); ctx.globalAlpha=.9; ctx.fillRect(x(ms),yy,bw,yB+hB-yy); });
-  ctx.globalAlpha=1; ctx.restore();
+    ctx.fillStyle=colOf(binP.get(k)); ctx.globalAlpha=v>=85?.8:.5; ctx.fillRect(x(ms),yy,bw,yB+hB-yy); });
+  ctx.globalAlpha=1;
+  const clusters=[];
+  if(span<=26*3600e3){ const idx=[]; for(let i=lo;i<hi;i++){ if(fp<0||EF.pr[i]===fp) idx.push(i); }
+    let e=0, s0=0; for(let k2=0;k2<idx.length;k2++){ if(k2>0 && EF.ts[idx[k2]]-EF.ts[idx[k2-1]]>3e5){ e=0; s0=k2; }
+      e+=EF.ej[idx[k2]]; if(k2-s0>=20) e-=EF.ej[idx[k2-20]];
+      if(k2-s0>=19 && e>=10){ const st=k2-19; const last=clusters[clusters.length-1]; if(last && st<=last.e+5 && st>=s0) last.e=k2; else clusters.push({s:st,e:k2}); } }
+    clusters.forEach(cl=>{ let n=0,ej=0; for(let k2=cl.s;k2<=cl.e;k2++){ n++; ej+=EF.ej[idx[k2]]; } cl.n=n; cl.ej=ej; cl.t0=EF.ts[idx[cl.s]]; cl.t1=EF.ts[idx[cl.e]]; });
+    ctx.fillStyle=C("--bad"); ctx.globalAlpha=.13; clusters.forEach(cl=>ctx.fillRect(x(cl.t0),yB,Math.max(3,x(cl.t1)-x(cl.t0)),hB)); ctx.globalAlpha=1; }
+  const pnF=$("e-prod").value.toLowerCase(); ctx.strokeStyle=C("--bad"); ctx.lineWidth=2.2; ctx.lineCap="round"; ctx.beginPath();
+  for(let q=0;q<EF.intervals.length;q++){ const mm=EF.ivMs[q], v=EF.intervals[q]; if(mm[1]<=vA) continue; if(mm[0]>=vB) break; if(v[2]<5) continue;
+    if(pnF){ const j=lbound(EF.segMs,mm[0]+1)-1; if(j<0||EF.segs[j][1].toLowerCase()!==pnF) continue; }
+    const yy=yB+hB*(1-Math.min(100,v[3]/v[2]*100)/100); ctx.moveTo(x(Math.max(vA,mm[0])),yy); ctx.lineTo(x(Math.min(vB,mm[1])),yy); }
+  ctx.stroke(); ctx.restore();
   // griglia e assi
   ctx.strokeStyle=C("--line"); ctx.fillStyle=C("--muted"); ctx.font="10.5px "+C("--f-mono"); ctx.textAlign="right";
   [0,50,100].forEach(g=>{ const yy=yB+hB*(1-g/100); ctx.beginPath(); ctx.moveTo(L,yy); ctx.lineTo(W-Rr,yy); ctx.stroke(); ctx.fillText(g+"%",L-6,yy+3.5); });
@@ -1389,7 +1259,13 @@ function drawEffTimeline(A,B,R){
   $("eView").textContent=`${hm(vA)} → ${hm(vB)} · barre da ${m<60?m+" min":(m/60)+" h"}`;
   let n=0; for(let i=lo;i<hi;i++){ if(fp<0||EF.pr[i]===fp) n++; }
   let plan=0, stopT=0, stopN=0, microN=0; R.states.forEach(s=>{ const ov=Math.min(vB,s.b)-Math.max(vA,s.a); if(ov<=0) return; if(s.k==="run") plan+=ov; if(s.k==="stop"){ stopT+=ov; stopN++; } if(s.k==="micro") microN++; });
-  const c=60000/rate; $("eWin").innerHTML = `<span>Nel tratto visibile:</span><span><b>${fmt(n)}</b> cassette</span><span>efficienza <b>${plan?pf(n*c/plan*100):"–"}</b></span><span><b>${fmt(stopN)}</b> fermate per <b>${fdur(stopT)}</b></span><span><b>${fmt(microN)}</b> microfermate</span>`;
+  const c=60000/rate; let cT=0,cR=0,ejN=0; for(let i=lo;i<hi;i++){ if(fp<0||EF.pr[i]===fp) ejN+=EF.ej[i]; }
+  for(let q=0;q<EF.intervals.length;q++){ const mm=EF.ivMs[q], v=EF.intervals[q]; if(mm[1]<=vA) continue; if(mm[0]>=vB) break; if(pnF){ const j=lbound(EF.segMs,mm[0]+1)-1; if(j<0||EF.segs[j][1].toLowerCase()!==pnF) continue; } const ov=(Math.min(vB,mm[1])-Math.max(vA,mm[0]))/Math.max(1,mm[1]-mm[0]); cT+=v[2]*ov; cR+=v[3]*ov; }
+  $("eWin").innerHTML = `<span>Nel tratto visibile:</span><span><b>${fmt(n)}</b> cassette lette</span><span>efficienza <b>${plan?pf(n*c/plan*100):"–"}</b></span><span>scarto <b>${cT>=1?pf(cR/cT*100):"–"}</b></span><span>espulse <b>${fmt(ejN)}</b></span><span><b>${fmt(stopN)}</b> fermate per <b>${fdur(stopT)}</b></span><span><b>${fmt(microN)}</b> microfermate</span>`;
+  const cb=$("eClusters"); cb.innerHTML="";
+  if(clusters.length){ const tm=ms=>new Date(ms).toTimeString().slice(0,5);
+    cb.innerHTML=`<p class="fhint" style="margin:10px 0 6px">${clusters.length} concentrazioni di scarti nel tratto visibile (almeno 10 cassette espulse su 20 di fila): clicca per ingrandire.</p><div class="cl">`+clusters.slice().sort((a,b)=>b.ej-a.ej).slice(0,12).sort((a,b)=>a.t0-b.t0).map(cl=>`<button type="button" data-a="${cl.t0}" data-b="${cl.t1}"><b>${new Date(cl.t0).toLocaleDateString("it-IT",{day:"2-digit",month:"2-digit"})} ${tm(cl.t0)}–${tm(cl.t1)}</b> · ${fmt(cl.ej)} espulse su ${fmt(cl.n)}<span>${pf(cl.ej/cl.n*100)} in ${Math.max(1,Math.round((cl.t1-cl.t0)/6e4))} min</span></button>`).join("")+"</div>";
+    cb.querySelectorAll("button").forEach(b=>b.onclick=()=>effFocus(+b.dataset.a,+b.dataset.b)); }
   $("eZoomOut").disabled=$("eReset").disabled=!EV; 
   cv._e={vA,vB,L,Rr,W,PW,R,rate,bins,b0,bm,m,fp};
 }
@@ -1406,7 +1282,7 @@ function effZoom(a,b){ if(!EFLAST) return; const {A,B}=EFLAST; let s=b-a; if(s<5
     const ms=tAt(s,e.offsetX); if(ms<s.vA||ms>s.vB){hideTip();return;}
     const st=s.R.states.find(q=>q.k!=="run"&&q.a<=ms&&ms<q.b)||s.R.states.find(q=>q.a<=ms&&ms<q.b); const k=Math.floor((ms-s.b0)/s.bm), nn=s.bins.get(k)||0; const j=lbound(EF.segMs,ms+1)-1; const p=j>=0?EF.segs[j][1]:"–";
     const lab={run:"in marcia",micro:"microfermata",stop:"fermata",off:"fuori turno",miss:"log mancante"}; const d=new Date(ms), bs=new Date(s.b0+k*s.bm), be=new Date(s.b0+(k+1)*s.bm);
-    const tip=$("tip"); tip.innerHTML=`<b>${d.toLocaleDateString("it-IT",{weekday:"short",day:"2-digit",month:"2-digit"})} ${d.toTimeString().slice(0,8)}</b><div class="r"><span>Prodotto</span><span>${esc(p)}</span></div><div class="r"><span>Stato</span><span>${st?lab[st.k]:"fuori turno"}</span></div>`+(st&&st.k!=="run"?`<div class="r"><span>Durata</span><span>${fdur(st.b-st.a)}</span></div><div class="r"><span>Dalle / alle</span><span>${new Date(st.a).toTimeString().slice(0,8)} – ${new Date(st.b).toTimeString().slice(0,8)}</span></div>`:"")+`<div class="r"><span>Cassette ${bs.toTimeString().slice(0,5)}–${be.toTimeString().slice(0,5)}</span><span>${fmt(nn)} / ${fmt(s.rate*s.m)}</span></div><div class="r"><span>Efficienza</span><span>${pf(nn/(s.rate*s.m)*100)}</span></div>`;
+    const tip=$("tip"); tip.innerHTML=`<b>${d.toLocaleDateString("it-IT",{weekday:"short",day:"2-digit",month:"2-digit"})} ${d.toTimeString().slice(0,8)}</b><div class="r"><span>Prodotto</span><span>${esc(p)}</span></div><div class="r"><span>Stato</span><span>${st?lab[st.k]:"fuori turno"}</span></div>`+(st&&st.k!=="run"?`<div class="r"><span>Durata</span><span>${fdur(st.b-st.a)}</span></div><div class="r"><span>Dalle / alle</span><span>${new Date(st.a).toTimeString().slice(0,8)} – ${new Date(st.b).toTimeString().slice(0,8)}</span></div>`:"")+`<div class="r"><span>Cassette ${bs.toTimeString().slice(0,5)}–${be.toTimeString().slice(0,5)}</span><span>${fmt(nn)} / ${fmt(s.rate*s.m)}</span></div><div class="r"><span>Efficienza</span><span>${pf(nn/(s.rate*s.m)*100)}</span></div>`+(()=>{ const q=EF.ivMs.findIndex(v=>v[0]<=ms&&ms<v[1]); if(q<0) return ""; const v=EF.intervals[q]; return `<div class="r"><span>Scarto ${v[0].slice(11,16)}–${v[1].slice(11,16)}</span><span>${v[2]?pf(v[3]/v[2]*100):"–"}</span></div><div class="r"><span>di cui amido / residui</span><span>${fmt(v[5])} / ${fmt(v[6])}</span></div>`; })();
     tip.hidden=false; tip.style.left=Math.min(e.clientX+14,innerWidth-tip.offsetWidth-8)+"px"; tip.style.top=(e.clientY+14)+"px"; });
   cv.addEventListener("mouseleave",()=>{ hideTip(); });
   const cur=()=>cv._e;
@@ -1470,293 +1346,6 @@ function effSubscribe(db){
   db.collection("eventi").onSnapshot(s=>{ const m={}; s.docs.forEach(d=>{ m[d.id]=d.data(); }); EF.dbMonths=m; effRebuild(); renderEff(); }, ()=>{});
 }
 effRebuild();
-const ANDAMENTO=(()=>{
-let DATA={products:{},timeline:{segs:[],intervals:[],bins:[],events:[]}};
-const TEST = new Set(["test2","123","evs test","Product EVS","prova fs","gjit","HUSTOL"]);
-const cov = r => r[7] >= 0.8*r[1];
-let dFrom = null, dTo = null, sel = null;
-try{ const s=JSON.parse(localStorage.getItem("smi-andamento")||"{}"); if(s.dFrom) dFrom=s.dFrom; if(s.dTo) dTo=s.dTo; if(s.sel) sel=s.sel; }catch(e){}
-const fmt = n => n.toLocaleString("it-IT");
-const pct = (a,b) => b ? a/b*100 : 0;
-const pf = v => v.toFixed(1).replace(".",",")+"%";
-const cls = v => v<10?"p-good":v<25?"p-warn":"p-bad";
-const dIt = d => d.slice(8,10)+"/"+d.slice(5,7)+"/"+d.slice(2,4);
-
-function rowsFor(p){ return (DATA.products[p]||[]).filter(r => r[0]>=dFrom && r[0]<=dTo); }
-function sum(rows){ const s=[0,0,0,0,0,0]; let ej=0,ejTot=0; rows.forEach(r=>{for(let i=0;i<5;i++)s[i]+=r[i+1]; if(cov(r)){ej+=r[6];ejTot+=r[1];}}); return {t:s[0],r:s[1],u:s[2],st:s[3],re:s[4],ej,ejTot,days:rows.length}; }
-
-function save(){ try{localStorage.setItem("smi-andamento",JSON.stringify({dFrom,dTo,sel}));}catch(e){} }
-
-function renderList(){
-  const hide = document.getElementById("a-hideTest").checked;
-  const items = Object.keys(DATA.products).filter(p=>!(hide&&TEST.has(p))).map(p=>({p,s:sum(rowsFor(p))})).filter(x=>x.s.t>0).sort((a,b)=>b.s.t-a.s.t);
-  if(!items.find(x=>x.p===sel)) sel = items.length?items[0].p:null;
-  const box=document.getElementById("a-rows"); box.innerHTML="";
-  items.forEach(({p,s})=>{
-    const b=document.createElement("button"); b.className="aprod"; b.setAttribute("role","option"); b.id="aprod-"+p.replace(/\W+/g,"_");
-    b.setAttribute("aria-selected", p===sel);
-    const v=pct(s.r,s.t);
-    b.innerHTML=`<span class="n">${p}<small>${s.days} giorni</small></span><span class="num">${fmt(s.t)}</span><span style="text-align:right"><span class="pill ${cls(v)}">${pf(v)}</span></span>`;
-    b.onclick=()=>{sel=p;pDay=null;pZoom=null;save();renderAll();};
-    box.appendChild(b);
-  });
-  if(!items.length) box.innerHTML='<p style="padding:14px;color:var(--muted)">Nessun prodotto nel periodo scelto. Allarga le date in alto.</p>';
-}
-
-function renderDetail(){
-  const rows = sel?rowsFor(sel):[];
-  document.getElementById("a-pname").textContent = sel || "Nessun prodotto";
-  const s=sum(rows), v=pct(s.r,s.t);
-  const ejTxt = s.ejTot ? pf(pct(s.ej,s.ejTot)) : "n/d";
-  const k=[["Pezzi ispezionati",fmt(s.t)],["Scarto totale",pf(v)],["di cui amido",pf(pct(s.st,s.t))],["di cui residui",pf(pct(s.re,s.t))],["Espulsi davvero",ejTxt],["Giorni di produzione",s.days]];
-  document.getElementById("a-kpis").innerHTML = k.map(([a,b],i)=>`<div class="kpi" style="${i===1?`border-color:var(--${v<10?'good':v<25?'warn':'bad'})`:''}"><b>${b}</b><span>${a}</span></div>`).join("");
-  drawPct(rows); drawCount(rows);
-  document.getElementById("a-tbody").innerHTML = rows.slice().reverse().map(r=>{
-    const sp=pct(r[2],r[1]); const ej = cov(r) ? fmt(r[6]) : '<span class="na">n/d</span>';
-    return `<tr><td>${dIt(r[0])}</td><td>${fmt(r[1])}</td><td>${fmt(r[2])}</td><td><span class="pill ${cls(sp)}">${pf(sp)}</span></td><td>${fmt(r[4])}</td><td>${fmt(r[5])}</td><td>${fmt(r[3])}</td><td>${ej}</td></tr>`;
-  }).join("");
-}
-
-const NS="http://www.w3.org/2000/svg";
-function el(t,a){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
-function frame(svg,n,H){
-  const W=Math.max(svg.parentNode.clientWidth||600, n*14+60);
-  svg.setAttribute("viewBox",`0 0 ${W} ${H}`); svg.setAttribute("width",W); svg.setAttribute("height",H); svg.innerHTML="";
-  return {W,L:44,R:8,T:10,B:26};
-}
-function xLabels(svg,rows,m,bw){
-  const step=Math.max(1,Math.ceil(rows.length/(Math.floor((m.W-m.L-m.R)/52))));
-  rows.forEach((r,i)=>{ if(i%step) return; const x=m.L+i*bw+bw/2; const t=el("text",{x,y:m.H-8,"text-anchor":"middle"}); t.textContent=dIt(r[0]).slice(0,5); svg.appendChild(t); });
-}
-function showTip(e,r){
-  const tip=document.getElementById("tip"); const sp=pct(r[2],r[1]);
-  tip.innerHTML=`<b>${dIt(r[0])}</b><div class="r"><span>Pezzi</span><span>${fmt(r[1])}</span></div><div class="r"><span>Scarto</span><span>${pf(sp)}</span></div><div class="r"><span>Amido</span><span>${fmt(r[4])}</span></div><div class="r"><span>Residui</span><span>${fmt(r[5])}</span></div><div class="r"><span>Espulsi</span><span>${cov(r)?fmt(r[6]):"n/d"}</span></div>`;
-  tip.hidden=false; const x=Math.min(e.clientX+14, innerWidth-tip.offsetWidth-8); tip.style.left=x+"px"; tip.style.top=(e.clientY+14)+"px";
-}
-function hideTip(){document.getElementById("tip").hidden=true;}
-
-function drawPct(rows){
-  const svg=document.getElementById("a-chart1"), H=240, m=frame(svg,rows.length,H); m.H=H;
-  const ih=H-m.T-m.B, y=v=>m.T+ih*(1-v/100), bw=(m.W-m.L-m.R)/Math.max(rows.length,1);
-  [0,25,50,75,100].forEach(g=>{ svg.appendChild(el("line",{x1:m.L,x2:m.W-m.R,y1:y(g),y2:y(g),stroke:"var(--line)"})); const t=el("text",{x:m.L-6,y:y(g)+3.5,"text-anchor":"end"}); t.textContent=g+"%"; svg.appendChild(t); });
-  rows.forEach((r,i)=>{
-    const w=Math.min(Math.max(bw*0.7,2),36), x=m.L+i*bw+(bw-w)/2, st=pct(r[4],r[1]), re=pct(r[5],r[1]);
-    const g=el("g",{});
-    g.appendChild(el("rect",{x,y:y(st),width:w,height:y(0)-y(st),fill:"var(--starch)"}));
-    g.appendChild(el("rect",{x,y:y(st+re),width:w,height:y(st)-y(st+re),fill:"var(--resid)"}));
-    if(cov(r)){ const ev=Math.min(100,pct(r[6],r[1])); g.appendChild(el("circle",{cx:x+w/2,cy:y(ev),r:Math.min(4,Math.max(2.5,bw*0.22)),fill:"var(--eject)",stroke:"var(--panel)","stroke-width":1.5})); }
-    const hit=el("rect",{x:m.L+i*bw,y:m.T,width:bw,height:ih,fill:"transparent"});
-    hit.addEventListener("mousemove",e=>showTip(e,r)); hit.addEventListener("mouseleave",hideTip);
-    g.appendChild(hit); svg.appendChild(g);
-  });
-  xLabels(svg,rows,m,bw);
-}
-function drawCount(rows){
-  const svg=document.getElementById("a-chart2"), H=160, m=frame(svg,rows.length,H); m.H=H;
-  const ih=H-m.T-m.B, max=Math.max(1,...rows.map(r=>r[1])), nice=Math.pow(10,Math.floor(Math.log10(max))), top=Math.ceil(max/nice)*nice;
-  const y=v=>m.T+ih*(1-v/top), bw=(m.W-m.L-m.R)/Math.max(rows.length,1);
-  [0,top/2,top].forEach(g=>{ svg.appendChild(el("line",{x1:m.L,x2:m.W-m.R,y1:y(g),y2:y(g),stroke:"var(--line)"})); const t=el("text",{x:m.L-6,y:y(g)+3.5,"text-anchor":"end"}); t.textContent=g>=1000?(g/1000).toLocaleString("it-IT")+"k":g; svg.appendChild(t); });
-  rows.forEach((r,i)=>{
-    const w=Math.min(Math.max(bw*0.7,2),36), x=m.L+i*bw+(bw-w)/2;
-    svg.appendChild(el("rect",{x,y:y(r[1]),width:w,height:y(0)-y(r[1]),fill:"var(--accent)",rx:1}));
-    const hit=el("rect",{x:m.L+i*bw,y:m.T,width:bw,height:ih,fill:"transparent"});
-    hit.addEventListener("mousemove",e=>showTip(e,r)); hit.addEventListener("mouseleave",hideTip); svg.appendChild(hit);
-  });
-  xLabels(svg,rows,m,bw);
-}
-
-
-let LAST=null, FIRST=null;
-const PAL=["#e76f51","#3a86c8","#2a9d8f","#7b61c4","#e9a23b","#c4487a","#6a994e","#b5651d","#4cc9f0","#5c677d","#d4a017","#9d4edd","#118ab2","#ef476f","#06a77d","#8c564b","#bc6c25","#457b9d"];
-let pcol={}, pi=0;
-function colorOf(p){ const k=String(p).toLowerCase(); if(!(k in pcol)) pcol[k]=PAL[pi++%PAL.length]; return pcol[k]; }
-const toMs = s => new Date(s.replace(" ","T")).getTime();
-const addDays=(d,n)=>{const x=new Date(d+"T12:00:00");x.setDate(x.getDate()+n);return x.toLocaleDateString("sv");};
-function prodAt(ms){ const j=lowerBound(EF.segMs,ms+1)-1; return j>=0?EF.segs[j][1]:null; }
-let binsMs=[], ivMs=[], shut=[];
-const PCS={get ts(){return EF.ts;}, get ej(){return EF.ej;}};
-const fmtTs=ms=>{ const d=new Date(ms); const p=n=>String(n).padStart(2,"0"); return d.toLocaleDateString("sv")+" "+p(d.getHours())+":"+p(d.getMinutes())+":"+p(d.getSeconds()); };
-function build(){
-  const canon={}; const cn=p=>{ const k=String(p).toLowerCase(); if(!(k in canon)) canon[k]=p; return canon[k]; };
-  EF.segs.forEach(s=>cn(s[1]));
-  const lastMs=Math.max(EF.ts.length?EF.ts[EF.ts.length-1]:0, EF.ivMs.length?EF.ivMs[EF.ivMs.length-1][1]:0);
-  const segs=EF.segs.map((s,i)=>[s[0], i+1<EF.segs.length?EF.segs[i+1][0]:fmtTs(lastMs), cn(s[1])]);
-  const P={}; const row=(p,d)=>{ const m=P[p]||(P[p]={}); return m[d]||(m[d]=[d,0,0,0,0,0,0,0]); };
-  EF.intervals.forEach((v,i)=>{ const p=prodAt(EF.ivMs[i][0]); if(!p) return; const r=row(cn(p),v[0].slice(0,10)); for(let k=0;k<5;k++) r[k+1]+=v[k+2]; });
-  const bins=new Map();
-  for(let i=0;i<EF.ts.length;i++){ const ms=EF.ts[i]; const p=EF.prods[EF.pr[i]]; const k=Math.floor(ms/9e5);
-    const b=bins.get(k)||[0,0]; b[0]++; b[1]+=EF.ej[i]; bins.set(k,b);
-    if(p && p!=="?"){ const d=dayOf(ms); const m=P[cn(p)]; const r=m&&m[d]; if(r){ r[6]+=EF.ej[i]; r[7]++; } } }
-  const products={}; Object.entries(P).forEach(([p,m])=>{ const rows=Object.values(m).filter(r=>r[1]>0).sort((a,b)=>a[0].localeCompare(b[0])); if(rows.length) products[p]=rows; });
-  DATA={products, timeline:{segs, intervals:EF.intervals, events:EF.events, bins:[...bins.entries()].sort((a,b)=>a[0]-b[0]).map(([k,b])=>[k*9e5,b[0],b[1]])}};
-  const all=Object.values(products).flat().map(r=>r[0]).sort();
-  FIRST=all[0]||null; LAST=all[all.length-1]||null;
-  pcol={}; pi=0;
-  Object.keys(products).map(p=>[p,products[p].reduce((a,r)=>a+r[1],0)]).sort((a,b)=>b[1]-a[1]).forEach(([p])=>colorOf(p));
-  binsMs=DATA.timeline.bins; ivMs=EF.intervals.map((v,i)=>[EF.ivMs[i][0],EF.ivMs[i][1],v[2],v[3],v[5],v[6]]);
-  shut=EF.events.filter(e=>e[1]==="shutdown").map(e=>toMs(e[0]));
-  const s=$("a-sub"); if(s) s.textContent = LAST ? `Andamento della produzione nel periodo scelto, poi cassette ispezionate e scarti giorno per giorno, divisi tra difetto amido e residui. Dati dal ${dIt(FIRST)} al ${dIt(LAST)}: si aggiornano trascinando la cartella della visione qui sotto.` : "Nessun dato ancora: trascina qui sotto la cartella copiata dal PC della visione.";
-}
-
-function drawTimeline(){
-  const svg=document.getElementById("a-tl"), wrap=document.getElementById("a-tlWrap");
-  const t0=toMs(dFrom+" 00:00:00"), t1=toMs(addDays(dTo,1)+" 00:00:00"), days=(t1-t0)/864e5;
-  const W=Math.max(wrap.clientWidth||900, Math.min(days,14)*110+70), H=300, L=46, R=40, T=30, B=28, ih=H-T-B;
-  svg.setAttribute("viewBox",`0 0 ${W} ${H}`); svg.setAttribute("width",W); svg.setAttribute("height",H); svg.innerHTML="";
-  const x=ms=>L+(ms-t0)/(t1-t0)*(W-L-R);
-  const bins=binsMs.filter(b=>b[0]>=t0&&b[0]<t1);
-  const max=Math.max(50,...bins.map(b=>b[1])), top=Math.ceil(max/50)*50, y=v=>T+ih*(1-v/top), yp=v=>T+ih*(1-v/100);
-  // grid + axes
-  [0,top/2,top].forEach(g=>{svg.appendChild(el("line",{x1:L,x2:W-R,y1:y(g),y2:y(g),stroke:"var(--line)"})); const tt=el("text",{x:L-6,y:y(g)+3.5,"text-anchor":"end"}); tt.textContent=g; svg.appendChild(tt);});
-  [0,50,100].forEach(g=>{const tt=el("text",{x:W-R+6,y:yp(g)+3.5}); tt.textContent=g+"%"; tt.setAttribute("style","fill:var(--bad)"); svg.appendChild(tt);});
-  const lab=el("text",{x:L-6,y:T-8,"text-anchor":"end"}); lab.textContent="pz/15'"; svg.appendChild(lab);
-  // day separators
-  for(let d=dFrom; d<=dTo; d=addDays(d,1)){
-    const ms=toMs(d+" 00:00:00"), xx=x(ms);
-    svg.appendChild(el("line",{x1:xx,x2:xx,y1:T-20,y2:H-B,stroke:"var(--line)"}));
-    if(days<=16 || d.endsWith("01")||(+d.slice(8))%5===0){ const tt=el("text",{x:xx+4,y:H-10}); tt.textContent=["dom","lun","mar","mer","gio","ven","sab"][new Date(d+"T12:00").getDay()]+" "+dIt(d).slice(0,5); svg.appendChild(tt);}
-    if(days<=4){ [6,12,18].forEach(h=>{const hx=x(ms+h*36e5); svg.appendChild(el("line",{x1:hx,x2:hx,y1:H-B,y2:H-B+4,stroke:"var(--muted)"})); const tt=el("text",{x:hx,y:H-10,"text-anchor":"middle"}); tt.textContent=h+":00"; svg.appendChild(tt);}); }
-  }
-  // product strip
-  const segs=DATA.timeline.segs.filter(s=>toMs(s[1])>t0&&toMs(s[0])<t1);
-  const used=new Map();
-  segs.forEach(s=>{
-    const a=Math.max(t0,toMs(s[0])), b=Math.min(t1,toMs(s[1])), xa=x(a), xb=x(b), c=colorOf(s[2]);
-    used.set(s[2].toLowerCase(),s[2]);
-    const r=el("rect",{x:xa,y:T-20,width:Math.max(1,xb-xa),height:14,fill:c,rx:2}); svg.appendChild(r);
-    r.style.opacity = sel && sel.toLowerCase()!==s[2].toLowerCase() ? .35 : 1;
-    if(xb-xa>60){const tt=el("text",{x:xa+5,y:T-9.5}); tt.textContent=s[2]; tt.setAttribute("style","fill:#fff;font-family:var(--f-body);font-weight:600"); svg.appendChild(tt);}
-  });
-  // bars
-  const bw=Math.max(1,(x(t0+9e5)-x(t0))*0.85);
-  bins.forEach(b=>{const p=prodAt(b[0]); const r=el("rect",{x:x(b[0]),y:y(b[1]),width:bw,height:y(0)-y(b[1]),fill:p?colorOf(p):"var(--muted)"}); if(sel&&p&&sel.toLowerCase()!==p.toLowerCase()) r.style.opacity=.3; svg.appendChild(r);});
-  // reject line (counter intervals)
-  let path="";
-  ivMs.filter(v=>v[1]>t0&&v[0]<t1&&v[2]>=5).forEach(v=>{const a=x(Math.max(t0,v[0])),b=x(Math.min(t1,v[1])),yy=yp(Math.min(100,v[3]/v[2]*100)); path+=`M${a.toFixed(1)},${yy.toFixed(1)}H${b.toFixed(1)}`;});
-  svg.appendChild(el("path",{d:path,stroke:"var(--bad)","stroke-width":2.2,fill:"none","stroke-linecap":"round"}));
-  shut.filter(s=>s>=t0&&s<t1).forEach(s=>svg.appendChild(el("line",{x1:x(s),x2:x(s),y1:T,y2:H-B,stroke:"var(--fg)","stroke-width":1.2,"stroke-dasharray":"3 3"})));
-  // hover
-  const hit=el("rect",{x:L,y:T-20,width:W-L-R,height:ih+20,fill:"transparent"});
-  hit.addEventListener("mousemove",e=>{
-    const pt=svg.getBoundingClientRect(), ms=t0+(e.clientX-pt.left-L)/(W-L-R)*(t1-t0), bt=Math.floor(ms/9e5)*9e5;
-    const b=binsMs.find(q=>q[0]===bt) || [bt,0,0]; const iv=ivMs.find(v=>v[0]<=ms&&ms<v[1]); const p=prodAt(ms);
-    const d=new Date(bt), hh=String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
-    const tip=document.getElementById("tip");
-    tip.innerHTML=`<b>${d.toLocaleDateString("it-IT",{weekday:"short",day:"2-digit",month:"2-digit"})} ${hh}</b><div class="r"><span>Prodotto</span><span>${p||"–"}</span></div><div class="r"><span>Pezzi (15')</span><span>${fmt(b[1])}</span></div><div class="r"><span>Espulsi (15')</span><span>${fmt(b[2])}</span></div>`+(iv?`<div class="r"><span>Scarto nell'intervallo</span><span>${pf(pct(iv[3],iv[2]))}</span></div><div class="r"><span>Intervallo</span><span>${new Date(iv[0]).toTimeString().slice(0,5)}–${new Date(iv[1]).toTimeString().slice(0,5)}</span></div>`:"");
-    tip.hidden=false; tip.style.left=Math.min(e.clientX+14,innerWidth-tip.offsetWidth-8)+"px"; tip.style.top=(e.clientY+14)+"px";
-  });
-  hit.addEventListener("mouseleave",hideTip);
-  hit.addEventListener("click",e=>{const pt=svg.getBoundingClientRect(); const p=prodAt(t0+(e.clientX-pt.left-L)/(W-L-R)*(t1-t0)); if(p){const k=Object.keys(DATA.products).find(q=>q.toLowerCase()===p.toLowerCase()); if(k){sel=k;save();renderAll();}}});
-  hit.style.cursor="pointer"; svg.appendChild(hit);
-  // legend
-  const lg=document.getElementById("a-tlLegend"); lg.innerHTML="";
-  [...used.values()].forEach(p=>{const k=Object.keys(DATA.products).find(q=>q.toLowerCase()===p.toLowerCase()); const b=document.createElement("button"); b.type="button"; b.setAttribute("aria-pressed", !!(sel&&sel.toLowerCase()===p.toLowerCase())); b.innerHTML=`<i style="background:${colorOf(p)}"></i>${p}`; b.onclick=()=>{ if(k){sel=k;save();renderAll();} }; lg.appendChild(b);});
-  document.getElementById("a-tlHint").textContent = bins.length ? "Passa sopra il grafico per i dettagli, clicca per aprire il prodotto qui sotto. I pezzi ogni 15 minuti vengono dai log di sistema; nei tratti senza barre la linea era ferma oppure il log manca." : "Nessun dato di produzione dettagliato nel periodo scelto: i log di sistema coprono da fine agosto 2026.";
-}
-
-
-// ---- letture pezzo per pezzo ----
-let pDay=null, pZoom=null;
-function piecesFor(p,a,b){ const idx=[]; const fp=EF.prods.findIndex(q=>q.toLowerCase()===p.toLowerCase()); if(fp<0) return idx; const lo=lowerBound(EF.ts,a); for(let i=lo;i<EF.ts.length&&EF.ts[i]<b;i++){ if(EF.pr[i]===fp) idx.push(i);} return idx; }
-function lowerBound(arr,v){let lo=0,hi=arr.length;while(lo<hi){const m=(lo+hi)>>1; if(arr[m]<v)lo=m+1; else hi=m;} return lo;}
-function drawPieces(){
-  const box=document.getElementById("a-pcsBox"), cv=document.getElementById("a-pcs");
-  const hint=document.getElementById("a-pcsHint"), dz=document.getElementById("a-pcsDays"), cl=document.getElementById("a-clusters");
-  if(!sel){box.hidden=true;return;} box.hidden=false;
-  const R0=toMs(dFrom+" 00:00:00"), R1=toMs(addDays(dTo,1)+" 00:00:00");
-  const all=piecesFor(sel,R0,R1);
-  const daysSet=[...new Set(all.map(i=>new Date(PCS.ts[i]).toLocaleDateString("sv")))];
-  if(pDay && !daysSet.includes(pDay)) pDay=null;
-  if(!pDay && daysSet.length) pDay=daysSet[daysSet.length-1];
-  dz.innerHTML=""; daysSet.forEach(d=>{const b=document.createElement("button"); b.type="button"; b.textContent=["dom","lun","mar","mer","gio","ven","sab"][new Date(d+"T12:00").getDay()]+" "+dIt(d).slice(0,5); b.setAttribute("aria-pressed",d===pDay); b.onclick=()=>{pDay=d;pZoom=null;drawPieces();}; dz.appendChild(b);});
-  const ctx=cv.getContext("2d"), dpr=window.devicePixelRatio||1, W=cv.clientWidth, H=260;
-  cv.width=W*dpr; cv.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,W,H);
-  cl.innerHTML="";
-  if(!pDay){ hint.textContent="Nessuna lettura singola per questo prodotto nel periodo scelto: i log di sistema coprono solo alcuni giorni da fine agosto 2026."; cv._state=null; return; }
-  let a=toMs(pDay+" 00:00:00"), b=a+864e5;
-  let idx=all.filter(i=>PCS.ts[i]>=a&&PCS.ts[i]<b);
-  if(!pZoom){ a=PCS.ts[idx[0]]-6e5; b=PCS.ts[idx[idx.length-1]]+6e5; } else { a=pZoom[0]; b=pZoom[1]; idx=idx.filter(i=>PCS.ts[i]>=a&&PCS.ts[i]<b); }
-  const css=getComputedStyle(document.documentElement), C=n=>css.getPropertyValue(n).trim();
-  const L=40,Rr=12,T=8, stripY=T, stripH=46, gy=stripH+T+18, gh=H-gy-26;
-  const x=ms=>L+(ms-a)/(b-a)*(W-L-Rr), yv=v=>gy+gh*(1-v/100);
-  // ejector-off bands from counters
-  ctx.save();
-  ivMs.filter(v=>v[1]>a&&v[0]<b&&v[3]>=5).forEach(v=>{ const n0=lowerBound(PCS.ts,v[0]), n1=lowerBound(PCS.ts,v[1]); let e=0,n=0; for(let i=n0;i<n1;i++){n++;e+=PCS.ej[i];}
-    if(n>0 && e < 0.3*v[3]){ const xa=Math.max(L,x(v[0])), xb=Math.min(W-Rr,x(v[1])); ctx.fillStyle=C("--muted"); ctx.globalAlpha=.16; ctx.fillRect(xa,T,xb-xa,H-T-26); ctx.globalAlpha=.5;
-      ctx.strokeStyle=C("--muted"); ctx.lineWidth=1; for(let k=xa-200;k<xb;k+=7){ctx.beginPath();ctx.moveTo(Math.max(xa,k),Math.min(H-26, T+(Math.max(xa,k)-k)));ctx.lineTo(Math.min(xb,k+(H-26-T)),T+Math.min(xb,k+(H-26-T))-k);ctx.stroke();}
-      ctx.globalAlpha=1; ctx.fillStyle=C("--bad"); const yy=yv(Math.min(100,v[3]/v[2]*100)); ctx.fillRect(xa,yy-1,xb-xa,2.5); }});
-  ctx.restore();
-  // grid
-  ctx.font="10.5px "+C("--f-mono"); ctx.fillStyle=C("--muted"); ctx.strokeStyle=C("--line"); ctx.lineWidth=1;
-  [0,50,100].forEach(g=>{ctx.beginPath();ctx.moveTo(L,yv(g));ctx.lineTo(W-Rr,yv(g));ctx.stroke(); ctx.textAlign="right"; ctx.fillText(g+"%",L-6,yv(g)+3.5);});
-  ctx.textAlign="right"; ctx.fillText("pezzi",L-6,stripY+stripH/2+3);
-  const span=b-a, stepH=span>8*36e5?2:span>3*36e5?1:span>36e5?0.25:span>12e5?1/12:1/60;
-  ctx.textAlign="center";
-  for(let tt=Math.ceil(a/(stepH*36e5))*stepH*36e5; tt<b; tt+=stepH*36e5){const xx=x(tt); ctx.beginPath();ctx.moveTo(xx,H-26);ctx.lineTo(xx,H-22);ctx.stroke(); ctx.fillText(new Date(tt).toTimeString().slice(0,5),xx,H-10);}
-  // ticks
-  ctx.fillStyle=C("--muted"); ctx.globalAlpha=.35; idx.forEach(i=>{ if(!PCS.ej[i]) ctx.fillRect(x(PCS.ts[i]),stripY+stripH*0.45,1,stripH*0.55); });
-  ctx.globalAlpha=1; ctx.fillStyle=C("--bad"); idx.forEach(i=>{ if(PCS.ej[i]) ctx.fillRect(x(PCS.ts[i])-0.5,stripY,1.6,stripH); });
-  // rolling 50
-  const N=50, roll=[]; let s=0; ctx.beginPath(); ctx.strokeStyle=C("--fg"); ctx.lineWidth=1.6;
-  let gapPrev=null;
-  idx.forEach((i,k)=>{ s+=PCS.ej[i]; if(k>=N) s-=PCS.ej[idx[k-N]]; const v=s/Math.min(k+1,N)*100; roll.push(v);
-    const xx=x(PCS.ts[i]), yy=yv(v); const gap=gapPrev!==null && PCS.ts[i]-gapPrev>3e5; if(k===0||gap) ctx.moveTo(xx,yy); else ctx.lineTo(xx,yy); gapPrev=PCS.ts[i]; });
-  ctx.stroke();
-  // clusters: windows of 20 with >=10 ejected
-  const W20=20, cls=[]; let e=0;
-  for(let k=0;k<idx.length;k++){ e+=PCS.ej[idx[k]]; if(k>=W20) e-=PCS.ej[idx[k-W20]];
-    if(k>=W20-1 && e>=10){ const st=k-W20+1; const last=cls[cls.length-1]; if(last && st<=last.e+5) last.e=k; else cls.push({s:st,e:k}); } }
-  cls.forEach(c=>{ let n=c.e-c.s+1, ej=0; for(let k=c.s;k<=c.e;k++) ej+=PCS.ej[idx[k]]; c.n=n; c.ej=ej; c.t0=PCS.ts[idx[c.s]]; c.t1=PCS.ts[idx[c.e]]; });
-  ctx.fillStyle=C("--bad"); ctx.globalAlpha=.12; cls.forEach(c=>ctx.fillRect(x(c.t0),gy,Math.max(2,x(c.t1)-x(c.t0)),gh)); ctx.globalAlpha=1;
-  const tot=idx.length, ejt=idx.reduce((q,i)=>q+PCS.ej[i],0);
-  hint.textContent = `${fmt(tot)} pezzi letti, ${fmt(ejt)} espulsi (${pf(pct(ejt,tot))}). `+(pZoom?"Doppio clic sul grafico per tornare alla giornata intera. ":"Trascina sul grafico per ingrandire un tratto. ")+(cls.length?`Trovate ${cls.length} concentrazioni di scarti (almeno 10 espulsi su 20 pezzi di fila):`:"Nessuna concentrazione di scarti tra i pezzi registrati.");
-  if(cls.length){ const g=document.createElement("div"); g.className="cl";
-    cls.sort((p,q)=>q.ej-p.ej).slice(0,12).sort((p,q)=>p.t0-q.t0).forEach(c=>{ const bt=document.createElement("button"); bt.type="button";
-      const d0=new Date(c.t0), d1=new Date(c.t1), mins=Math.max(1,Math.round((c.t1-c.t0)/6e4));
-      bt.innerHTML=`<b>${d0.toTimeString().slice(0,5)}–${d1.toTimeString().slice(0,5)}</b> · ${fmt(c.ej)} espulsi su ${fmt(c.n)}<span>${pf(pct(c.ej,c.n))} in ${mins} min, clicca per ingrandire</span>`;
-      bt.onclick=()=>{ const pad=Math.max(3e5,(c.t1-c.t0)*0.5); pZoom=[c.t0-pad,c.t1+pad]; drawPieces(); cv.scrollIntoView({block:"center",behavior:"smooth"}); };
-      g.appendChild(bt); });
-    if(cls.length>12){const m=document.createElement("p"); m.className="hint"; m.textContent=`Mostrate le 12 più grandi su ${cls.length}.`; cl.appendChild(m);}
-    cl.prepend(g); }
-  cv._state={a,b,idx,roll,L,Rr,W,x};
-}
-(function(){ const cv=document.getElementById("a-pcs"); let drag=null;
-  cv.addEventListener("mousedown",e=>{ if(!cv._state)return; drag=e.offsetX; });
-  cv.addEventListener("mouseup",e=>{ if(!cv._state||drag===null)return; const s=cv._state, x0=Math.min(drag,e.offsetX), x1=Math.max(drag,e.offsetX); drag=null;
-    if(x1-x0>8){ const f=v=>s.a+(v-s.L)/(s.W-s.L-s.Rr)*(s.b-s.a); pZoom=[f(x0),f(x1)]; drawPieces(); }});
-  cv.addEventListener("dblclick",()=>{pZoom=null;drawPieces();});
-  cv.addEventListener("mousemove",e=>{ const s=cv._state; if(!s||!s.idx.length){hideTip();return;} const ms=s.a+(e.offsetX-s.L)/(s.W-s.L-s.Rr)*(s.b-s.a);
-    let lo=0,hi=s.idx.length-1; while(lo<hi){const m=(lo+hi)>>1; if(PCS.ts[s.idx[m]]<ms)lo=m+1; else hi=m;} const k=lo, i=s.idx[k];
-    if(Math.abs(s.x(PCS.ts[i])-e.offsetX)>12){hideTip();return;}
-    const d=new Date(PCS.ts[i]); const tip=document.getElementById("tip");
-    tip.innerHTML=`<b>${d.toLocaleTimeString("it-IT")}</b><div class="r"><span>Esito</span><span>${PCS.ej[i]?"espulso":"accettato"}</span></div><div class="r"><span>% espulsi ultimi 50</span><span>${pf(s.roll[k])}</span></div>`;
-    tip.hidden=false; tip.style.left=Math.min(e.clientX+14,innerWidth-tip.offsetWidth-8)+"px"; tip.style.top=(e.clientY+14)+"px"; });
-  cv.addEventListener("mouseleave",()=>{hideTip();});
-})();
-
-function renderAll(){ renderList(); renderDetail(); drawTimeline(); drawPieces(); }
-function setRange(a,b){
-  if(a>b){const t=a;a=b;b=t;}
-  dFrom=a; dTo=b; const fi=document.getElementById("a-dFrom"), ti=document.getElementById("a-dTo");
-  fi.value=a; ti.value=b; fi.min=ti.min=FIRST||""; fi.max=ti.max=LAST||"";
-  const preset = b===LAST ? (a===addDays(LAST,-6)?"7":a===addDays(LAST,-29)?"30":a===FIRST?"all":"") : "";
-  document.querySelectorAll("#v-andamento .aseg button").forEach(x=>x.setAttribute("aria-pressed", x.dataset.p===preset));
-  save(); renderAll();
-}
-document.querySelectorAll("#v-andamento .aseg button").forEach(b=>b.onclick=()=>{const p=b.dataset.p; setRange(p==="all"?FIRST:addDays(LAST,-(+p-1)), LAST);});
-document.getElementById("a-dFrom").onchange=e=>{ if(e.target.value) setRange(e.target.value,dTo); };
-document.getElementById("a-dTo").onchange=e=>{ if(e.target.value) setRange(dFrom,e.target.value); };
-document.getElementById("a-hideTest").onchange=renderAll;
-let rt; addEventListener("resize",()=>{ if($("v-andamento").hidden) return; clearTimeout(rt);rt=setTimeout(()=>{renderDetail();drawTimeline();drawPieces();},150);});
-let dirty=true;
-function refresh(){ dirty=true; if(!$("v-andamento").hidden) show(); }
-function show(){ if(dirty){ build(); dirty=false; }
-  if(!LAST){ $("a-rows").innerHTML='<p style="padding:14px;color:var(--muted)">Nessun dato. Trascina in alto la cartella copiata dal PC della visione.</p>'; return; }
-  if(!dFrom||!dTo||dTo>LAST||dFrom<FIRST){ dTo=LAST; dFrom=addDays(LAST,-6); if(dFrom<FIRST) dFrom=FIRST; }
-  setRange(dFrom,dTo); }
-return {refresh, show};
-})();
-window.__and=ANDAMENTO;
 
 /* ---------- guida al primo accesso (una volta per PC/browser) ---------- */
 const GKEY="smi-validazione-guida-vista";
@@ -1766,8 +1355,7 @@ const GUIDE=[
    <li><b>Prodotti</b>: lo stato di ogni ricetta (da provare, in prova, validato, da rifare) e i valori di sensibilità.</li>
    <li><b>Nuova prova</b>: la checklist da compilare a fine produzione.</li>
    <li><b>Storico</b>: tutte le prove fatte, da riaprire o esportare in Excel.</li>
-   <li><b>Andamento scarti</b>: scarti per prodotto giorno per giorno, il prodotto in lavorazione nel tempo e le letture cassetta per cassetta.</li>
-   <li><b>Efficienza e fermi</b>: efficienza della linea rispetto alle 24 cassette al minuto, durata e cause delle fermate.</li>
+   <li><b>Andamento linea</b>: in un solo grafico prodotto in lavorazione, efficienza rispetto alle 24 cassette al minuto, fermate e scarto; con lo zoom si arriva alla singola cassetta.</li>
    <li><b>Criteri e sensore</b>: le soglie di accettazione e lo stato del sensore.</li></ul></div>
 `},
  {t:"Prima di iniziare",s:"Da fare una volta sola",h:`<ol>
