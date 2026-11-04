@@ -43,7 +43,8 @@ su Supabase (server in Europa, Francoforte; Supabase fornisce il DPA).
 ----------------------------------
  Accedi al sito come amministratore, apri "Efficienza e fermi" e trascina
  nel riquadro la cartella completa del PC della visione (quella dello zip
- "Nuova cartella"). Le letture da agosto vengono salvate nel database.
+ "Nuova cartella"). Le letture da agosto vengono salvate nel database e
+ servono sia a "Efficienza e fermi" sia ad "Andamento scarti".
  Poi, ogni volta, basta la cartella creata da Copia_file_SMI.bat.
 
 DA SAPERE
