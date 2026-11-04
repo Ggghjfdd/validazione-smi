@@ -162,7 +162,7 @@ tr.mism td{background:color-mix(in srgb,var(--bad) 7%,transparent)}
 .casum b{font-family:var(--f-mono);font-weight:500;font-size:20px;color:var(--cc)}
 .casum small{font-size:12px;color:var(--muted)}
 .warnline{grid-column:1/-1;margin:0;color:var(--warn);font-size:13px;font-weight:600}
-table.et{min-width:1100px}
+table.et{min-width:1180px}
 table.et th:nth-child(2),table.et td:nth-child(2),table.et th:nth-child(3),table.et td:nth-child(3){text-align:right}
 table.et th:first-child,table.et td:first-child{text-align:left}
 #eStops td:nth-child(4),#eStops td:nth-child(6),#eDays td:nth-child(2){text-align:left;white-space:normal}
@@ -494,12 +494,12 @@ tr.click:hover td{background:var(--field)}
 
     <div class="panel tbl" style="margin-top:14px">
       <h3>Giorno per giorno</h3>
-      <div class="tscroll"><table class="et"><thead><tr><th>Giorno</th><th>Prodotti</th><th>Cassette</th><th>Efficienza</th><th>Disponibilità</th><th>Scarto</th><th>Amido</th><th>Residui</th><th>Espulsi</th><th>Fermate</th><th>Tempo fermo</th><th>Fermata più lunga</th><th>Microfermate</th></tr></thead><tbody id="eDays"></tbody></table></div>
+      <div class="tscroll"><table class="et"><thead><tr><th>Giorno</th><th>Prodotti</th><th>Cassette prodotte</th><th>Lette dal log</th><th>Efficienza</th><th>Disponibilità</th><th>Scarto</th><th>Amido</th><th>Residui</th><th>Espulsi</th><th>Fermate</th><th>Tempo fermo</th><th>Fermata più lunga</th><th>Microfermate</th></tr></thead><tbody id="eDays"></tbody></table></div>
     </div>
 
     <div class="panel tbl" style="margin-top:14px">
       <h3>Per prodotto</h3>
-      <div class="tscroll"><table class="et"><thead><tr><th>Prodotto</th><th></th><th>Cassette</th><th>Efficienza</th><th>Disponibilità</th><th>Scarto</th><th>Amido</th><th>Residui</th><th>Espulsi</th><th>Fermate</th><th>Tempo fermo</th><th>Fermata più lunga</th><th>Microfermate</th></tr></thead><tbody id="eProds"></tbody></table></div>
+      <div class="tscroll"><table class="et"><thead><tr><th>Prodotto</th><th></th><th>Cassette prodotte</th><th>Lette dal log</th><th>Efficienza</th><th>Disponibilità</th><th>Scarto</th><th>Amido</th><th>Residui</th><th>Espulsi</th><th>Fermate</th><th>Tempo fermo</th><th>Fermata più lunga</th><th>Microfermate</th></tr></thead><tbody id="eProds"></tbody></table></div>
     </div>
 
     <div class="panel tbl" style="margin-top:14px">
@@ -1062,7 +1062,10 @@ function effRebuild(){
   mk.forEach(k=>{ const v=months[k]; EF.segs.push(...(v.segs||[])); EF.intervals.push(...(v.intervals||[])); EF.events.push(...(v.events||[])); });
   EF.segs.sort((a,b)=>a[0].localeCompare(b[0])); EF.intervals.sort((a,b)=>a[0].localeCompare(b[0])); EF.events.sort((a,b)=>a[0].localeCompare(b[0]));
   const ivDays=EF.intervals.map(v=>v[0].slice(0,10)); if(ivDays.length){ const lo=ivDays[0], hi=ivDays[ivDays.length-1]; if(!EF.firstDay||lo<EF.firstDay) EF.firstDay=lo; if(!EF.lastDay||hi>EF.lastDay) EF.lastDay=hi; }
-  EF.segMs=EF.segs.map(s=>tsMs(s[0])); EF.ivMs=EF.intervals.map(v=>[tsMs(v[0]),tsMs(v[1]),v[2],v[3]]); EF.evMs=EF.events.map(e=>[tsMs(e[0]),e[1],e[2]]);
+  EF.segMs=EF.segs.map(s=>tsMs(s[0])); EF.ivMs=EF.intervals.map(v=>[tsMs(v[0]),tsMs(v[1]),v[2],v[3]]);
+  EF.ivProd=EF.ivMs.map(v=>{ let j=lbound(EF.segMs,v[0]+1)-1, best=j>=0?EF.segs[j][1]:"?", bo=-1; if(j<0) j=0;
+    for(; j<EF.segs.length && EF.segMs[j]<v[1]; j++){ const a=Math.max(v[0],EF.segMs[j]), b=Math.min(v[1], j+1<EF.segs.length?EF.segMs[j+1]:Infinity); if(b-a>bo){ bo=b-a; best=EF.segs[j][1]; } }
+    return best; }); EF.evMs=EF.events.map(e=>[tsMs(e[0]),e[1],e[2]]);
   // prodotto di ogni cassetta
   const names=[], idx={}; const pid=p=>{ const k=(p||"?"); if(!(k.toLowerCase() in idx)){ idx[k.toLowerCase()]=names.length; names.push(k); } return idx[k.toLowerCase()]; };
   const pr=new Int16Array(n); let j=-1;
@@ -1118,7 +1121,7 @@ function effCompute(A,B,prodName){
   }
   // qualità dai contatori
   for(let q=0;q<EF.intervals.length;q++){ const m=EF.ivMs[q], v=EF.intervals[q]; if(m[1]<=A) continue; if(m[0]>=B) break;
-    const j=lbound(EF.segMs,m[0]+1)-1; const pn=j>=0?EF.segs[j][1]:"?"; if(fp>=0 && pn.toLowerCase()!==prodName.toLowerCase()) continue;
+    const pn=EF.ivProd[q]||"?"; if(fp>=0 && pn.toLowerCase()!==prodName.toLowerCase()) continue;
     const pk=EF.prods.find(x=>x.toLowerCase()===pn.toLowerCase())||pn;
     const D=add(byDay,v[0].slice(0,10)), P=add(byProd,pk);
     [tot,D,P].forEach(o=>{ o.cT+=v[2]; o.cR+=v[3]; o.cSt+=v[5]; o.cRe+=v[6]; o.prods.add(pk); }); }
@@ -1145,7 +1148,8 @@ function renderEff(){
   const oee=(avail!=null&&perf!=null&&qual!=null)?avail*perf*qual/10000:null;
   const tile=(lab,val,sub,col)=>`<div class="kt" style="--sc:${col}"><b>${val}</b><span>${lab}</span>${sub?`<small>${sub}</small>`:""}</div>`;
   $("eKpi").innerHTML = (t.n||R.cT) ? [
-    tile("Efficienza",pf(eff),`${fmt(t.n)} cassette su ${fmt(Math.round(theo))} teoriche`,eff>=85?"var(--good)":eff>=65?"var(--warn)":"var(--bad)"),
+    tile("Cassette prodotte",R.cT?fmt(R.cT):"–",R.cT?(t.n&&t.n<R.cT*0.9?`${fmt(t.n)} lette dai log di sistema: l'efficienza vale solo per quelle`:"dai contatori della visione"):"contatori non disponibili","var(--c1)"),
+    tile("Efficienza",t.n?pf(eff):"–",t.n?`${fmt(t.n)} cassette lette su ${fmt(Math.round(theo))} teoriche`:"servono i log di sistema",eff>=85?"var(--good)":eff>=65?"var(--warn)":"var(--bad)"),
     tile("Disponibilità",pf(avail),"tempo senza fermate","var(--c2)"),
     tile("Prestazioni",pf(perf),"ritmo quando gira, microfermate incluse","var(--c3)"),
     tile("Scarto segnalato",R.cT?pf(R.cR/R.cT*100):"–",R.cT?`amido ${pf(t.cSt/R.cT*100)} · residui ${pf(t.cRe/R.cT*100)} su ${fmt(R.cT)} cassette contate`:"contatori non disponibili",R.cT&&R.cR/R.cT<0.1?"var(--good)":R.cT&&R.cR/R.cT<0.25?"var(--warn)":"var(--bad)"),
@@ -1169,11 +1173,11 @@ function renderEff(){
   const scPill=v=> v==null?"–":`<span class="pill ${v<10?"s-ok":v<25?"s-wip":"s-ko"}">${pf(v)}</span>`;
   const rowOf=(name,o,extra)=>{ const T=o.T, e=T?o.n*c/T*100:null, av=T?(T-o.stopT)/T*100:null, sc=o.cT?o.cR/o.cT*100:null;
     const ejw = o.n && sc!=null && o.ej/o.n*100 < sc*0.3 && sc>5;
-    return `<tr><td class="t">${name}</td><td class="t muted">${extra}</td><td>${o.n?fmt(o.n):"–"}</td><td>${effPill(e)}</td><td>${T?pf(av):"–"}</td><td>${scPill(sc)}</td><td>${o.cT?pf(o.cSt/o.cT*100):"–"}</td><td>${o.cT?pf(o.cRe/o.cT*100):"–"}</td><td${ejw?' title="Molti meno espulsi che scarti: espulsore probabilmente disattivato" style="color:var(--warn);font-weight:600"':""}>${o.n?pf(o.ej/o.n*100):"–"}</td><td>${T?fmt(o.stopN):"–"}</td><td>${T?fdur(o.stopT):"–"}</td><td>${o.maxStop?fdur(o.maxStop):"–"}</td><td>${T?fmt(o.microN)+" · "+fdur(o.microT):"–"}</td></tr>`; };
+    return `<tr><td class="t">${name}</td><td class="t muted">${extra}</td><td>${o.cT?fmt(o.cT):"–"}</td><td>${o.n?fmt(o.n):'<span class="muted" title="Mancano i log di sistema: efficienza non calcolabile">–</span>'}</td><td>${effPill(e)}</td><td>${T?pf(av):"–"}</td><td>${scPill(sc)}</td><td>${o.cT?pf(o.cSt/o.cT*100):"–"}</td><td>${o.cT?pf(o.cRe/o.cT*100):"–"}</td><td${ejw?' title="Molti meno espulsi che scarti: espulsore probabilmente disattivato" style="color:var(--warn);font-weight:600"':""}>${o.n?pf(o.ej/o.n*100):"–"}</td><td>${T?fmt(o.stopN):"–"}</td><td>${T?fdur(o.stopT):"–"}</td><td>${o.maxStop?fdur(o.maxStop):"–"}</td><td>${T?fmt(o.microN)+" · "+fdur(o.microT):"–"}</td></tr>`; };
   const dk=Object.keys(R.byDay).sort().reverse();
-  $("eDays").innerHTML = dk.length ? dk.map(d=>{ const day=["dom","lun","mar","mer","gio","ven","sab"][new Date(d+"T12:00").getDay()]; return rowOf(day+" "+dIt(d),R.byDay[d],esc([...R.byDay[d].prods].join(", "))).replace("<tr>",`<tr class="click" data-day="${d}" tabindex="0" title="Mostra questo giorno nel grafico">`); }).join("") : '<tr><td colspan="13" class="empty t">Nessun dato nel periodo.</td></tr>';
+  $("eDays").innerHTML = dk.length ? dk.map(d=>{ const day=["dom","lun","mar","mer","gio","ven","sab"][new Date(d+"T12:00").getDay()]; return rowOf(day+" "+dIt(d),R.byDay[d],esc([...R.byDay[d].prods].join(", "))).replace("<tr>",`<tr class="click" data-day="${d}" tabindex="0" title="Mostra questo giorno nel grafico">`); }).join("") : '<tr><td colspan="14" class="empty t">Nessun dato nel periodo.</td></tr>';
   const pk=Object.keys(R.byProd).filter(p=>p!=="?").sort((a,b)=>(R.byProd[b].cT||R.byProd[b].n)-(R.byProd[a].cT||R.byProd[a].n));
-  $("eProds").innerHTML = pk.length ? pk.map(p=>rowOf(esc(p),R.byProd[p],"")).join("") : '<tr><td colspan="13" class="empty t">Nessun dato nel periodo.</td></tr>';
+  $("eProds").innerHTML = pk.length ? pk.map(p=>rowOf(esc(p),R.byProd[p],"")).join("") : '<tr><td colspan="14" class="empty t">Nessun dato nel periodo.</td></tr>';
   // elenco fermate
   const ord=$("e-sort").value, list=R.stops.slice().sort(ord==="dur"?(a,b)=>b.g-a.g:(a,b)=>a.a-b.a);
   const show=EF.showAll?list:list.slice(0,40);
@@ -1238,7 +1242,7 @@ function drawEffTimeline(A,B,R){
     ctx.fillStyle=C("--bad"); ctx.globalAlpha=.13; clusters.forEach(cl=>ctx.fillRect(x(cl.t0),yB,Math.max(3,x(cl.t1)-x(cl.t0)),hB)); ctx.globalAlpha=1; }
   const pnF=$("e-prod").value.toLowerCase(); ctx.strokeStyle=C("--bad"); ctx.lineWidth=2.2; ctx.lineCap="round"; ctx.beginPath();
   for(let q=0;q<EF.intervals.length;q++){ const mm=EF.ivMs[q], v=EF.intervals[q]; if(mm[1]<=vA) continue; if(mm[0]>=vB) break; if(v[2]<5) continue;
-    if(pnF){ const j=lbound(EF.segMs,mm[0]+1)-1; if(j<0||EF.segs[j][1].toLowerCase()!==pnF) continue; }
+    if(pnF && String(EF.ivProd[q]).toLowerCase()!==pnF) continue;
     const yy=yB+hB*(1-Math.min(100,v[3]/v[2]*100)/100); ctx.moveTo(x(Math.max(vA,mm[0])),yy); ctx.lineTo(x(Math.min(vB,mm[1])),yy); }
   ctx.stroke(); ctx.restore();
   // griglia e assi
@@ -1260,7 +1264,7 @@ function drawEffTimeline(A,B,R){
   let n=0; for(let i=lo;i<hi;i++){ if(fp<0||EF.pr[i]===fp) n++; }
   let plan=0, stopT=0, stopN=0, microN=0; R.states.forEach(s=>{ const ov=Math.min(vB,s.b)-Math.max(vA,s.a); if(ov<=0) return; if(s.k==="run") plan+=ov; if(s.k==="stop"){ stopT+=ov; stopN++; } if(s.k==="micro") microN++; });
   const c=60000/rate; let cT=0,cR=0,ejN=0; for(let i=lo;i<hi;i++){ if(fp<0||EF.pr[i]===fp) ejN+=EF.ej[i]; }
-  for(let q=0;q<EF.intervals.length;q++){ const mm=EF.ivMs[q], v=EF.intervals[q]; if(mm[1]<=vA) continue; if(mm[0]>=vB) break; if(pnF){ const j=lbound(EF.segMs,mm[0]+1)-1; if(j<0||EF.segs[j][1].toLowerCase()!==pnF) continue; } const ov=(Math.min(vB,mm[1])-Math.max(vA,mm[0]))/Math.max(1,mm[1]-mm[0]); cT+=v[2]*ov; cR+=v[3]*ov; }
+  for(let q=0;q<EF.intervals.length;q++){ const mm=EF.ivMs[q], v=EF.intervals[q]; if(mm[1]<=vA) continue; if(mm[0]>=vB) break; if(pnF && String(EF.ivProd[q]).toLowerCase()!==pnF) continue; const ov=(Math.min(vB,mm[1])-Math.max(vA,mm[0]))/Math.max(1,mm[1]-mm[0]); cT+=v[2]*ov; cR+=v[3]*ov; }
   $("eWin").innerHTML = `<span>Nel tratto visibile:</span><span><b>${fmt(n)}</b> cassette lette</span><span>efficienza <b>${plan?pf(n*c/plan*100):"–"}</b></span><span>scarto <b>${cT>=1?pf(cR/cT*100):"–"}</b></span><span>espulse <b>${fmt(ejN)}</b></span><span><b>${fmt(stopN)}</b> fermate per <b>${fdur(stopT)}</b></span><span><b>${fmt(microN)}</b> microfermate</span>`;
   const cb=$("eClusters"); cb.innerHTML="";
   if(clusters.length){ const tm=ms=>new Date(ms).toTimeString().slice(0,5);
