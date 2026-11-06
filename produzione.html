@@ -428,6 +428,8 @@ select option{background:#16213f;color:#f3f5fb}
 .nc-gestione:hover{background:#fff;color:#141826}
 .nc-gestione svg{width:15px;height:15px}
 
+.nc-info{position:fixed;right:38px;bottom:14px;z-index:101;font-size:11.5px;color:#7a8090;max-width:60vw;text-align:right}
+
 </style>
 </head>
 <body>
@@ -773,7 +775,7 @@ const CONFIG = {
   SUPABASE_URL: 'https://sszxyritwrkxaictcaaa.supabase.co',
   SUPABASE_KEY: 'sb_publishable_HkYiyUEqlWXJo_CDyD9Eqw_k8-4cY-3',
   NOME_LINEA: 'Linea NID 1',
-  VERSIONE: 'v11 · 6 nov 16:05',
+  VERSIONE: 'v12 · 6 nov 16:15',
 };
 const S = {
   modo: null,             // 'demo' | 'remoto' | 'file' | 'lettore'
@@ -1625,7 +1627,7 @@ window.addEventListener('hashchange', render);
 function sb() {
   if (S.sb) return S.sb;
   if (!window.supabase?.createClient) return null;
-  S.sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
+  S.sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true, lock: async (_n, _t, fn) => await fn() } });
   return S.sb;
 }
 async function utenteCorrente() { const c = sb(); if (!c) return null; const { data } = await c.auth.getSession(); S.utente = data.session?.user || null; return S.utente; }
@@ -1809,7 +1811,7 @@ function vistaNonChiudere() {
       <div class="nc-sub">this page</div>
     </div>
     ${BTN_GESTIONE}
-    <span class="nc-dot ${statoInvio()}" id="ncDot" title="Stato invio dati"></span>
+    <span class="nc-info" id="ncInfo">${esc(infoInvio())}</span><span class="nc-dot ${statoInvio()}" id="ncDot" title="Stato invio dati"></span>
   </div>`;
 }
 function vistaRiavvia() {
@@ -1832,7 +1834,25 @@ function vistaSostituito() {
 }
 function statoInvio() { return L.ultimoOk && Date.now() - L.ultimoOk < Math.max(30e3, L.intervallo * 3000 + 15e3) ? 'ok' : L.ultimoErrore ? 'ko' : ''; }
 function collegaNonChiudere() { $('#btnGestione').onclick = chiediPassword; }
-setInterval(() => { const d = $('#ncDot'); if (d) d.className = 'nc-dot ' + statoInvio(); }, 3000);
+setInterval(() => {
+  const d = $('#ncDot'); if (d) d.className = 'nc-dot ' + statoInvio();
+  const t = $('#ncInfo'); if (t) t.textContent = infoInvio();
+}, 3000);
+function infoInvio() {
+  const ora = x => new Date(x).toLocaleTimeString('it-IT');
+  if (L.testoErrore) return `errore alle ${ora(L.ultimoErrore)}: ${L.testoErrore}`.slice(0, 120);
+  return L.ultimoOk ? `ultimo invio ${ora(L.ultimoOk)} · ${CONFIG.VERSIONE.split(' ')[0]}` : `in avvio… · ${CONFIG.VERSIONE.split(' ')[0]}`;
+}
+setInterval(() => {
+  if (!L.attivo) return;
+  // un giro bloccato da più di 90 s: lo sblocco
+  if (L.inCorso && L.inCorsoDa && Date.now() - L.inCorsoDa > 90e3) { log('Giro di lettura bloccato: lo sblocco'); L.inCorso = false; L.inCorsoDa = null; }
+  // niente invii riusciti da 3 minuti: ricarico la pagina (solo se Edge ridà il permesso da solo)
+  const rif0 = L.ultimoOk || L.avviatoDa || Date.now();
+  if (Date.now() - rif0 > 3 * 60e3 && localStorage.getItem('smi_perm_persistente') === '1' && !L.ricaricoAuto) {
+    log('Nessun invio riuscito da 3 minuti: ricarico la pagina'); L.ricaricoAuto = true; setTimeout(() => location.reload(), 1000);
+  }
+}, 30e3);
 window.addEventListener('beforeunload', e => { if (L.attivo && !L.ricaricoAuto) { e.preventDefault(); e.returnValue = ''; } });
 
 /* ---------- aggiornamento automatico del lettore ----------
@@ -1955,7 +1975,7 @@ async function avviaLettore() {
   if (nuovo || L.autorizzato) await rivendicaPc();
   else if (!(await sonoIlPcDellaLinea())) return;
   L.sostituito = null;
-  L.attivo = true; L.impostazioni = false; localStorage.setItem('smi_autostart', '1');
+  L.attivo = true; L.impostazioni = false; L.avviatoDa = Date.now(); localStorage.setItem('smi_autostart', '1');
   log('Lettore avviato');
   avviaTicker();
   try { await navigator.wakeLock?.request('screen'); } catch { }
@@ -1968,7 +1988,8 @@ async function avviaLettore() {
 }
 function fermaLettore() { L.attivo = false; localStorage.setItem('smi_autostart', '0'); L.ticker?.terminate(); L.ticker = null; log('Lettore fermato'); render(); }
 async function sonoIlPcDellaLinea() {
-  const { data, error } = await sb().from('smi_dati').select('dati').eq('id', 'pc_linea').maybeSingle();
+  let data, error;
+  try { ({ data, error } = await conTimeout(sb().from('smi_dati').select('dati').eq('id', 'pc_linea').maybeSingle(), 15000, 'controllo PC')); } catch { return true; }
   if (error || !data) return true; // nessun PC registrato o errore di rete: continuo
   if (data.dati?.pcId && data.dati.pcId !== L.config?.id) {
     L.attivo = false; L.ticker?.terminate(); L.ticker = null; localStorage.setItem('smi_autostart', '0');
@@ -1988,10 +2009,11 @@ async function reimpostaDaZero() {
   log('Configurazione cancellata'); render();
 }
 
+const conTimeout = (p, ms = 20000, cosa = 'richiesta') => Promise.race([p, new Promise((_, ko) => setTimeout(() => ko(new Error(`${cosa}: nessuna risposta dopo ${ms / 1000} s`)), ms))]);
 function fnv(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36) + ':' + s.length; }
 
 async function cicloLettore(comandoId) {
-  if (!L.attivo || L.inCorso) return; L.inCorso = true;
+  if (!L.attivo || L.inCorso) return; L.inCorso = true; L.inCorsoDa = Date.now();
   try {
     if (Date.now() - L.ultimoScan > 60000) await scansiona();
     const testi = { traces: [] }; let cambiato = false, righeAnalisi = null, modAnalisi = null;
@@ -2041,22 +2063,22 @@ async function cicloLettore(comandoId) {
     const daInviare = [];
     for (const [id, dati] of righe) { const s = JSON.stringify(dati); const h = fnv(s); if (L.ultimoInvio[id] !== h) daInviare.push({ id, dati, h }); }
     daInviare.push({ id: 'vivo', dati: vivo });
-    const { error } = await sb().from('smi_dati').upsert(daInviare.map(({ id, dati }) => ({ id, dati, aggiornato: new Date().toISOString() })));
-    if (error) { log('Errore invio: ' + error.message); L.ultimoErrore = Date.now(); return; }
-    L.ultimoOk = Date.now(); L.ultimoErrore = null;
+    const { error } = await conTimeout(sb().from('smi_dati').upsert(daInviare.map(({ id, dati }) => ({ id, dati, aggiornato: new Date().toISOString() }))), 45000, 'invio dati');
+    if (error) { log('Errore invio: ' + error.message); L.ultimoErrore = Date.now(); L.testoErrore = error.message; return; }
+    L.ultimoOk = Date.now(); L.ultimoErrore = null; L.testoErrore = null;
     for (const d of daInviare) if (d.h) L.ultimoInvio[d.id] = d.h;
     L.ciclo++;
     if (L.ciclo % Math.max(1, Math.round(30 / L.intervallo)) === 0 && !(await sonoIlPcDellaLinea())) return;
     if (daInviare.length > 1) log(`Inviato: ${daInviare.filter(d => d.h).map(d => d.id).join(', ')} + stato`);
     else if (L.ciclo % Math.max(1, Math.round(60 / L.intervallo)) === 0) log(`Tutto ok · ${extra ? n0(extra.cassette) + ' cassette dall\'ultimo contatore · ' + (extra.velocita1 != null ? n1(extra.velocita1) + '/min' : '') : 'nessun dato in diretta'}`);
-    if (comandoId) await sb().from('smi_comandi').update({ eseguito: new Date().toISOString() }).eq('id', comandoId);
+    if (comandoId) await conTimeout(sb().from('smi_comandi').update({ eseguito: new Date().toISOString() }).eq('id', comandoId), 15000, 'comandi');
     else {
-      const { data: pend } = await sb().from('smi_comandi').select('id').is('eseguito', null).limit(20);
-      if (pend?.length) await sb().from('smi_comandi').update({ eseguito: new Date().toISOString() }).in('id', pend.map(p => p.id));
+      const { data: pend } = await conTimeout(sb().from('smi_comandi').select('id').is('eseguito', null).limit(20), 15000, 'comandi');
+      if (pend?.length) await conTimeout(sb().from('smi_comandi').update({ eseguito: new Date().toISOString() }).in('id', pend.map(p => p.id)), 15000, 'comandi');
     }
     const el = $('#elencoFile'); if (el) el.innerHTML = elencoFileHtml();
-  } catch (e) { log('Errore: ' + e.message); }
-  finally { L.inCorso = false; }
+  } catch (e) { log('Errore: ' + e.message); L.ultimoErrore = Date.now(); L.testoErrore = e.message; }
+  finally { L.inCorso = false; L.inCorsoDa = null; }
 }
 
 /* ---------- avvio ---------- */
