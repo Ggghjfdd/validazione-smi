@@ -422,6 +422,8 @@ select option{background:#16213f;color:#f3f5fb}
 .t-oee small{font-size:11px;font-weight:500;color:var(--text-3)}
 .nuova-prod{border-color:rgba(250,178,25,.45)!important;cursor:default}
 
+.mn-ver{font-size:11px;color:var(--text-3);text-align:center;padding:8px 0 2px}
+
 </style>
 </head>
 <body>
@@ -767,6 +769,7 @@ const CONFIG = {
   SUPABASE_URL: 'https://sszxyritwrkxaictcaaa.supabase.co',
   SUPABASE_KEY: 'sb_publishable_HkYiyUEqlWXJo_CDyD9Eqw_k8-4cY-3',
   NOME_LINEA: 'Linea NID 1',
+  VERSIONE: 'v7 · 6 nov 13:55',
 };
 const S = {
   modo: null,             // 'demo' | 'remoto' | 'file' | 'lettore'
@@ -1545,6 +1548,7 @@ function header() {
         <button data-a="file" class="${location.hash === '#file' ? 'att' : ''}"><span class="mn-ico">${ICONE.file}</span><span class="mn-t"><b>Carica file a mano</b><span>Log dalla chiavetta</span></span></button>
         <button data-a="lettore" class="${location.hash === '#lettore' ? 'att' : ''}"><span class="mn-ico">${ICONE.pc}</span><span class="mn-t"><b>Lettore</b><span>Solo sul PC della linea</span></span></button>
         ${S.utente ? `<div class="mn-sep"></div><button data-a="esci" class="mn-esci"><span class="mn-ico">${ICONE.esci}</span><span class="mn-t"><b>Esci</b></span></button>` : ''}
+        <div class="mn-ver">Versione ${CONFIG.VERSIONE}</div>
       </div></div>
   </header>`;
 }
