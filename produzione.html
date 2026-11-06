@@ -383,6 +383,45 @@ select option{background:#16213f;color:#f3f5fb}
 .avviso-esp svg{width:18px;height:18px;flex:none;color:#fab219}
 .avviso-esp b{color:#fff3d6}
 
+/* menu ⋮ */
+.menu .lista{min-width:270px;padding:8px;border-radius:18px}
+.menu .lista button{gap:12px;padding:9px 10px;border-radius:12px}
+.menu .lista button.att{background:rgba(57,135,229,.16)}
+.mn-ico{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:rgba(255,255,255,.07);border:1px solid var(--line-soft);flex:none}
+.mn-ico svg{width:17px;height:17px;color:var(--text-2)}
+.menu .lista button.att .mn-ico{background:rgba(57,135,229,.25);border-color:rgba(57,135,229,.4)}
+.menu .lista button.att .mn-ico svg{color:#cfe2ff}
+.mn-t{display:flex;flex-direction:column;line-height:1.25}
+.mn-t b{font-size:14px;font-weight:600}
+.mn-t span{font-size:12px;color:var(--text-3)}
+.mn-utente{display:flex;gap:10px;align-items:center;padding:8px 10px 12px;margin-bottom:6px;border-bottom:1px solid var(--line-soft)}
+.mn-utente b{display:block;font-size:13.5px}
+.mn-utente span:not(.mn-avatar){font-size:12px;color:var(--text-3)}
+.mn-avatar{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:700;background:linear-gradient(135deg,#3987e5,#7a4be0);flex:none}
+.mn-sep{height:1px;background:var(--line-soft);margin:6px 4px}
+.menu .lista button.mn-esci .mn-t b{color:#ffb4ae}
+.menu .lista button.mn-esci .mn-ico svg{color:#ffb4ae}
+/* pulsante riavvio PC linea */
+.btn-riavvia{display:inline-flex;align-items:center;gap:18px;padding:22px 34px;border:0;border-radius:24px;cursor:pointer;color:#fff;font:inherit;background:linear-gradient(135deg,#1d9e3a,#0c7a2a);box-shadow:0 18px 40px -12px rgba(12,122,42,.6);text-align:left;animation:esp 1.6s ease-in-out infinite}
+.btn-riavvia svg{width:44px;height:44px}
+.btn-riavvia span{font-size:clamp(20px,3vw,30px);font-weight:800;letter-spacing:-.3px;line-height:1.1}
+.btn-riavvia small{display:block;font-size:.6em;font-weight:600;opacity:.85;margin-top:4px}
+.btn-riavvia:hover{filter:brightness(1.08)}
+.non-chiudere .nc-gear svg{width:18px;height:18px}
+
+/* cambi prodotto */
+.tempo-barra i.c{background:var(--warn);box-shadow:0 0 0 1px rgba(11,20,48,.6)}
+.stato-linea.cambio{background:linear-gradient(135deg,rgba(250,178,25,.24),rgba(250,178,25,.07));border-color:rgba(250,178,25,.5)}
+.stato-linea.cambio .ico{background:rgba(250,178,25,.3);color:#ffe9b8}
+.stato-linea.cambio b{color:#fff3d6}
+.cambio-pill{color:#ffe9b8;border-color:rgba(250,178,25,.45);background:rgba(250,178,25,.14)}
+.chip.giallo,.live-badge.giallo{color:#1a1200;background:#fab219;border-color:#ffd36b}
+.allarme.cambio .ora,.allarme.cambio b{color:#ffe2a6}
+.kpi-fermi{grid-template-columns:repeat(4,1fr)}
+@media(max-width:720px){.kpi-fermi{grid-template-columns:repeat(2,1fr)}}
+.t-oee small{font-size:11px;font-weight:500;color:var(--text-3)}
+.nuova-prod{border-color:rgba(250,178,25,.45)!important;cursor:default}
+
 </style>
 </head>
 <body>
@@ -485,7 +524,7 @@ const SMI = (() => {
     }
     if (inMarcia) intervalliMarcia.push([marciaDa, null]);
     chiudi();
-    return { runs, intervalliMarcia, cambiImpostazioni, fermi, storiaProdotti, stato: { prodotto, inMarcia, modo, ultimoTs, ultimiContatori: prev, ultimiContatoriTs: prevTs, espulsione, espulsioneDa, storiaEspulsione: storiaEspulsione.slice(-200) } };
+    return { runs, intervalliMarcia, cambiImpostazioni, fermi, storiaProdotti, stato: { prodotto, inMarcia, modo, ultimoTs, ultimiContatori: prev, ultimiContatoriTs: prevTs, espulsione, espulsioneDa, storiaEspulsione: storiaEspulsione.slice(-200), cambioProdottoTs: storiaProdotti.length ? storiaProdotti[storiaProdotti.length - 1][0] : null } };
   }
 
   function sovrapposizione(intervalli, a, b, fineAperta) {
@@ -653,6 +692,24 @@ const SMI = (() => {
     return out.sort((x, y) => x.da - y.da).map(f => ({ ...f, turno: turnoDi(f.da).key }));
   }
 
+  /* ---------- cambi prodotto ----------
+     dal momento in cui finisce il vecchio prodotto (ultima cassetta) alla prima cassetta del nuovo.
+     Se la pausa è più lunga di 4 h (linea spenta, weekend) il cambio parte dall'ora in cui è
+     stato scelto il nuovo prodotto; se anche quello è oltre le 4 h, non è un cambio "in turno". */
+  const MAX_PAUSA = 4 * 3600e3;
+  function calcolaCambi(produzioni, storiaProdotti) {
+    const ps = produzioni.filter(p => p.t >= 1), out = [];
+    for (let i = 1; i < ps.length; i++) {
+      const a = ps[i - 1], b = ps[i];
+      if (a.prodotto === b.prodotto) continue;
+      let ts = null; for (const [t, n] of storiaProdotti) if (n === b.prodotto && t >= a.inizio && t <= b.inizio + 60e3) ts = t;
+      let da = a.fine;
+      if (b.inizio - da > MAX_PAUSA) { if (ts && b.inizio - ts <= MAX_PAUSA) da = Math.min(ts, b.inizio); else continue; }
+      out.push({ da, a: Math.max(da, b.inizio), ts, dal: a.prodotto, al: b.prodotto, turno: turnoDi(da).key });
+    }
+    return out;
+  }
+
   /* ---------- modello completo ---------- */
   function costruisciModello(f) {
     // f = { eventLog, traces:[testo], errorLog, analysisIni, systemIni, giorniMinuti }
@@ -687,6 +744,7 @@ const SMI = (() => {
       minuti: minutiArr,
       allarmi,
       fermi,
+      cambi: calcolaCambi(produzioni, ev.storiaProdotti),
       parametri,
       prodotti: nomiTutti,
     };
@@ -696,7 +754,7 @@ const SMI = (() => {
   const pedane = n => Math.floor(n / CASSETTE_PER_PEDANA);
   const perc = (a, b) => b > 0 ? (100 * a / b) : 0;
 
-  return { calcolaFermi, CASSETTE_PER_PEDANA, VELOCITA_STD, TURNI, ms, fmtData, fmtOra, isoGiorno, adesso, turnoDi, parseEventLog, costruisciProduzioni, parseTrace, parseErrorLog, parseIni, parametriPerProdotto, costruisciModello, pedane, perc, traduci };
+  return { MAX_PAUSA, calcolaCambi, calcolaFermi, CASSETTE_PER_PEDANA, VELOCITA_STD, TURNI, ms, fmtData, fmtOra, isoGiorno, adesso, turnoDi, parseEventLog, costruisciProduzioni, parseTrace, parseErrorLog, parseIni, parametriPerProdotto, costruisciModello, pedane, perc, traduci };
 })();
 if (typeof module !== 'undefined') module.exports = SMI;
 
@@ -890,6 +948,8 @@ function statoLinea() {
   // in diretta, se il lettore non invia dati non possiamo sapere se la linea gira
   if (inDiretta() && !lettoreCollegato()) return { ignoto: true, da: S.aggiornatoVivo, inMarcia: !!st.inMarcia };
   const ult = inDiretta() ? S.vivo?.extra?.ultimaCassetta : null;
+  const cIn = cambioInCorso();
+  if (cIn?.inCorso) return { ferma: true, cambio: true, da: cIn.da, motivo: `cambio prodotto da ${cIn.dal} a ${cIn.al}`, c: cIn };
   if (!st.inMarcia) {
     const da = st.inMarciaDa?.[1] ?? st.ultimoTs;
     return { ferma: true, da, motivo: 'ispezione fermata', tipo: 'ispezione' };
@@ -904,7 +964,11 @@ function statoLinea() {
 const durataDa = ms => durata(Math.max(0, ms) / 60e3);
 function htmlStatoLinea() {
   const s = statoLinea(), ora = rif();
-  if (s.ignoto) return `<div class="stato-linea ignoto"><span class="ico">${ICONE.pc}</span><div><b>Stato non disponibile</b><span>Il lettore sul PC della linea non invia dati${s.da ? ' dalle ' + new Date(s.da).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : ''} · riattivalo per vedere se la linea è in marcia</span></div></div>`;
+  if (s.ignoto) return `<div class="stato-linea ignoto"><span class="ico">${ICONE.pc}</span><div><b>Non so se la linea è ferma: il lettore è spento</b><span>Nessun dato dal PC della linea${s.da ? ' dalle ' + new Date(s.da).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : ''}. Sul PC della linea clicca <b style="display:inline;font-size:inherit;color:var(--text-1)">"Clicca qui per riavviare"</b>.</span></div></div>`;
+  if (s.cambio) {
+    const dur = ora - s.da;
+    return `<div class="stato-linea cambio"><span class="ico">${ICONE.agg}</span><div><b>Cambio prodotto in corso${inDiretta() || dur >= 60e3 ? ' da ' + durataDa(dur) : ''}</b><span style="text-transform:none"><span style="text-transform:capitalize">${esc(s.c.dal)}</span> → <b style="display:inline;font-size:inherit;color:#fff3d6;text-transform:capitalize">${esc(s.c.al)}</b> · nuovo prodotto scelto alle ${SMI.fmtOra(s.c.ts)} · la produzione sta per ripartire</span></div></div>`;
+  }
   if (s.ferma) {
     const dur = ora - (s.da || ora);
     const testo = inDiretta() || dur >= 60e3 ? `Linea ferma da ${durataDa(dur)}` : `Linea ferma`;
@@ -929,20 +993,75 @@ function pillStatoLinea() {
   if (!S.modello?.stato) return '';
   const s = statoLinea(), ora = rif();
   if (s.ignoto) return `<span class="pill" title="Il lettore non invia dati"><span class="dot"></span>Stato sconosciuto</span>`;
+  if (s.cambio) return `<span class="pill cambio-pill" title="Cambio prodotto: ${esc(s.c.dal)} → ${esc(s.c.al)}"><span class="dot file"></span>Cambio prodotto${inDiretta() ? ' da ' + durataDa(ora - s.da) : ''}</span>`;
   return s.ferma ? `<span class="pill ferma-pill" title="${esc('Dalle ' + (s.da ? SMI.fmtOra(s.da) : '') + ' · ' + s.motivo)}"><span class="dot off"></span>Ferma${inDiretta() ? ' da ' + durataDa(ora - (s.da || ora)) : ''}</span>`
     : `<span class="pill"><span class="dot on"></span>In marcia</span>`;
 }
-// tutti i fermi, compreso quello in corso adesso
-function tuttiIFermi() {
+/* ---------- produzioni, cambi e finestre "programmate" ----------
+   Le ore senza nessuna produzione (linea spenta, weekend) NON contano né nei fermi né nell'OEE.
+   Contano: le produzioni, le pause tra una produzione e l'altra (se < 4 h) e i cambi prodotto. */
+const prodOrdinate = () => (S.modello?.produzioni || []).filter(p => p.t >= 1);
+function ultimaAttivita() {
+  const ps = prodOrdinate(); let t = ps.length ? ps[ps.length - 1].fine : 0;
+  if (inDiretta()) { const u = S.vivo?.extra?.ultimaCassetta; if (u) t = Math.max(t, u); if (S.vivo?.extra?.velocita1 > 0) t = Math.max(t, rif()); }
+  return t;
+}
+// cambio prodotto fatto dopo l'ultima produzione con cassette: la nuova produzione sta per partire
+function cambioInCorso() {
+  const st = S.modello?.stato; const ps = prodOrdinate(); const last = ps[ps.length - 1];
+  if (!st?.prodotto || !last || st.prodotto === last.prodotto || !st.cambioProdottoTs || st.cambioProdottoTs < last.inizio) return null;
+  const ex = inDiretta() ? S.vivo?.extra : null;
+  const partita = ex?.primaDa && ex.primaDa >= st.cambioProdottoTs - 60e3 && ex.cassette > 0 ? ex.primaDa : null;
+  let da = last.fine; if (st.cambioProdottoTs - da > SMI.MAX_PAUSA) da = st.cambioProdottoTs;
+  return { da, a: partita, ts: st.cambioProdottoTs, dal: last.prodotto, al: st.prodotto, inCorso: !partita, cassette: partita ? ex.cassette : 0 };
+}
+function tuttiICambi() {
+  const l = (S.modello?.cambi || []).map(c => ({ ...c }));
+  const c = cambioInCorso(); if (c) l.push({ ...c, a: c.a ?? null, turno: SMI.turnoDi(c.da).key });
+  return l;
+}
+const fineC = c => c.a ?? rif();
+function finestre() {
+  const ps = prodOrdinate(), out = [], r = rif();
+  ps.forEach((p, i) => {
+    let fine = p.fine; const nx = ps[i + 1];
+    if (nx && nx.inizio - p.fine <= SMI.MAX_PAUSA) fine = nx.inizio;
+    if (!nx) fine = Math.max(p.fine, Math.min(r, ultimaAttivita() + SMI.MAX_PAUSA));
+    out.push([p.inizio, fine]);
+  });
+  for (const c of tuttiICambi()) out.push([c.da, fineC(c)]);
+  return out;
+}
+const dentro = (t, F) => F.some(([a, b]) => t >= a && t < b);
+// fermi grezzi (dai log) + quello in corso adesso
+function fermiGrezzi() {
   const m = S.modello; const lista = (m?.fermi || []).map(f => ({ ...f }));
   const s = m?.stato ? statoLinea() : null;
-  if (s?.ferma && !s.ignoto && s.tipo === 'linea' && !lista.some(f => f.a == null)) lista.push({ da: s.da, a: null, tipo: 'linea', prodotto: m.stato.prodotto, turno: SMI.turnoDi(s.da).key });
+  if (s?.ferma && !s.ignoto && !s.cambio && s.tipo === 'linea' && !lista.some(f => f.a == null)) lista.push({ da: s.da, a: null, tipo: 'linea', prodotto: m.stato.prodotto });
   return lista;
+}
+// fermi tagliati sulle finestre programmate e senza la parte che è un cambio prodotto
+function tuttiIFermi() {
+  const F = finestre(), C = tuttiICambi().map(c => [c.da, fineC(c)]), r = rif(), out = [];
+  for (const f of fermiGrezzi()) {
+    const fine = f.a ?? r;
+    for (const [a, b] of F) {
+      let x = Math.max(f.da, a), y = Math.min(fine, b); if (y - x < 60e3) continue;
+      // togli la parte sovrapposta a un cambio prodotto
+      for (const [ca, cb] of C) { if (ca <= x && cb >= y) { x = y; break; } if (ca <= x && cb > x) x = cb; if (cb >= y && ca < y) y = ca; }
+      if (y - x < 60e3) continue;
+      out.push({ ...f, da: x, a: (f.a == null && y >= r - 1000) ? null : y, turno: SMI.turnoDi(x).key });
+    }
+  }
+  // tolgo i doppioni (stesso fermo in due finestre sovrapposte)
+  out.sort((p, q) => p.da - q.da);
+  return out.filter((f, i) => !i || f.da >= (out[i - 1].a ?? r));
 }
 const fineF = f => f.a ?? rif();
 function fineProd(p) {
-  const ultimaId = S.modello.produzioni.filter(x => x.t >= 1).slice(-1)[0]?.id;
-  return p.id === ultimaId && inDiretta() && S.modello.stato?.inMarcia ? Math.max(p.fine, rif()) : p.fine;
+  const ps = prodOrdinate(), i = ps.findIndex(x => x.id === p.id);
+  if (i === ps.length - 1 && !cambioInCorso()) return Math.max(p.fine, Math.min(rif(), ultimaAttivita()));
+  return p.fine;
 }
 function fermiDi(p) {
   const a = fineProd(p);
@@ -960,17 +1079,18 @@ function tabellaFermi(lista, { mostraProdotto = true } = {}) {
   <div class="nota"><b>Ispezione fermata</b>: l'operatore ha fermato l'ispezione (dal file event.log). <b>Nessuna cassetta</b>: ispezione attiva ma nessuna cassetta per almeno 2 minuti (dai file system_event_trace e, in diretta, da analysis_time.log). I riavvii più brevi di 1 minuto non sono contati.</div>`;
 }
 // barra del tempo: produzioni in blu, fermi in rosso
-function lineaTempo(da, a, produzioni, fermi) {
+function lineaTempo(da, a, produzioni, fermi, cambi = []) {
   const L = a - da; if (L <= 0) return '';
   const pos = t => Math.max(0, Math.min(100, (t - da) / L * 100));
   const seg = (x, y, cls, tit) => { const l = pos(x), w = pos(y) - l; return w > 0 ? `<i class="${cls}" style="left:${l}%;width:${Math.max(w, .35)}%" title="${esc(tit)}"></i>` : ''; };
   let h = '';
   for (const p of produzioni) h += seg(p.inizio, p.fine, 'p', `${p.prodotto} ${SMI.fmtOra(p.inizio)}–${SMI.fmtOra(p.fine)}`);
   for (const f of fermi) h += seg(f.da, fineF(f), 'f', `Fermo ${SMI.fmtOra(f.da)}–${f.a ? SMI.fmtOra(f.a) : 'in corso'} · ${durataDa(fineF(f) - f.da)} · ${TIPO_FERMO[f.tipo]}`);
+  for (const c of cambi) h += seg(c.da, fineC(c), 'c', `Cambio prodotto ${c.dal} → ${c.al} · ${SMI.fmtOra(c.da)}–${c.a ? SMI.fmtOra(c.a) : 'in corso'} · ${durataDa(fineC(c) - c.da)}`);
   const tacche = []; const passo = L > 36 * 3600e3 ? 6 * 3600e3 : L > 12 * 3600e3 ? 2 * 3600e3 : L > 4 * 3600e3 ? 3600e3 : 30 * 60e3;
   for (let t = Math.ceil(da / passo) * passo; t <= a; t += passo) tacche.push(`<span style="left:${pos(t)}%">${SMI.fmtOra(t)}</span>`);
   return `<div class="tempo"><div class="tempo-barra">${h}</div><div class="tempo-tacche">${tacche.join('')}</div></div>
-    <div class="legenda" style="margin-top:8px"><span><i style="background:var(--blue)"></i>In produzione</span><span><i style="background:var(--crit)"></i>Fermo</span><span><i style="background:rgba(255,255,255,.12)"></i>Nessuna produzione</span></div>`;
+    <div class="legenda" style="margin-top:8px"><span><i style="background:var(--blue)"></i>In produzione</span><span><i style="background:var(--crit)"></i>Fermo</span><span><i style="background:var(--warn)"></i>Cambio prodotto</span><span><i style="background:rgba(255,255,255,.12)"></i>Nessuna produzione (non conta)</span></div>`;
 }
 function cardFermiOggi() {
   const m = S.modello; if (!m?.stato) return '';
@@ -979,17 +1099,38 @@ function cardFermiOggi() {
   const clip = f => Math.min(fineF(f), Math.min(a, r)) - Math.max(f.da, da);
   const tot = fermi.reduce((s, f) => s + Math.max(0, clip(f)), 0);
   const lungo = fermi.reduce((b, f) => !b || clip(f) > clip(b) ? f : b, null);
-  const prod = m.produzioni.filter(p => p.fine > da && p.inizio < a);
+  const prod = m.produzioni.filter(p => p.fine > da && p.inizio < a).map(p => ({ ...p, fine: fineProd(p) }));
+  const cambi = tuttiICambi().filter(c => fineC(c) > da && c.da < a);
+  const totC = cambi.reduce((s, c) => s + Math.max(0, Math.min(fineC(c), a, r) - Math.max(c.da, da)), 0);
   return `<section class="vetro card" style="margin-bottom:16px">
-    <h2>Fermi di oggi <span class="chip">${giornoCorto(T.giorno)} · 06:00 → 06:00</span><span class="spazio"></span><button class="btn" id="vediFermi" style="text-transform:none;letter-spacing:0">Tutti i fermi ›</button></h2>
-    <div class="turno-kpi" style="grid-template-columns:repeat(3,1fr);margin-top:0;margin-bottom:16px">
+    <h2>Fermi e cambi di oggi <span class="chip">${giornoCorto(T.giorno)} · 06:00 → 06:00</span><span class="spazio"></span><button class="btn" id="vediFermi" style="text-transform:none;letter-spacing:0">Tutti i fermi ›</button></h2>
+    <div class="turno-kpi kpi-fermi" style="margin-top:0;margin-bottom:16px">
       <div class="mini"><div class="lab">Numero di fermi</div><div class="val">${fermi.length}</div></div>
       <div class="mini"><div class="lab">Tempo totale fermo</div><div class="val r">${durataDa(tot)}</div></div>
       <div class="mini"><div class="lab">Fermo più lungo</div><div class="val">${lungo ? durataDa(clip(lungo)) : '—'}</div>${lungo ? `<div class="lab">${SMI.fmtOra(lungo.da)} · ${TIPO_FERMO[lungo.tipo].toLowerCase()}</div>` : ''}</div>
+      <div class="mini"><div class="lab">Cambi prodotto</div><div class="val" style="color:#ffe2a6">${cambi.length}${cambi.length ? ` <span style="font-size:13px;color:var(--text-2)">${durataDa(totC)}</span>` : ''}</div>${cambi.length ? `<div class="lab" style="text-transform:capitalize">ultimo: ${esc(cambi[cambi.length - 1].al)}</div>` : ''}</div>
     </div>
-    ${lineaTempo(da, a, prod, fermi)}
-    ${fermi.length ? `<div class="fermi-recenti">${fermi.slice(-5).reverse().map(f => `<div class="allarme"><span class="ora">${SMI.fmtOra(f.da)} → ${f.a ? SMI.fmtOra(f.a) : 'adesso'}</span><span><b>${durataDa(fineF(f) - f.da)}</b> · ${TIPO_FERMO[f.tipo]}</span><span class="conta" style="text-transform:capitalize;font-weight:500">${esc(f.prodotto || '')}</span></div>`).join('')}</div>` : ''}
+    ${lineaTempo(da, a, prod, fermi, cambi)}
+    ${(() => { const ev = [...fermi.map(f => ({ ...f, k: 'f' })), ...cambi.map(c => ({ ...c, k: 'c' }))].sort((x, y) => x.da - y.da).slice(-6).reverse();
+      return ev.length ? `<div class="fermi-recenti">${ev.map(e => e.k === 'f'
+        ? `<div class="allarme"><span class="ora">${SMI.fmtOra(e.da)} → ${e.a ? SMI.fmtOra(e.a) : 'adesso'}</span><span><b>${durataDa(fineF(e) - e.da)}</b> · ${TIPO_FERMO[e.tipo]}</span><span class="conta" style="text-transform:capitalize;font-weight:500">${esc(e.prodotto || '')}</span></div>`
+        : `<div class="allarme cambio"><span class="ora">${SMI.fmtOra(e.da)} → ${e.a ? SMI.fmtOra(e.a) : 'adesso'}</span><span><b>${durataDa(fineC(e) - e.da)}</b> · Cambio prodotto</span><span class="conta" style="text-transform:capitalize;font-weight:500">${esc(e.dal)} → ${esc(e.al)}</span></div>`).join('')}</div>` : ''; })()}
   </section>`;
+}
+function tabellaCambi(lista) {
+  if (!lista.length) return '<div class="vuoto">Nessun cambio prodotto nel periodo scelto.</div>';
+  const tot = lista.reduce((s, c) => s + fineC(c) - c.da, 0);
+  return `<div class="scroll-x"><table class="tabella"><thead><tr><th>Giorno</th><th>Dalle</th><th>Alle</th><th>Durata</th><th class="sx">Da prodotto</th><th class="sx">A prodotto</th><th>Scelto alle</th><th class="sx">Turno</th></tr></thead><tbody>
+    ${lista.slice().reverse().map(c => { const T = SMI.turnoDi(c.da); return `<tr><td>${giornoCorto(c.da)}</td><td>${SMI.fmtOra(c.da)}</td><td>${c.a ? SMI.fmtOra(c.a) : '<span class="live-badge giallo">IN CORSO</span>'}</td><td><b>${durataDa(fineC(c) - c.da)}</b></td><td style="text-align:left;text-transform:capitalize">${esc(c.dal)}</td><td style="text-align:left;text-transform:capitalize"><b>${esc(c.al)}</b></td><td>${c.ts ? SMI.fmtOra(c.ts) : '—'}</td><td style="text-align:left">${T.nome} ${giornoCorto(T.giorno)}</td></tr>`; }).join('')}
+  </tbody><tfoot><tr><td colspan="3"><b>${lista.length} cambi</b></td><td><b>${durataDa(tot)}</b></td><td colspan="4"></td></tr></tfoot></table></div>
+  <div class="nota">Il cambio va dall'<b>ultima cassetta del vecchio prodotto</b> alla <b>prima cassetta del nuovo</b> e nell'OEE conta come fermo. Se la linea è rimasta spenta più di 4 ore (per esempio nel weekend), il cambio parte da quando è stato scelto il nuovo prodotto.</div>`;
+}
+function elencoCambi() {
+  const r = rif();
+  const lim = { oggi: SMI.turnoDi(r).giorno + 6 * 3600e3, '7': r - 7 * 864e5, '30': r - 30 * 864e5, tutto: -Infinity }[S.periodo];
+  let l = tuttiICambi().filter(c => fineC(c) >= lim);
+  if (S.prodotto) l = l.filter(c => c.al === S.prodotto || c.dal === S.prodotto);
+  return tabellaCambi(l);
 }
 function elencoFermi() {
   const r = rif();
@@ -1011,26 +1152,27 @@ function oeeTurno(key) {
   const T = SMI.turnoDi(Date.parse(g + 'T00:00:00Z') + ({ 1: 7, 2: 15, 3: 23 })[n] * 3600e3);
   const r = rif(), da = T.inizio, a = Math.min(T.fine, r);
   if (a <= da) return { futuro: true, T };
-  const pianificato = (a - da) / 60e3;
-  let t = 0, rej = 0; const prod = new Set(), intervalli = [];
-  const ultimaId = m.produzioni.filter(x => x.t >= 1).slice(-1)[0]?.id;
-  for (const p of m.produzioni) {
-    for (const tt of p.turni) if (tt.key === key) { t += tt.t; rej += tt.r; prod.add(p.prodotto); }
-    const fp = fineProd(p); if (fp > da && p.inizio < a) intervalli.push([Math.max(p.inizio, da), Math.min(fp, a)]);
-    if (p.id === ultimaId && S.vivo?.extra?.cassette && inDiretta() && SMI.turnoDi(r).key === key) t += S.vivo.extra.cassette;
-  }
+  let t = 0, rej = 0; const prod = new Set();
+  for (const p of m.produzioni) for (const tt of p.turni) if (tt.key === key) { t += tt.t; rej += tt.r; prod.add(p.prodotto); }
+  if (inDiretta() && SMI.turnoDi(r).key === key && S.vivo?.extra?.cassette) t += S.vivo.extra.cassette;
+  const cIn = cambioInCorso(); if (cIn && SMI.turnoDi(r).key === key) prod.add(cIn.al);
+  const F = finestre().filter(([x, y]) => y > da && x < a);
   const fermi = tuttiIFermi().filter(f => fineF(f) > da && f.da < a);
-  // minuti realmente in produzione: dentro una produzione e non in un fermo
-  let inProd = 0;
+  const cambi = tuttiICambi().filter(c => fineC(c) > da && c.da < a);
+  // minuto per minuto: è programmato? è fermo / cambio?
+  let pianificato = 0, fermo = 0, cambio = 0;
   for (let x = da; x < a; x += 60e3) {
-    const c = x + 30e3;
-    if (intervalli.some(([i, j]) => c >= i && c < j) && !fermi.some(f => c >= f.da && c < fineF(f))) inProd++;
+    const c = x + 30e3; if (!dentro(c, F)) continue;
+    pianificato++;
+    if (cambi.some(k => c >= k.da && c < fineC(k))) cambio++;
+    else if (fermi.some(f => c >= f.da && c < fineF(f))) fermo++;
   }
-  inProd = Math.min(inProd, pianificato);
-  const A = pianificato ? inProd / pianificato : 0;
+  if (!pianificato) return { T, key, t, r: rej, prod, vuoto: true, pianificato: 0, inProd: 0, fermoMin: 0, cambioMin: 0 };
+  const inProd = pianificato - fermo - cambio;
+  const A = inProd / pianificato;
   const P = inProd ? t / (inProd * SMI.VELOCITA_STD) : 0;
   const Q = t ? (t - rej) / t : 0;
-  return { T, key, t, r: rej, prod, pianificato, inProd, fermoMin: pianificato - inProd, A, P, Q, oee: A * P * Q, inCorso: r < T.fine };
+  return { T, key, t, r: rej, prod, pianificato, inProd, fermoMin: fermo, cambioMin: cambio, A, P, Q, oee: A * P * Q, inCorso: r < T.fine };
 }
 const classeOee = v => v >= .85 ? 'buono' : v >= .65 ? 'medio' : 'basso';
 const pct0 = v => Math.round((v || 0) * 100) + '%';
@@ -1047,7 +1189,7 @@ function produzioniFiltrate() {
   return p.filter(x => x.fine >= lim);
 }
 function conLive(p, isUltima) {
-  if (!isUltima || !S.vivo?.extra?.cassette || S.modo === 'demo' || S.modo === 'file') return p;
+  if (!isUltima || !S.vivo?.extra?.cassette || S.modo === 'demo' || S.modo === 'file' || cambioInCorso()) return p;
   return { ...p, t: p.t + S.vivo.extra.cassette, extraLive: S.vivo.extra.cassette };
 }
 
@@ -1056,7 +1198,9 @@ function vistaDashboard() {
   if (!m || !m.produzioni) return `<div class="centro"><div class="vetro card" style="max-width:520px;text-align:center"><h2 style="justify-content:center">Nessun dato</h2><p class="nota">Il lettore sul PC della linea non ha ancora inviato dati. Apri <b>#lettore</b> su quel PC, oppure carica i file a mano dal menu.</p></div></div>`;
   const r = rif();
   const tutte = m.produzioni.filter(x => x.t >= 1);
-  const ultimaRaw = tutte[tutte.length - 1];
+  let ultimaRaw = tutte[tutte.length - 1];
+  const cIn = cambioInCorso(), precedente = cIn ? ultimaRaw : null;
+  if (cIn) ultimaRaw = { id: '__nuova', nuova: true, prodotto: cIn.al, inizio: cIn.a || cIn.ts, fine: rif(), t: cIn.cassette, r: 0, s: 0, re: 0, u: 0, setupT: 0, setupR: 0, marciaMin: cIn.a ? (rif() - cIn.a) / 60e3 : 0, turni: [], ore: [], fermi: 0, cambiImpostazioni: [], extraLive: cIn.cassette };
   const ultima = ultimaRaw ? conLive(ultimaRaw, true) : null;
   const inMarcia = !statoLinea().ferma;
   const vel = velocitaAttuale(m);
@@ -1075,10 +1219,12 @@ function vistaDashboard() {
     const velCls = v >= 22 ? '' : v >= 18 ? 'bassa' : 'critica';
     hero = `
     <section class="vetro card">
-      <h2>${inMarcia ? 'Produzione in corso' : 'Ultima produzione'}</h2>
+      <h2>${ultima.nuova ? 'Nuovo prodotto' : inMarcia ? 'Produzione in corso' : 'Ultima produzione'}${ultima.nuova ? '<span class="spazio"></span><span class="chip giallo">In avvio</span>' : ''}</h2>
       <div id="statoLinea">${htmlStatoLinea()}</div>${avvisoEspulsione()}
       <div class="prodotto-nome">${esc(ultima.prodotto)}</div>
-      <div class="sotto"><span>Iniziata ${giornoLungo(ultima.inizio)} alle ${SMI.fmtOra(ultima.inizio)}</span><span>·</span><span>In marcia ${durata(ultima.marciaMin)}</span><span>·</span><span>${(() => { const f = fermiDi(ultima); return `${f.n} fermi (${durata(f.min)})`; })()}</span></div>
+      ${ultima.nuova
+        ? `<div class="sotto"><span>Scelto ${giornoLungo(cIn.ts)} alle ${SMI.fmtOra(cIn.ts)}</span><span>·</span><span style="text-transform:none">prima: <b style="text-transform:capitalize;color:var(--text-1)">${esc(precedente.prodotto)}</b>, ${n0(precedente.t)} cassette, finita alle ${SMI.fmtOra(precedente.fine)}</span></div>`
+        : `<div class="sotto"><span>Iniziata ${giornoLungo(ultima.inizio)} alle ${SMI.fmtOra(ultima.inizio)}</span><span>·</span><span>In marcia ${durata(ultima.marciaMin)}</span><span>·</span><span>${(() => { const f = fermiDi(ultima); return `${f.n} fermi (${durata(f.min)})`; })()}</span></div>`}
       <div class="kpi">
         <div class="tile"><div class="lab">Cassette contate</div><div class="val">${n0(ultima.t)}</div><div class="det">${ultima.extraLive ? `di cui ≈${n0(ultima.extraLive)} in diretta` : `${n0(ultima.t - ultima.r)} buone`}</div></div>
         <div class="tile scarti"><div class="lab">Cassette scartate</div><div class="val">${n0(ultima.r)}<small>${pc(ultima.r, ultimaRaw.t)}</small></div><div class="det">${ultima.setupT ? `${pc(scartiNetti, totNetti)} senza avviamento` : `Amido ${n0(ultima.s)} · Residui ${n0(ultima.re)}`}</div></div>
@@ -1100,15 +1246,15 @@ function vistaDashboard() {
       <div class="turno-testa">
         <div><div class="grande">${tc.nome} <span style="color:var(--text-3);font-weight:500">${tc.orario}</span></div>
           <div class="sotto" style="text-transform:capitalize">${tc.prod?.size ? [...tc.prod].map(esc).join(', ') : 'Nessuna produzione in questo turno'}</div></div>
-        <div class="oee-grande ${tc.t ? classeOee(tc.oee) : ''}"><span>OEE</span><b>${tc.t ? pct0(tc.oee) : '—'}</b></div>
+        <div class="oee-grande ${!tc.vuoto && !tc.futuro ? classeOee(tc.oee) : ''}"><span>OEE</span><b>${!tc.vuoto && !tc.futuro ? pct0(tc.oee) : '—'}</b></div>
       </div>
       <div class="turno-kpi">
         <div class="mini"><div class="lab">Cassette</div><div class="val">${n0(tc.t)}</div></div>
         <div class="mini"><div class="lab">Scarti</div><div class="val r">${n0(tc.r)} <span style="font-size:13px;color:var(--text-2)">${pc(tc.r, tc.t)}</span></div></div>
         <div class="mini"><div class="lab">Pedane</div><div class="val">${n0(SMI.pedane(tc.t))}</div></div>
       </div>
-      ${tc.t ? `<div class="apq-riga">
-        ${barraApq('Disponibilità', tc.A, `In produzione ${durata(tc.inProd)} su ${durata(tc.pianificato)} trascorsi del turno`)}
+      ${!tc.vuoto && !tc.futuro ? `<div class="apq-riga">
+        ${barraApq('Disponibilità', tc.A, `In produzione ${durata(tc.inProd)} su ${durata(tc.pianificato)} programmati · fermi ${durata(tc.fermoMin)} · cambi ${durata(tc.cambioMin)}`)}
         ${barraApq('Prestazione', tc.P, `${n0(tc.t)} cassette su ${n0(tc.inProd * 24)} possibili a 24/min`)}
         ${barraApq('Qualità', tc.Q, `${n0(tc.t - tc.r)} buone su ${n0(tc.t)}`)}
       </div>` : ''}
@@ -1117,9 +1263,10 @@ function vistaDashboard() {
           <div class="t-testa"><b class="t-nome">${t.nome}</b><span>${t.orario}</span></div>
           <div class="t-val">${t.futuro ? '—' : n0(t.t)}</div><div class="t-lab">cassette${t.futuro ? '' : ' · ' + n0(SMI.pedane(t.t)) + ' pedane'}</div>
           <div class="t-riga"><span>Scarti</span><b>${t.t ? pc(t.r, t.t) : '—'}</b></div>
-          <div class="t-riga"><span>Fermo</span><b>${t.futuro ? '—' : durata(t.fermoMin)}</b></div>
-          <div class="t-oee ${t.t ? classeOee(t.oee) : ''}"><span>OEE</span><b>${t.t ? pct0(t.oee) : '—'}</b></div>
-          ${t.t ? `<div class="barra oee ${classeOee(t.oee)}"><i style="width:${Math.min(100, t.oee * 100)}%"></i></div>` : ''}
+          <div class="t-riga"><span>Fermo</span><b>${t.futuro || t.vuoto ? '—' : durata(t.fermoMin)}</b></div>
+          <div class="t-riga"><span>Cambi</span><b>${t.futuro || t.vuoto ? '—' : durata(t.cambioMin)}</b></div>
+          <div class="t-oee ${!t.vuoto && !t.futuro ? classeOee(t.oee) : ''}"><span>OEE</span><b>${t.vuoto ? '<small>nessuna produzione</small>' : t.futuro ? '—' : pct0(t.oee)}</b></div>
+          ${!t.vuoto && !t.futuro ? `<div class="barra oee ${classeOee(t.oee)}"><i style="width:${Math.min(100, t.oee * 100)}%"></i></div>` : ''}
         </div>`).join('')}</div>
     </section>`;
 
@@ -1140,13 +1287,13 @@ function vistaDashboard() {
   <section class="vetro card">
     <h2>Produzioni</h2>
     <div class="barra-filtri">
-      <div class="seg" id="fVista">${[['produzioni', 'Produzioni'], ['turni', 'Per turno'], ['fermi', 'Fermi']].map(([k, l]) => `<button data-v="${k}" class="${S.vista === k ? 'att' : ''}">${l}</button>`).join('')}</div>
+      <div class="seg" id="fVista">${[['produzioni', 'Produzioni'], ['turni', 'Per turno'], ['fermi', 'Fermi'], ['cambi', 'Cambi prodotto']].map(([k, l]) => `<button data-v="${k}" class="${S.vista === k ? 'att' : ''}">${l}</button>`).join('')}</div>
       <div class="seg" id="fPeriodo">${[['oggi', 'Oggi'], ['7', '7 giorni'], ['30', '30 giorni'], ['tutto', 'Tutto']].map(([k, l]) => `<button data-p="${k}" class="${S.periodo === k ? 'att' : ''}">${l}</button>`).join('')}</div>
       ${tendinaProdotti(prodotti)}
       <span class="spazio"></span>
       <label class="switch" title="Mostra anche le prove con meno di una pedana (80 cassette)"><input type="checkbox" id="fProve" ${S.prove ? 'checked' : ''}><i></i>Mostra prove</label>
     </div>
-    <div id="elenco">${S.vista === 'turni' ? elencoTurni() : S.vista === 'fermi' ? elencoFermi() : elencoProduzioni()}</div>
+    <div id="elenco">${S.vista === 'turni' ? elencoTurni() : S.vista === 'fermi' ? elencoFermi() : S.vista === 'cambi' ? elencoCambi() : elencoProduzioni()}</div>
   </section>`;
 
   return banner + `<div class="hero">${hero}${turno}</div>` + cardFermiOggi() + graf + lista;
@@ -1185,13 +1332,16 @@ function collegaTendina() {
 function elencoProduzioni() {
   const lista = produzioniFiltrate();
   if (!lista.length) return '<div class="vuoto">Nessuna produzione nel periodo scelto.</div>';
-  const ultimaId = S.modello.produzioni.filter(x => x.t >= 1).slice(-1)[0]?.id;
-  const perGiorno = new Map();
+  const cIn = cambioInCorso();
+  const ultimaId = cIn ? null : S.modello.produzioni.filter(x => x.t >= 1).slice(-1)[0]?.id;
+  const perGiorno = new Map(); let primo = true;
   for (const p of lista.slice().reverse()) { const g = SMI.turnoDi(p.inizio).giorno; if (!perGiorno.has(g)) perGiorno.set(g, []); perGiorno.get(g).push(p); }
   let h = '';
   for (const [g, ps] of perGiorno) {
     const tot = ps.reduce((s, p) => s + p.t, 0), rej = ps.reduce((s, p) => s + p.r, 0);
     const gl = giornoLungo(g); h += `<div class="giorno-tit">${gl[0].toUpperCase() + gl.slice(1)} <span>${n0(tot)} cassette · ${n0(SMI.pedane(tot))} pedane · ${pc(rej, tot)} scarti</span></div>`;
+    if (cIn && primo && (!S.prodotto || S.prodotto === cIn.al)) h += `<div class="vetro prod nuova-prod"><div class="principale"><div class="nome">${esc(cIn.al)} <span class="live-badge giallo">IN AVVIO</span></div><div class="quando">nuovo prodotto scelto alle ${SMI.fmtOra(cIn.ts)} · cambio da ${esc(cIn.dal)} ${cIn.inCorso ? 'in corso da ' + durataDa(rif() - cIn.da) : 'durato ' + durataDa(cIn.a - cIn.da)}</div></div><div class="c"><div class="lab">Cassette</div><div class="v">${n0(cIn.cassette)}</div></div><div class="c"></div><div class="c"></div><div class="c"></div><div class="turni-chip"></div><div class="freccia"></div></div>`;
+    primo = false;
     for (const p0 of ps) {
       const live = p0.id === ultimaId; const p = conLive(p0, live);
       const vivo = live && (S.modello.stato?.inMarcia) && S.modo !== 'demo' && S.modo !== 'file';
@@ -1220,7 +1370,7 @@ function elencoTurni() {
   const righe = [...turni.values()].sort((a, b) => b.key.localeCompare(a.key));
   if (!righe.length) return '<div class="vuoto">Nessun turno nel periodo scelto.</div>';
   return `<div class="scroll-x"><table class="tabella"><thead><tr><th>Turno</th><th class="sx">Prodotti</th><th>Cassette</th><th>Scarti</th><th>%</th><th>Pedane</th><th>In marcia</th><th>Resa vel.</th><th title="OEE di tutto il turno">OEE turno</th></tr></thead><tbody>
-  ${righe.map(o => `<tr class="clic" data-id="${esc(o.prodotti.sort((a, b) => b.t - a.t)[0].id)}"><td><b>${o.nome}</b> <span style="color:var(--text-3)">${giornoCorto(o.giorno)}</span></td><td style="text-align:left;white-space:normal;text-transform:capitalize">${[...new Set(o.prodotti.map(x => x.nome))].map(esc).join(', ')}</td><td>${n0(o.t)}</td><td class="r">${n0(o.r)}</td><td>${pc(o.r, o.t)}</td><td>${n0(SMI.pedane(o.t))}</td><td>${durata(o.marcia)}</td><td>${o.marcia ? Math.round(o.t / (o.marcia * 24) * 100) : 0}%</td><td>${(() => { const x = oeeTurno(o.key); return x.t ? `<span class="oee-chip ${classeOee(x.oee)}">${pct0(x.oee)}</span>` : '—'; })()}</td></tr>`).join('')}
+  ${righe.map(o => `<tr class="clic" data-id="${esc(o.prodotti.sort((a, b) => b.t - a.t)[0].id)}"><td><b>${o.nome}</b> <span style="color:var(--text-3)">${giornoCorto(o.giorno)}</span></td><td style="text-align:left;white-space:normal;text-transform:capitalize">${[...new Set(o.prodotti.map(x => x.nome))].map(esc).join(', ')}</td><td>${n0(o.t)}</td><td class="r">${n0(o.r)}</td><td>${pc(o.r, o.t)}</td><td>${n0(SMI.pedane(o.t))}</td><td>${durata(o.marcia)}</td><td>${o.marcia ? Math.round(o.t / (o.marcia * 24) * 100) : 0}%</td><td>${(() => { const x = oeeTurno(o.key); return !x.vuoto && !x.futuro ? `<span class="oee-chip ${classeOee(x.oee)}">${pct0(x.oee)}</span>` : '—'; })()}</td></tr>`).join('')}
   </tbody></table></div>`;
 }
 
@@ -1289,6 +1439,7 @@ function apriProduzione(id) {
           <tr><td>Durata totale</td><td>${durata(durataTot)}</td></tr>
           <tr><td>In marcia (ispezione attiva)</td><td>${durata(p.marciaMin)}</td></tr>
           <tr><td>Fermi</td><td>${FP.n} · ${durata(FP.min)}</td></tr>
+          ${(() => { const c = tuttiICambi().find(c => c.al === p.prodotto && Math.abs(fineC(c) - p.inizio) < 3600e3); return c ? `<tr><td>Cambio prodotto prima (da ${esc(c.dal)})</td><td>${durataDa(fineC(c) - c.da)}</td></tr>` : ''; })()}
           <tr><td>Modifiche ai parametri</td><td>${p.cambiImpostazioni.length}</td></tr>
         </tbody></table></div>
       <div class="pannello"><h3>Tipo di scarto</h3>
@@ -1389,10 +1540,11 @@ function header() {
     ${S.modo !== 'lettore' ? `<button class="btn primario" id="btnAgg" ${puoAggiornare ? '' : 'disabled title="Disponibile quando il lettore è collegato"'}>${ICONE.agg}<span class="nascondi-m">Aggiorna</span></button>` : ''}
     <div class="menu" id="menu"><button class="btn icona" id="btnMenu" aria-label="Menu">${ICONE.menu}</button>
       <div class="lista vetro">
-        <button data-a="dash">${ICONE.dash} Dashboard</button>
-        <button data-a="file">${ICONE.file} Carica file a mano</button>
-        <button data-a="lettore">${ICONE.pc} Lettore (PC della linea)</button>
-        ${S.utente ? `<button data-a="esci">${ICONE.esci} Esci (${esc(S.utente.email)})</button>` : ''}
+        ${S.utente ? `<div class="mn-utente"><span class="mn-avatar">${esc(S.utente.email[0].toUpperCase())}</span><div><b>${esc(S.utente.email.split('@')[0])}</b><span>${esc(S.utente.email)}</span></div></div>` : ''}
+        <button data-a="dash" class="${!location.hash ? 'att' : ''}"><span class="mn-ico">${ICONE.dash}</span><span class="mn-t"><b>Dashboard</b><span>Produzioni, turni, fermi</span></span></button>
+        <button data-a="file" class="${location.hash === '#file' ? 'att' : ''}"><span class="mn-ico">${ICONE.file}</span><span class="mn-t"><b>Carica file a mano</b><span>Log dalla chiavetta</span></span></button>
+        <button data-a="lettore" class="${location.hash === '#lettore' ? 'att' : ''}"><span class="mn-ico">${ICONE.pc}</span><span class="mn-t"><b>Lettore</b><span>Solo sul PC della linea</span></span></button>
+        ${S.utente ? `<div class="mn-sep"></div><button data-a="esci" class="mn-esci"><span class="mn-ico">${ICONE.esci}</span><span class="mn-t"><b>Esci</b></span></button>` : ''}
       </div></div>
   </header>`;
 }
@@ -1406,6 +1558,7 @@ function render() {
     S.modo = 'lettore';
     document.title = L.attivo ? 'NON CHIUDERE · DO NOT CLOSE · NID 1' : 'Lettore · ' + CONFIG.NOME_LINEA;
     if (L.attivo && !L.impostazioni) { app.innerHTML = vistaNonChiudere(); collegaNonChiudere(); return; }
+    if (L.permessoDaRiattivare && S.utente && !L.impostazioni) { app.innerHTML = vistaRiavvia(); $('#btnRiavvia').onclick = riattivaPermessi; $('#ncGear').onclick = () => { L.impostazioni = true; render(); }; return; }
     app.innerHTML = header() + vistaLettore(); collegaHeader(); collegaLettore(); return;
   }
   document.title = 'Produzione · ' + CONFIG.NOME_LINEA;
@@ -1623,6 +1776,15 @@ function vistaNonChiudere() {
     <span class="nc-dot ${statoInvio()}" id="ncDot" title="Stato invio dati"></span>
   </div>`;
 }
+function vistaRiavvia() {
+  return `<div class="non-chiudere"><div class="nc-card">
+    <div class="nc-logo" role="img" aria-label="Logo"></div>
+    <div class="nc-sub" style="margin:0 0 18px;color:#141826;font-weight:600">Il lettore è in pausa · The reader is paused</div>
+    <button class="btn-riavvia" id="btnRiavvia"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><span>CLICCA QUI PER RIAVVIARE<small>CLICK HERE TO RESTART</small></span></button>
+    <div class="nc-sub" style="font-size:14px;margin-top:18px">Se Edge chiede il permesso, scegli <b>"Consenti a ogni visita"</b> · If Edge asks, choose <b>"Allow on every visit"</b></div>
+  </div>
+  <button class="nc-gear" id="ncGear" title="Impostazioni lettore" aria-label="Impostazioni lettore">${ICONE.menu}</button></div>`;
+}
 function statoInvio() { return L.ultimoOk && Date.now() - L.ultimoOk < Math.max(30e3, L.intervallo * 3000 + 15e3) ? 'ok' : L.ultimoErrore ? 'ko' : ''; }
 function collegaNonChiudere() { $('#ncGear').onclick = () => { L.impostazioni = true; render(); }; }
 setInterval(() => { const d = $('#ncDot'); if (d) d.className = 'nc-dot ' + statoInvio(); }, 3000);
@@ -1654,9 +1816,11 @@ async function preparaLettore() {
   if (location.hash === '#lettore') render();
 }
 async function riattivaPermessi() {
-  for (const h of L.cartelle) await h.requestPermission({ mode: 'read' });
+  let ok = true;
+  for (const h of L.cartelle) { const p = await h.requestPermission({ mode: 'read' }); if (p !== 'granted') ok = false; }
+  if (!ok) { toast('Serve il permesso sulla cartella per leggere i file'); return; }
   L.permessoDaRiattivare = false; await scansiona();
-  if (S.utente && localStorage.getItem('smi_autostart') === '1') avviaLettore(); else render();
+  if (S.utente) avviaLettore(); else render();
 }
 async function scegliCartella() {
   try {
@@ -1753,6 +1917,7 @@ async function cicloLettore(comandoId) {
       const v1 = valoreA(ora - 60e3), v5 = valoreA(ora - 300e3);
       extra = {
         daTs: base[0], cassette: Math.max(0, Math.round(now[1] - base[1])),
+        primaDa: (A.campioni.find(c => c[0] >= base[0] && c[1] > base[1]) || [null])[0],
         velocita1: v1 && now[0] - v1[0] > 0 ? (now[1] - v1[1]) / ((now[0] - v1[0]) / 60e3) : null,
         velocita5: v5 && now[0] - v5[0] > 0 ? (now[1] - v5[1]) / ((now[0] - v5[0]) / 60e3) : null,
       };
