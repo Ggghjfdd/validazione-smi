@@ -424,6 +424,10 @@ select option{background:#16213f;color:#f3f5fb}
 
 .mn-ver{font-size:11px;color:var(--text-3);text-align:center;padding:8px 0 2px}
 
+.nc-gestione{position:fixed;left:14px;bottom:14px;z-index:101;display:inline-flex;align-items:center;gap:8px;padding:9px 14px;border-radius:12px;border:1px solid rgba(20,24,38,.15);background:rgba(255,255,255,.85);color:#3a4050;font:inherit;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 6px 18px -8px rgba(0,0,0,.3)}
+.nc-gestione:hover{background:#fff;color:#141826}
+.nc-gestione svg{width:15px;height:15px}
+
 </style>
 </head>
 <body>
@@ -769,7 +773,7 @@ const CONFIG = {
   SUPABASE_URL: 'https://sszxyritwrkxaictcaaa.supabase.co',
   SUPABASE_KEY: 'sb_publishable_HkYiyUEqlWXJo_CDyD9Eqw_k8-4cY-3',
   NOME_LINEA: 'Linea NID 1',
-  VERSIONE: 'v8 · 6 nov 14:30',
+  VERSIONE: 'v9 · 6 nov 15:50',
 };
 const S = {
   modo: null,             // 'demo' | 'remoto' | 'file' | 'lettore'
@@ -1229,8 +1233,8 @@ function vistaDashboard() {
         ? `<div class="sotto"><span>Scelto ${giornoLungo(cIn.ts)} alle ${SMI.fmtOra(cIn.ts)}</span><span>·</span><span style="text-transform:none">prima: <b style="text-transform:capitalize;color:var(--text-1)">${esc(precedente.prodotto)}</b>, ${n0(precedente.t)} cassette, finita alle ${SMI.fmtOra(precedente.fine)}</span></div>`
         : `<div class="sotto"><span>Iniziata ${giornoLungo(ultima.inizio)} alle ${SMI.fmtOra(ultima.inizio)}</span><span>·</span><span>In marcia ${durata(ultima.marciaMin)}</span><span>·</span><span>${(() => { const f = fermiDi(ultima); return `${f.n} fermi (${durata(f.min)})`; })()}</span></div>`}
       <div class="kpi">
-        <div class="tile"><div class="lab">Cassette contate</div><div class="val">${n0(ultima.t)}</div><div class="det">${ultima.extraLive ? `di cui ≈${n0(ultima.extraLive)} in diretta` : `${n0(ultima.t - ultima.r)} buone`}</div></div>
-        <div class="tile scarti"><div class="lab">Cassette scartate</div><div class="val">${n0(ultima.r)}<small>${pc(ultima.r, ultimaRaw.t)}</small></div><div class="det">${ultima.setupT ? `${pc(scartiNetti, totNetti)} senza avviamento` : `Amido ${n0(ultima.s)} · Residui ${n0(ultima.re)}`}</div></div>
+        <div class="tile"><div class="lab">Cassette contate</div><div class="val">${n0(ultima.t)}</div><div class="det">${ultima.nuova ? 'dalla prima cassetta del nuovo prodotto' : `contatori SMI delle ${m.stato?.ultimiContatoriTs ? SMI.fmtOra(m.stato.ultimiContatoriTs) : '—'}${ultima.extraLive ? ` + ≈${n0(ultima.extraLive)} in diretta` : ''}`}</div></div>
+        <div class="tile scarti"><div class="lab">Cassette scartate</div><div class="val">${n0(ultima.r)}<small>${pc(ultima.r, ultimaRaw.t)}</small></div><div class="det">${ultima.setupT ? `${pc(scartiNetti, totNetti)} senza avviamento` : `Amido ${n0(ultima.s)} · Residui ${n0(ultima.re)}`}<br><span style="color:var(--text-3)">aggiornati alle ${m.stato?.ultimiContatoriTs ? SMI.fmtOra(m.stato.ultimiContatoriTs) : '—'} (ogni ora)</span></div></div>
         <div class="tile"><div class="lab">Pedane</div><div class="val">${n0(SMI.pedane(ultima.t))}<small>+ ${resto}/80</small></div><div class="barra"><i style="width:${resto / 80 * 100}%"></i></div></div>
         <div class="tile"><div class="lab">Velocità</div><div class="val">${n1(v)}<small>/min</small></div><div class="barra vel ${velCls}"><i style="width:${Math.min(100, v / SMI.VELOCITA_STD * 100)}%"></i></div><div class="det">${vel && (inMarcia || S.modo === 'demo') ? vel.fonte : 'media produzione'} · resa ${Math.round(resa * 100)}%</div></div>
       </div>
@@ -1527,7 +1531,7 @@ function statoLettore() {
   if (S.modo === 'lettore') return `<span class="pill" id="pillLettore"><span class="dot ${L.attivo ? 'on' : 'off'}"></span>${L.attivo ? 'Lettore attivo' : 'Lettore fermo'}</span>`;
   const age = S.aggiornatoVivo ? (Date.now() - S.aggiornatoVivo) / 1000 : Infinity;
   const limite = Math.max(30, (S.vivo?.intervallo || 5) * 3 + 20);
-  if (age < limite) return `<span class="pill" title="Il PC della linea sta inviando i dati"><span class="dot on"></span><span class="nascondi-m">Lettore collegato · </span>${age < 60 ? Math.round(age) + ' s fa' : Math.round(age / 60) + ' min fa'}</span>`;
+  if (age < limite) return `<span class="pill" title="${esc((S.pcLinea?.nome || 'Il PC della linea') + ' sta inviando i dati')}"><span class="dot on"></span><span class="nascondi-m">Lettore collegato · </span>${age < 60 ? Math.round(age) + ' s fa' : Math.round(age / 60) + ' min fa'}</span>`;
   return `<span class="pill" title="Il PC della linea non invia dati: la scheda del lettore è chiusa o il PC è spento"><span class="dot off"></span>${isFinite(age) ? 'Lettore fermo da ' + tempoFa(age) : 'Lettore mai collegato'}</span>`;
 }
 const tempoFa = s => s < 3600 ? Math.round(s / 60) + ' min' : s < 86400 ? Math.round(s / 3600) + ' h' : Math.round(s / 86400) + ' giorni';
@@ -1561,8 +1565,13 @@ function render() {
     if (!L.preparato) { L.preparato = true; preparaLettore(); }
     S.modo = 'lettore';
     document.title = L.attivo ? 'NON CHIUDERE · DO NOT CLOSE · NID 1' : 'Lettore · ' + CONFIG.NOME_LINEA;
+    if (!L.pronto) { app.innerHTML = `<div class="centro"><div class="pill"><span class="dot"></span>Avvio del lettore…</div></div>`; return; }
+    if (L.sostituito) { app.innerHTML = vistaSostituito(); $('#btnGestione').onclick = chiediPassword; return; }
+    if (L.chiediPw) { app.innerHTML = vistaLogin('', { titolo: 'Gestione lettore', testo: 'Per modificare il lettore inserisci email e password.', email: S.utente?.email, annulla: true }); collegaLogin(() => { L.chiediPw = false; L.autorizzato = true; L.impostazioni = true; render(); }); $('#btnAnnullaLogin').onclick = () => { L.chiediPw = false; render(); }; return; }
     if (L.attivo && !L.impostazioni) { app.innerHTML = vistaNonChiudere(); collegaNonChiudere(); return; }
-    if (L.permessoDaRiattivare && S.utente && !L.impostazioni) { app.innerHTML = vistaRiavvia(); $('#btnRiavvia').onclick = riattivaPermessi; $('#ncGear').onclick = () => { L.impostazioni = true; render(); }; return; }
+    if (L.config && L.permessoDaRiattivare && S.utente && !L.impostazioni) { app.innerHTML = vistaRiavvia(); $('#btnRiavvia').onclick = riattivaPermessi; $('#btnGestione').onclick = chiediPassword; return; }
+    // PC non ancora configurato (o sessione scaduta): si entra solo con email e password
+    if (!L.autorizzato) { app.innerHTML = vistaLogin('', { titolo: 'Lettore ' + CONFIG.NOME_LINEA, testo: L.config ? 'Accedi per gestire il lettore di questo PC.' : 'Accedi per configurare <b>questo PC</b> come PC della linea. Serve solo la prima volta.', email: S.utente?.email }); collegaLogin(() => { L.autorizzato = true; render(); }); return; }
     app.innerHTML = header() + vistaLettore(); collegaHeader(); collegaLettore(); return;
   }
   document.title = 'Produzione · ' + CONFIG.NOME_LINEA;
@@ -1624,6 +1633,7 @@ function applicaRighe(righe) {
   const r = Object.fromEntries(righe.map(x => [x.id, x]));
   const storico = r.storico?.dati || S.modello || {};
   S.modello = { ...storico, parametri: r.parametri?.dati ?? S.modello?.parametri, allarmi: r.allarmi?.dati ?? S.modello?.allarmi };
+  if (r.pc_linea) S.pcLinea = r.pc_linea.dati;
   if (r.vivo) { S.vivo = r.vivo.dati; S.aggiornatoVivo = new Date(r.vivo.aggiornato).getTime(); if (S.vivo?.stato && S.modello) S.modello.stato = S.vivo.stato; }
   if (!r.storico && !S.modello.produzioni) S.modello = null;
 }
@@ -1648,16 +1658,16 @@ async function richiediAggiornamento() {
   setTimeout(() => { const b2 = $('#btnAgg'); if (b2) { b2.disabled = false; b2.querySelector('svg')?.classList.remove('gira'); } }, 2500);
 }
 
-function vistaLogin(msg = '') {
+function vistaLogin(msg = '', opz = {}) {
   return `<div class="centro"><form class="vetro box-login" id="fLogin">
     <div class="logo-img" role="img" aria-label="Logo"></div>
-    <h1>${esc(CONFIG.NOME_LINEA)}</h1>
-    <p>Accedi con lo stesso account del sito Validazione SMI.</p>
-    <label class="campo">Email<input type="email" name="email" autocomplete="username" required></label>
+    <h1>${esc(opz.titolo || CONFIG.NOME_LINEA)}</h1>
+    <p>${opz.testo || 'Accedi con lo stesso account del sito Validazione SMI.'}</p>
+    <label class="campo">Email<input type="email" name="email" autocomplete="username" required value="${esc(opz.email || '')}"></label>
     <label class="campo">Password<input type="password" name="password" autocomplete="current-password" required></label>
     <div class="errore" id="errLogin">${esc(msg)}</div>
     <button class="btn primario" style="width:100%;justify-content:center;padding:12px">Accedi</button>
-    <div class="nota" style="text-align:center">oppure <a href="#file" style="color:#9ec5f4">carica i file a mano</a> senza accedere</div>
+    ${opz.annulla ? '<button type="button" class="btn" id="btnAnnullaLogin" style="width:100%;justify-content:center;margin-top:8px">Annulla</button>' : '<div class="nota" style="text-align:center">oppure <a href="#file" style="color:#9ec5f4">carica i file a mano</a> senza accedere</div>'}
   </form></div>`;
 }
 function collegaLogin(dopo) {
@@ -1753,14 +1763,20 @@ function vistaLettore() {
     </section>
     ${!supportato ? `<section class="vetro banner" style="margin-top:16px">${ICONE.warn.replace('<svg', '<svg style="width:18px;height:18px;color:var(--warn)"')} Questo browser non può leggere le cartelle. Apri questa pagina con <b>Microsoft Edge</b> o <b>Google Chrome</b>.</section>` : ''}
     <div class="passi">
-      <div class="vetro passo ${loggato ? 'fatto' : ''}"><div class="num">${loggato ? '✓' : '1'}</div><div class="testo">Accedi<small>${loggato ? esc(S.utente.email) : 'Con lo stesso account della dashboard'}</small></div>${loggato ? '' : '<button class="btn primario" id="btnLoginL">Accedi</button>'}</div>
+      <div class="vetro passo fatto"><div class="num">✓</div><div class="testo">Accesso fatto<small>${esc(S.utente?.email || '')}</small></div></div>
+      <div class="vetro passo ${L.config ? 'fatto' : ''}"><div class="num">${L.config ? '✓' : '1'}</div><div class="testo">Nome di questo PC<small>Compare sulla dashboard, per sapere quale PC sta inviando i dati</small></div>
+        <input type="text" id="nomePc" value="${esc(L.config?.nome || 'PC visione NID 1')}" style="max-width:220px"></div>
       <div class="vetro passo ${haCartelle ? 'fatto' : ''}"><div class="num">${haCartelle ? '✓' : '2'}</div><div class="testo">Scegli la cartella del programma SMI<small>${haCartelle ? L.cartelle.map(c => esc(c.name)).join(', ') + ` · ${L.file.size} file trovati` : 'Di solito C:\\SMI oppure la cartella di Eagle Inspector. Si fa una volta sola.'}</small></div>
         <button class="btn ${haCartelle ? '' : 'primario'}" id="btnCartella" ${supportato ? '' : 'disabled'}>${ICONE.cartella} ${haCartelle ? 'Aggiungi cartella' : 'Scegli cartella'}</button>
+        ${haCartelle && !L.attivo ? `<button class="btn" id="btnTogliCartelle">Cambia</button>` : ''}
         ${L.permessoDaRiattivare ? `<button class="btn primario" id="btnRiattiva">Riattiva accesso</button>` : ''}</div>
-      <div class="vetro passo ${L.attivo ? 'fatto' : ''}"><div class="num">${L.attivo ? '✓' : '3'}</div><div class="testo">Avvia la lettura<small>Ogni quanto leggere i file</small></div>
+      <div class="vetro passo ${L.attivo ? 'fatto' : ''}"><div class="num">${L.attivo ? '✓' : '3'}</div><div class="testo">Avvia<small>Da quel momento <b>questo</b> diventa il PC della linea: se si chiude o si riavvia, riparte da solo</small></div>
         <select id="selInt">${[2, 5, 10, 30, 60].map(s => `<option value="${s}" ${s === L.intervallo ? 'selected' : ''}>ogni ${s} s</option>`).join('')}</select>
         <button class="btn primario" id="btnAvvia" ${loggato && haCartelle && !L.attivo ? '' : 'disabled'}>${ICONE.play} Avvia</button></div>
     </div>
+    <section class="vetro card" style="margin-top:16px;border-color:rgba(229,83,75,.35)"><h2>Ricomincia da zero</h2>
+      <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap"><div class="nota" style="margin:0;flex:1;min-width:240px">Ferma il lettore, dimentica la cartella scelta e esce dall'account <b>su questo PC</b>. Usalo se vuoi spostare il lettore su un altro PC o rifare la configurazione.</div>
+      <button class="btn" id="btnReset" style="border-color:rgba(229,83,75,.5);color:#ffc9c4">Reimposta da zero</button></div></section>
     <section class="vetro card" style="margin-top:16px"><h2>File letti</h2><div class="file-trovati" id="elencoFile">${elencoFileHtml()}</div></section>
     <section class="vetro" style="margin-top:16px"><h2 style="padding:16px 16px 0;margin:0;font-size:13px;letter-spacing:.6px;text-transform:uppercase;color:var(--text-3)">Registro</h2><div class="registro" id="registro">${L.registro.map(esc).join('<br>') || 'Nessuna attività.'}</div></section>
     <div class="nota" style="margin-top:14px">💡 Per non far "addormentare" la scheda: in Edge apri <b>Impostazioni → Sistema e prestazioni → Non sospendere mai questi siti</b> e aggiungi l'indirizzo di questa pagina.</div>
@@ -1776,7 +1792,7 @@ function vistaNonChiudere() {
       <div class="nc-en">DO NOT CLOSE</div>
       <div class="nc-sub">this page</div>
     </div>
-    <button class="nc-gear" id="ncGear" title="Impostazioni lettore" aria-label="Impostazioni lettore"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h0a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v0a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+    ${BTN_GESTIONE}
     <span class="nc-dot ${statoInvio()}" id="ncDot" title="Stato invio dati"></span>
   </div>`;
 }
@@ -1787,10 +1803,19 @@ function vistaRiavvia() {
     <button class="btn-riavvia" id="btnRiavvia"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><span>CLICCA QUI PER RIAVVIARE<small>CLICK HERE TO RESTART</small></span></button>
     <div class="nc-sub" style="font-size:14px;margin-top:18px">Se Edge chiede il permesso, scegli <b>"Consenti a ogni visita"</b> · If Edge asks, choose <b>"Allow on every visit"</b></div>
   </div>
-  <button class="nc-gear" id="ncGear" title="Impostazioni lettore" aria-label="Impostazioni lettore">${ICONE.menu}</button></div>`;
+  ${BTN_GESTIONE}</div>`;
+}
+const BTN_GESTIONE = `<button class="nc-gestione" id="btnGestione" title="Riservato: serve la password"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Gestione</button>`;
+function chiediPassword() { L.chiediPw = true; render(); }
+function vistaSostituito() {
+  return `<div class="non-chiudere"><div class="nc-card">
+    <div class="nc-logo" role="img" aria-label="Logo"></div>
+    <div class="nc-it" style="font-size:clamp(28px,4vw,44px)">Lettore spento su questo PC</div>
+    <div class="nc-sub">Il PC della linea adesso è <b>${esc(L.sostituito)}</b>. Questo PC non invia più dati.<br>This PC no longer sends data. You can close this page.</div>
+  </div>${BTN_GESTIONE}</div>`;
 }
 function statoInvio() { return L.ultimoOk && Date.now() - L.ultimoOk < Math.max(30e3, L.intervallo * 3000 + 15e3) ? 'ok' : L.ultimoErrore ? 'ko' : ''; }
-function collegaNonChiudere() { $('#ncGear').onclick = () => { L.impostazioni = true; render(); }; }
+function collegaNonChiudere() { $('#btnGestione').onclick = chiediPassword; }
 setInterval(() => { const d = $('#ncDot'); if (d) d.className = 'nc-dot ' + statoInvio(); }, 3000);
 window.addEventListener('beforeunload', e => { if (L.attivo && !L.ricaricoAuto) { e.preventDefault(); e.returnValue = ''; } });
 
@@ -1824,18 +1849,24 @@ function collegaLettore() {
   $('#btnAvvia')?.addEventListener('click', avviaLettore);
   $('#btnStop')?.addEventListener('click', fermaLettore);
   $('#btnNC')?.addEventListener('click', () => { L.impostazioni = false; render(); });
+  $('#btnReset')?.addEventListener('click', reimpostaDaZero);
+  $('#btnTogliCartelle')?.addEventListener('click', async () => { L.cartelle = []; L.file = new Map(); await IDB.set('cartelle', []); render(); });
+  $('#nomePc')?.addEventListener('change', async e => { if (L.config) { L.config.nome = e.target.value.trim() || 'PC visione NID 1'; try { await IDB.set('config', L.config); } catch { } rivendicaPc(); } });
   $('#selInt')?.addEventListener('change', e => { L.intervallo = +e.target.value; localStorage.setItem('smi_intervallo', L.intervallo); if (L.attivo) { avviaTicker(); render(); } });
 }
 async function preparaLettore() {
   await utenteCorrente();
+  L.config = await IDB.get('config').catch(() => null);
+  try { const a = JSON.parse(localStorage.getItem('smi_analisi') || 'null'); if (a?.campioni?.length && SMI.adesso() - a.campioni[a.campioni.length - 1][0] < 3 * 3600e3) L.analisi = a; } catch { }
   const salvate = await IDB.get('cartelle').catch(() => null);
   if (salvate?.length && !L.cartelle.length) {
     let tutteOk = true;
     for (const h of salvate) { const p = await h.queryPermission({ mode: 'read' }); if (p !== 'granted') tutteOk = false; }
     L.cartelle = salvate;
-    if (tutteOk) { await scansiona(); if (S.utente && localStorage.getItem('smi_autostart') === '1') avviaLettore(); }
+    if (tutteOk) { await scansiona(); if (L.config && S.utente && localStorage.getItem('smi_autostart') === '1') { L.pronto = true; await avviaLettore(); } }
     else L.permessoDaRiattivare = true;
   }
+  L.pronto = true;
   if (location.hash === '#lettore') render();
 }
 async function riattivaPermessi() {
@@ -1843,13 +1874,13 @@ async function riattivaPermessi() {
   for (const h of L.cartelle) { const p = await h.requestPermission({ mode: 'read' }); if (p !== 'granted') ok = false; }
   if (!ok) { toast('Serve il permesso sulla cartella per leggere i file'); return; }
   L.permessoDaRiattivare = false; await scansiona();
-  if (S.utente) avviaLettore(); else render();
+  if (S.utente && L.config) avviaLettore(); else render();
 }
 async function scegliCartella() {
   try {
     const h = await window.showDirectoryPicker({ id: 'smi', mode: 'read' });
     if (!L.cartelle.some(x => x.name === h.name)) L.cartelle.push(h);
-    await IDB.set('cartelle', L.cartelle);
+    try { await IDB.set('cartelle', L.cartelle); } catch (e) { log('Non riesco a salvare la cartella: ' + e.message); }
     log(`Cartella scelta: ${h.name}`);
     await scansiona(); render();
   } catch (e) { if (e.name !== 'AbortError') log('Errore cartella: ' + e.message); }
@@ -1890,8 +1921,21 @@ function avviaTicker() {
   L.ticker.onmessage = () => cicloLettore();
   L.ticker.postMessage(L.intervallo * 1000);
 }
+async function rivendicaPc() {
+  if (!L.config) return;
+  const { error } = await sb().from('smi_dati').upsert({ id: 'pc_linea', dati: { pcId: L.config.id, nome: L.config.nome, da: new Date().toISOString(), email: S.utente?.email }, aggiornato: new Date().toISOString() });
+  if (error) log('Errore registrazione PC: ' + error.message);
+}
 async function avviaLettore() {
   if (!S.utente) return;
+  const nome = ($('#nomePc')?.value || L.config?.nome || 'PC visione NID 1').trim();
+  const nuovo = !L.config;
+  L.config = { id: L.config?.id || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random()), nome };
+  try { await IDB.set('config', L.config); } catch { }
+  // la prima volta (o dopo "Gestione") questo PC diventa il PC della linea; alla ripartenza automatica controllo solo di esserlo ancora
+  if (nuovo || L.autorizzato) await rivendicaPc();
+  else if (!(await sonoIlPcDellaLinea())) return;
+  L.sostituito = null;
   L.attivo = true; L.impostazioni = false; localStorage.setItem('smi_autostart', '1');
   log('Lettore avviato');
   avviaTicker();
@@ -1904,6 +1948,26 @@ async function avviaLettore() {
   render(); cicloLettore();
 }
 function fermaLettore() { L.attivo = false; localStorage.setItem('smi_autostart', '0'); L.ticker?.terminate(); L.ticker = null; log('Lettore fermato'); render(); }
+async function sonoIlPcDellaLinea() {
+  const { data, error } = await sb().from('smi_dati').select('dati').eq('id', 'pc_linea').maybeSingle();
+  if (error || !data) return true; // nessun PC registrato o errore di rete: continuo
+  if (data.dati?.pcId && data.dati.pcId !== L.config?.id) {
+    L.attivo = false; L.ticker?.terminate(); L.ticker = null; localStorage.setItem('smi_autostart', '0');
+    L.sostituito = data.dati.nome || 'un altro PC'; log('Un altro PC è diventato il PC della linea: mi fermo');
+    render(); return false;
+  }
+  return true;
+}
+async function reimpostaDaZero() {
+  if (!confirm('Fermare il lettore e cancellare la configurazione di questo PC?')) return;
+  L.attivo = false; L.ticker?.terminate(); L.ticker = null;
+  L.config = null; L.cartelle = []; L.file = new Map(); L.cache = new Map(); L.permessoDaRiattivare = false;
+  L.autorizzato = false; L.impostazioni = false; L.ultimoModello = null; L.ultimoInvio = {};
+  try { await IDB.set('config', null); await IDB.set('cartelle', []); } catch { }
+  localStorage.removeItem('smi_autostart');
+  await sb()?.auth.signOut(); S.utente = null;
+  log('Configurazione cancellata'); render();
+}
 
 function fnv(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36) + ':' + s.length; }
 
@@ -1929,14 +1993,17 @@ async function cicloLettore(comandoId) {
       if (A.righePrec != null && righeAnalisi < A.righePrec) A.offset += A.righePrec; // file ruotato in .bak
       A.righePrec = righeAnalisi;
       A.campioni.push([ora, (A.offset + righeAnalisi) / 4]);
-      A.campioni = A.campioni.filter(c => c[0] > ora - 2 * 3600e3);
+      A.campioni = A.campioni.filter(c => c[0] > ora - 3 * 3600e3);
+      try { localStorage.setItem('smi_analisi', JSON.stringify(A)); } catch { } // così il conteggio sopravvive a un riavvio
     }
     const valoreA = t => { let best = null; for (const c of A.campioni) if (c[0] <= t) best = c; return best; };
+    // valore al momento t, interpolato tra il campione prima e quello dopo
+    const valoreInterp = t => { const p = valoreA(t), n = A.campioni.find(c => c[0] > t); if (!p) return n || null; if (!n) return p; return [t, p[1] + (n[1] - p[1]) * (t - p[0]) / (n[0] - p[0])]; };
     let extra = null;
     if (A.campioni.length) {
       const now = A.campioni[A.campioni.length - 1];
       const snap = m.stato.ultimiContatoriTs || 0;
-      const base = valoreA(snap) || A.campioni.find(c => c[0] >= snap) || now;
+      const base = valoreInterp(snap) || now;
       const v1 = valoreA(ora - 60e3), v5 = valoreA(ora - 300e3);
       extra = {
         daTs: base[0], cassette: Math.max(0, Math.round(now[1] - base[1])),
@@ -1960,6 +2027,7 @@ async function cicloLettore(comandoId) {
     L.ultimoOk = Date.now(); L.ultimoErrore = null;
     for (const d of daInviare) if (d.h) L.ultimoInvio[d.id] = d.h;
     L.ciclo++;
+    if (L.ciclo % Math.max(1, Math.round(30 / L.intervallo)) === 0 && !(await sonoIlPcDellaLinea())) return;
     if (daInviare.length > 1) log(`Inviato: ${daInviare.filter(d => d.h).map(d => d.id).join(', ')} + stato`);
     else if (L.ciclo % Math.max(1, Math.round(60 / L.intervallo)) === 0) log(`Tutto ok · ${extra ? n0(extra.cassette) + ' cassette dall\'ultimo contatore · ' + (extra.velocita1 != null ? n1(extra.velocita1) + '/min' : '') : 'nessun dato in diretta'}`);
     if (comandoId) await sb().from('smi_comandi').update({ eseguito: new Date().toISOString() }).eq('id', comandoId);
