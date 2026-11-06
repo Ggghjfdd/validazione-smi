@@ -1,0 +1,1387 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Produzione Linea SMI</title>
+<meta name="theme-color" content="#060b18">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+:root{
+  --bg-0:#060b18; --bg-1:#0b1430;
+  --glass: rgba(255,255,255,.065);
+  --glass-strong: rgba(255,255,255,.10);
+  --glass-hi: rgba(255,255,255,.16);
+  --line: rgba(255,255,255,.12);
+  --line-soft: rgba(255,255,255,.07);
+  --text-1:#f3f5fb; --text-2:#b9c1d6; --text-3:#7f89a3;
+  --blue:#3987e5; --blue-soft:rgba(57,135,229,.18);
+  --aqua:#1fc28a; --violet:#9085e9;
+  --good:#0ca30c; --warn:#fab219; --serious:#ec835a; --crit:#e5534b;
+  --radius:22px; --radius-s:14px;
+  --shadow: 0 20px 60px -20px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.08);
+  color-scheme: dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{
+  font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  color:var(--text-1); background:var(--bg-0);
+  font-feature-settings:'tnum' 1,'cv11' 1; -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+/* sfondo con macchie luminose dietro il vetro */
+.sfondo{position:fixed;inset:0;z-index:-1;overflow:hidden;
+  background:radial-gradient(1200px 800px at 10% -10%,#16306a 0%,transparent 60%),
+             radial-gradient(900px 700px at 110% 10%,#2b1a5e 0%,transparent 55%),
+             linear-gradient(180deg,var(--bg-1),var(--bg-0) 70%);}
+.sfondo i{position:absolute;border-radius:50%;filter:blur(70px);opacity:.55;animation:galleggia 26s ease-in-out infinite alternate}
+.sfondo i:nth-child(1){width:520px;height:520px;left:-120px;top:30%;background:#1e5bd8}
+.sfondo i:nth-child(2){width:420px;height:420px;right:-80px;top:-60px;background:#7a4be0;animation-duration:32s}
+.sfondo i:nth-child(3){width:380px;height:380px;left:45%;bottom:-160px;background:#0fa37a;opacity:.35;animation-duration:38s}
+@keyframes galleggia{to{transform:translate(60px,-40px) scale(1.08)}}
+@media (prefers-reduced-motion:reduce){.sfondo i{animation:none}}
+
+.vetro{
+  background:linear-gradient(160deg,var(--glass-strong),var(--glass) 40%);
+  border:1px solid var(--line); border-radius:var(--radius);
+  backdrop-filter:blur(24px) saturate(150%); -webkit-backdrop-filter:blur(24px) saturate(150%);
+  box-shadow:var(--shadow);
+}
+.wrap{max-width:1280px;margin:0 auto;padding:20px 20px 60px}
+@media(max-width:600px){.wrap{padding:12px 12px 40px}}
+
+/* header */
+header.top{display:flex;align-items:center;gap:14px;padding:14px 18px;margin-bottom:18px;position:sticky;top:12px;z-index:20}
+.logo{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(135deg,#3987e5,#7a4be0);box-shadow:0 6px 20px -6px #3987e5}
+.logo svg{width:20px;height:20px}
+.titolo b{display:block;font-size:15px;letter-spacing:.2px}
+.titolo span{font-size:12px;color:var(--text-3)}
+.spazio{flex:1}
+.pill{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;font-size:12.5px;color:var(--text-2);background:rgba(255,255,255,.06);border:1px solid var(--line-soft);white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--text-3);box-shadow:0 0 0 3px rgba(255,255,255,.05)}
+.dot.on{background:var(--good);box-shadow:0 0 0 3px rgba(12,163,12,.2),0 0 12px var(--good);animation:pulsa 2s infinite}
+.dot.off{background:var(--crit);box-shadow:0 0 0 3px rgba(229,83,75,.2)}
+.dot.file{background:var(--warn)}
+@keyframes pulsa{50%{box-shadow:0 0 0 6px rgba(12,163,12,.08),0 0 18px var(--good)}}
+.btn{appearance:none;border:1px solid var(--line);background:rgba(255,255,255,.08);color:var(--text-1);padding:9px 14px;border-radius:12px;font:inherit;font-size:13.5px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:.15s}
+.btn:hover{background:rgba(255,255,255,.14);border-color:var(--glass-hi)}
+.btn.primario{background:linear-gradient(135deg,#3987e5,#5b6ff0);border-color:transparent;box-shadow:0 8px 24px -10px #3987e5}
+.btn.primario:hover{filter:brightness(1.08)}
+.btn.icona{padding:9px}
+.btn svg{width:16px;height:16px}
+.btn[disabled]{opacity:.5;cursor:default}
+.menu{position:relative}
+.menu .lista{position:absolute;right:0;top:calc(100% + 8px);min-width:220px;padding:6px;display:none;z-index:40}
+.menu.aperto .lista{display:block}
+.menu .lista button{display:flex;width:100%;gap:10px;align-items:center;padding:10px 12px;border:0;background:none;color:var(--text-1);font:inherit;font-size:13.5px;border-radius:10px;cursor:pointer;text-align:left}
+.menu .lista button:hover{background:rgba(255,255,255,.08)}
+@media(max-width:720px){.nascondi-m{display:none!important}}
+
+/* griglie */
+.griglia{display:grid;gap:16px}
+.hero{display:grid;grid-template-columns:1.35fr 1fr;gap:16px;margin-bottom:16px}
+@media(max-width:980px){.hero{grid-template-columns:1fr}}
+.card{padding:20px 22px}
+.card h2{font-size:13px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--text-3);margin:0 0 14px;display:flex;align-items:center;gap:10px}
+.card h2 .spazio{flex:1}
+.prodotto-nome{font-size:clamp(26px,4vw,38px);font-weight:700;letter-spacing:-.5px;line-height:1.1;margin:2px 0 6px;text-transform:capitalize}
+.sotto{color:var(--text-2);font-size:13.5px;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:600;border:1px solid var(--line-soft);background:rgba(255,255,255,.06);color:var(--text-2)}
+.chip.marcia{color:#bff5c9;background:rgba(12,163,12,.16);border-color:rgba(12,163,12,.35)}
+.chip.ferma{color:#ffd6d3;background:rgba(229,83,75,.14);border-color:rgba(229,83,75,.35)}
+.chip.info{color:#cfe2ff;background:var(--blue-soft);border-color:rgba(57,135,229,.35)}
+.chip svg{width:12px;height:12px}
+
+.kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:18px}
+@media(max-width:720px){.kpi{grid-template-columns:repeat(2,1fr)}}
+.tile{padding:14px 16px;border-radius:var(--radius-s);background:rgba(255,255,255,.05);border:1px solid var(--line-soft);position:relative;overflow:hidden}
+.tile .lab{font-size:12px;color:var(--text-3);font-weight:500;display:flex;align-items:center;gap:6px}
+.tile .val{font-size:clamp(24px,3vw,32px);font-weight:700;letter-spacing:-.6px;margin-top:4px;line-height:1.1}
+.tile .val small{font-size:14px;font-weight:600;color:var(--text-2);letter-spacing:0;margin-left:4px}
+.tile .det{font-size:12px;color:var(--text-2);margin-top:4px}
+.tile.scarti .val{color:#ffb4ae}
+.barra{height:6px;border-radius:6px;background:rgba(255,255,255,.08);margin-top:10px;overflow:hidden}
+.barra i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,#3987e5,#7aa9ff)}
+.barra.vel i{background:linear-gradient(90deg,#1fc28a,#8ff0c6)}
+.barra.vel.bassa i{background:linear-gradient(90deg,#fab219,#ffd36b)}
+.barra.vel.critica i{background:linear-gradient(90deg,#e5534b,#ff8f88)}
+.nota{font-size:12px;color:var(--text-3);margin-top:12px;line-height:1.5}
+.nota b{color:var(--text-2);font-weight:600}
+
+.turno-box .grande{font-size:20px;font-weight:700;margin-bottom:2px}
+.turno-kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+.mini .lab{font-size:11.5px;color:var(--text-3)}
+.mini .val{font-size:22px;font-weight:700;letter-spacing:-.4px}
+.mini .val.r{color:#ffb4ae}
+.trio-turni{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px}
+.trio-turni .t{padding:10px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid var(--line-soft);font-size:12px;color:var(--text-2)}
+.trio-turni .t.att{border-color:rgba(57,135,229,.55);background:var(--blue-soft)}
+.trio-turni .t b{display:block;color:var(--text-1);font-size:15px;margin-top:2px}
+
+/* grafici */
+.grafici{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+@media(max-width:980px){.grafici{grid-template-columns:1fr}}
+.chart{position:relative;width:100%}
+.chart svg{display:block;width:100%;overflow:visible}
+.chart .asse text{fill:var(--text-3);font-size:11px}
+.chart .griglia-l line{stroke:rgba(255,255,255,.07)}
+.chart .rif line{stroke:rgba(255,255,255,.45);stroke-dasharray:4 4}
+.chart .rif text{fill:var(--text-2);font-size:11px;font-weight:600}
+.legenda{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--text-2);margin-bottom:8px}
+.legenda span{display:inline-flex;align-items:center;gap:6px}
+.legenda i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.legenda i.linea{height:2px;border-radius:2px}
+.tip{position:absolute;pointer-events:none;padding:9px 11px;border-radius:12px;font-size:12px;line-height:1.5;background:rgba(14,20,40,.92);border:1px solid var(--line);box-shadow:0 10px 30px rgba(0,0,0,.5);white-space:nowrap;z-index:5;transform:translate(-50%,-100%);opacity:0;transition:opacity .1s}
+.tip b{font-weight:600}
+.tip .k{color:var(--text-3)}
+.vuoto{color:var(--text-3);font-size:13px;padding:36px 0;text-align:center}
+
+/* lista produzioni */
+.barra-filtri{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
+.seg{display:inline-flex;padding:3px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid var(--line-soft)}
+.seg button{border:0;background:none;color:var(--text-2);font:inherit;font-size:13px;padding:7px 12px;border-radius:9px;cursor:pointer}
+.seg button.att{background:rgba(255,255,255,.14);color:var(--text-1);box-shadow:inset 0 1px 0 rgba(255,255,255,.1)}
+select,input[type=text],input[type=email],input[type=password],input[type=search]{appearance:none;font:inherit;font-size:13.5px;color:var(--text-1);background:rgba(255,255,255,.07);border:1px solid var(--line);border-radius:12px;padding:9px 12px;outline:none}
+select{padding-right:30px;background-image:linear-gradient(45deg,transparent 50%,var(--text-2) 50%),linear-gradient(135deg,var(--text-2) 50%,transparent 50%);background-position:calc(100% - 16px) 55%,calc(100% - 11px) 55%;background-size:5px 5px;background-repeat:no-repeat}
+select option{background:#101a36}
+input:focus,select:focus{border-color:rgba(57,135,229,.7);box-shadow:0 0 0 3px rgba(57,135,229,.2)}
+.switch{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--text-2);cursor:pointer;user-select:none}
+.switch input{display:none}
+.switch i{width:34px;height:20px;border-radius:20px;background:rgba(255,255,255,.12);position:relative;transition:.2s}
+.switch i:after{content:'';position:absolute;left:3px;top:3px;width:14px;height:14px;border-radius:50%;background:#fff;transition:.2s}
+.switch input:checked + i{background:var(--blue)}
+.switch input:checked + i:after{left:17px}
+
+.giorno-tit{font-size:12.5px;font-weight:600;color:var(--text-3);margin:18px 4px 8px;display:flex;gap:10px;align-items:baseline}
+.giorno-tit span{font-weight:500}
+.prod{display:grid;grid-template-columns:minmax(160px,1.4fr) repeat(4,minmax(80px,.7fr)) minmax(150px,1.1fr) 20px;gap:14px;align-items:center;padding:14px 18px;margin-bottom:8px;cursor:pointer;transition:transform .15s,background .15s,border-color .15s;border-radius:18px}
+.prod:hover{transform:translateY(-1px);border-color:var(--glass-hi);background:linear-gradient(160deg,rgba(255,255,255,.13),rgba(255,255,255,.07))}
+.prod .nome{font-weight:650;font-size:15px;text-transform:capitalize;display:flex;align-items:center;gap:8px}
+.prod .quando{font-size:12px;color:var(--text-3);margin-top:3px}
+.prod .c .lab{font-size:11px;color:var(--text-3)}
+.prod .c .v{font-size:16px;font-weight:650}
+.prod .c .v.r{color:#ffb4ae}
+.prod .turni-chip{display:flex;gap:5px;flex-wrap:wrap}
+.prod .freccia{color:var(--text-3)}
+.tchip{font-size:11px;padding:3px 8px;border-radius:8px;background:rgba(255,255,255,.07);border:1px solid var(--line-soft);color:var(--text-2)}
+.tchip b{color:var(--text-1)}
+.live-badge{font-size:10.5px;font-weight:700;letter-spacing:.4px;padding:3px 7px;border-radius:6px;background:rgba(12,163,12,.2);color:#bff5c9;border:1px solid rgba(12,163,12,.4)}
+@media(max-width:900px){
+  .prod{grid-template-columns:1fr 1fr 1fr;gap:10px 12px}
+  .prod .principale{grid-column:1/-1}
+  .prod .turni-chip{grid-column:1/-1}
+  .prod .freccia{display:none}
+}
+.tabella{width:100%;border-collapse:collapse;font-size:13.5px}
+.tabella th{font-size:11.5px;font-weight:600;color:var(--text-3);text-align:right;padding:8px 10px;border-bottom:1px solid var(--line-soft);white-space:nowrap}
+.tabella td{padding:10px;text-align:right;border-bottom:1px solid var(--line-soft);white-space:nowrap}
+.tabella th:first-child,.tabella td:first-child{text-align:left}
+.tabella tr.clic{cursor:pointer}
+.tabella tr.clic:hover td{background:rgba(255,255,255,.04)}
+.tabella td.r{color:#ffb4ae}
+.scroll-x{overflow-x:auto}
+
+/* modale */
+.velo{position:fixed;inset:0;background:rgba(3,6,15,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:50;display:none;align-items:flex-start;justify-content:center;padding:4vh 16px;overflow-y:auto}
+.velo.aperto{display:flex;animation:appari .2s ease-out}
+@keyframes appari{from{opacity:0}}
+.modale{width:100%;max-width:1100px;padding:24px 26px;position:relative;animation:sali .25s ease-out}
+@keyframes sali{from{transform:translateY(14px);opacity:0}}
+@media(max-width:600px){.modale{padding:18px 16px}}
+.modale .chiudi{position:absolute;right:16px;top:16px}
+.schede{display:flex;gap:4px;margin:18px 0 16px;border-bottom:1px solid var(--line-soft);overflow-x:auto}
+.schede button{border:0;background:none;color:var(--text-3);font:inherit;font-size:14px;font-weight:500;padding:10px 14px;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+.schede button.att{color:var(--text-1);border-bottom-color:var(--blue)}
+.sezione{margin-top:18px}
+.sezione h3{font-size:13px;font-weight:600;color:var(--text-2);margin:0 0 10px}
+.dueco{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:800px){.dueco{grid-template-columns:1fr}}
+.pannello{padding:16px 18px;border-radius:var(--radius-s);background:rgba(255,255,255,.045);border:1px solid var(--line-soft)}
+.param-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.param{padding:12px 14px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid var(--line-soft)}
+.param .n{font-size:12px;color:var(--text-3);line-height:1.35}
+.param .v{font-size:20px;font-weight:700;margin-top:4px}
+.param .k{font-size:10.5px;color:var(--text-3);font-family:ui-monospace,Consolas,monospace;margin-top:4px;word-break:break-all}
+.diverso{font-size:10.5px;font-weight:600;color:#cfe2ff;background:var(--blue-soft);padding:2px 6px;border-radius:6px;margin-left:6px;vertical-align:middle}
+.lista-param{font-family:ui-monospace,Consolas,monospace;font-size:12.5px}
+.lista-param td{padding:7px 10px}
+.split{display:flex;height:12px;border-radius:8px;overflow:hidden;gap:2px;margin:10px 0 8px}
+.split i{display:block;height:100%;border-radius:4px}
+.allarme{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line-soft);font-size:13px}
+.allarme:last-child{border-bottom:0}
+.allarme .ora{color:var(--text-3);font-size:12px;min-width:92px}
+.allarme svg{width:16px;height:16px;flex:none;color:var(--warn);margin-top:1px}
+.conta{margin-left:auto;font-weight:600;color:var(--text-2)}
+
+/* lettore + login */
+.centro{min-height:calc(100vh - 140px);display:grid;place-items:center}
+.box-login{width:100%;max-width:420px;padding:30px}
+.box-login h1{font-size:24px;margin:10px 0 6px;letter-spacing:-.3px}
+.box-login p{color:var(--text-2);font-size:14px;margin:0 0 20px;line-height:1.5}
+.campo{display:grid;gap:6px;margin-bottom:12px;font-size:12.5px;color:var(--text-2)}
+.campo input{width:100%}
+.errore{color:#ffb4ae;font-size:13px;min-height:18px;margin:6px 0}
+.lettore{max-width:860px;margin:0 auto}
+.lettore .stato-grande{display:flex;align-items:center;gap:18px;padding:24px}
+.lettore .anello{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.06);border:1px solid var(--line)}
+.lettore .anello.on{background:rgba(12,163,12,.15);border-color:rgba(12,163,12,.5);box-shadow:0 0 30px -4px rgba(12,163,12,.6)}
+.lettore .anello svg{width:28px;height:28px}
+.passi{display:grid;gap:12px;margin-top:16px}
+.passo{display:flex;gap:14px;align-items:center;padding:16px 18px}
+.passo .num{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:13px;background:rgba(255,255,255,.08);flex:none}
+.passo.fatto .num{background:var(--good);color:#04200a}
+.passo .testo{flex:1;font-size:14px}
+.passo .testo small{display:block;color:var(--text-3);font-size:12.5px;margin-top:2px}
+.registro{font-family:ui-monospace,Consolas,monospace;font-size:12px;color:var(--text-2);max-height:220px;overflow:auto;line-height:1.7;padding:14px 16px}
+.file-trovati{font-size:12.5px;color:var(--text-2);display:grid;gap:4px;margin-top:8px}
+.drop{border:1.5px dashed rgba(255,255,255,.22);border-radius:var(--radius);padding:30px;text-align:center;color:var(--text-2);transition:.15s}
+.drop.sopra{border-color:var(--blue);background:var(--blue-soft)}
+.banner{padding:10px 16px;margin-bottom:16px;font-size:13px;color:var(--text-2);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.banner b{color:var(--text-1)}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);padding:12px 18px;font-size:13.5px;opacity:0;transition:.25s;z-index:80;pointer-events:none}
+.toast.vis{opacity:1;transform:translateX(-50%)}
+.nascosto{display:none!important}
+.gira{animation:gira 1s linear infinite}
+@keyframes gira{to{transform:rotate(360deg)}}
+
+.chip{white-space:nowrap}
+@media(max-width:600px){
+  header.top{padding:10px 12px;gap:10px;top:8px}
+  .titolo span{display:none}
+  .titolo b{font-size:14px}
+  #statoPill .pill{padding:7px 9px}
+  .pill .testo-pill{display:none}
+  .card{padding:16px}
+}
+.tabella th.sx{text-align:left}
+
+</style>
+</head>
+<body>
+<div class="sfondo"><i></i><i></i><i></i></div>
+<div class="wrap" id="app"></div>
+<div class="velo" id="velo"></div>
+<div class="vetro toast" id="toast"></div>
+
+<script>
+/* ==========================================================================
+   SMI CORE — lettura dei file del sistema di ispezione SMI (Eagle Inspector)
+   Tutti gli orari sono "ora locale della macchina" salvati come millisecondi
+   pseudo-UTC: così il calcolo è identico su qualsiasi PC, a qualsiasi fuso.
+   ========================================================================== */
+const SMI = (() => {
+  const CASSETTE_PER_PEDANA = 80;
+  const VELOCITA_STD = 24;              // cassette / minuto
+  const PAUSA_NUOVA_PRODUZIONE = 4 * 3600e3; // 4 h senza conteggi = nuova produzione
+  const SOGLIA_SETUP = 0.30;            // intervallo con LEARNING e scarti > 30% = avviamento
+  const TURNI = [
+    { n: 1, nome: 'Mattino', da: 6, a: 14 },
+    { n: 2, nome: 'Pomeriggio', da: 14, a: 22 },
+    { n: 3, nome: 'Notte', da: 22, a: 6 },
+  ];
+
+  /* ---------- tempo ---------- */
+  const ms = (y, mo, d, h = 0, mi = 0, s = 0, f = 0) => Date.UTC(+y, +mo - 1, +d, +h, +mi, +s, +f);
+  const pad = n => String(n).padStart(2, '0');
+  const fmtData = t => { const d = new Date(t); return `${pad(d.getUTCDate())}/${pad(d.getUTCMonth() + 1)}/${d.getUTCFullYear()}`; };
+  const fmtOra = t => { const d = new Date(t); return `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`; };
+  const isoGiorno = t => new Date(t).toISOString().slice(0, 10);
+  // "adesso" nello stesso sistema pseudo-UTC (ora locale del browser)
+  const adesso = () => { const d = new Date(); return ms(d.getFullYear(), d.getMonth() + 1, d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds()); };
+
+  function turnoDi(t) {
+    const d = new Date(t), h = d.getUTCHours();
+    let n, giorno = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+    if (h >= 6 && h < 14) n = 1; else if (h >= 14 && h < 22) n = 2; else { n = 3; if (h < 6) giorno -= 864e5; }
+    const T = TURNI[n - 1];
+    const inizio = giorno + T.da * 3600e3;
+    return { key: `${isoGiorno(giorno)}_${n}`, giorno, n, nome: T.nome, inizio, fine: inizio + 8 * 3600e3 };
+  }
+
+  /* ---------- event.log ---------- */
+  const RE_EV = /^(\d{4})-(\d\d)-(\d\d) (\d\d):(\d\d):(\d\d) (.+?) id: (\d+) message: ?(.*?)\s*$/;
+  const RE_CNT = /Total number of products: (\d+) Rejected: (\d+) Uninspected: (\d+) Starch Rejected: (\d+) Residual Rejected: (\d+)/;
+  const ZERO = { t: 0, r: 0, u: 0, s: 0, re: 0 };
+
+  function parseEventLog(text) {
+    const runs = [], intervalliMarcia = [], cambiImpostazioni = [], fermi = [];
+    let prodotto = null, prev = { ...ZERO }, prevTs = null, learn = false, modo = 'ANALYSIS';
+    let inMarcia = false, marciaDa = null, cur = null, ultimoTs = null;
+
+    const chiudi = () => { if (cur && cur.ore.length) runs.push(cur); cur = null; };
+    const lines = text.split(/\r?\n/);
+    for (const line of lines) {
+      const m = RE_EV.exec(line); if (!m) continue;
+      const ts = ms(m[1], m[2], m[3], m[4], m[5], m[6]);
+      const tipo = m[7].trim(), msg = m[9];
+      ultimoTs = ts;
+      switch (tipo) {
+        case 'PRODUCT CHANGED':
+          if (msg && msg !== prodotto) { chiudi(); prodotto = msg; }
+          break;
+        case 'COUNTERS RESET':
+        case 'SYSTEM STARTUP INITIALISATION COMPLETED':
+          prev = { ...ZERO }; prevTs = ts; break;
+        case 'ANALYSIS MODE SET':
+          modo = msg; if (msg === 'LEARNING' || msg === 'UPDATE') learn = true; break;
+        case 'ANALYSIS SETTINGS CHANGED':
+          cambiImpostazioni.push({ ts, prodotto: msg }); break;
+        case 'INSPECTION STARTED':
+          if (!inMarcia) { inMarcia = true; marciaDa = ts; } break;
+        case 'INSPECTION STOPPED':
+        case 'SYSTEM SHUTDOWN':
+          if (inMarcia) { intervalliMarcia.push([marciaDa, ts]); fermi.push(ts); }
+          inMarcia = false; break;
+        case 'INSPECTION COUNTERS': {
+          const c = RE_CNT.exec(msg); if (!c) break;
+          const v = { t: +c[1], r: +c[2], u: +c[3], s: +c[4], re: +c[5] };
+          const base = (v.t < prev.t || v.r < prev.r) ? ZERO : prev;
+          const d = { t: v.t - base.t, r: Math.max(0, v.r - base.r), u: Math.max(0, v.u - base.u), s: Math.max(0, v.s - base.s), re: Math.max(0, v.re - base.re) };
+          if (d.t > 0 || d.r > 0) {
+            if (cur && cur.ultimo && ts - cur.ultimo > PAUSA_NUOVA_PRODUZIONE) chiudi();
+            if (!cur) cur = { prodotto: prodotto || '(prodotto sconosciuto)', ore: [], ultimo: null };
+            const da = prevTs != null ? prevTs : ts - 3600e3;
+            cur.ore.push({ da, ts, ...d, setup: learn && d.t > 0 && d.r / d.t > SOGLIA_SETUP });
+            cur.ultimo = ts;
+          }
+          prev = v; prevTs = ts; learn = false;
+          break;
+        }
+      }
+    }
+    if (inMarcia) intervalliMarcia.push([marciaDa, null]);
+    chiudi();
+    return { runs, intervalliMarcia, cambiImpostazioni, fermi, stato: { prodotto, inMarcia, modo, ultimoTs, ultimiContatori: prev, ultimiContatoriTs: prevTs } };
+  }
+
+  function sovrapposizione(intervalli, a, b, fineAperta) {
+    let tot = 0;
+    for (const [x, y0] of intervalli) { const y = y0 == null ? fineAperta : y0; const s = Math.max(a, x), e = Math.min(b, y); if (e > s) tot += e - s; }
+    return tot;
+  }
+
+  function somma(arr) {
+    const o = { t: 0, r: 0, u: 0, s: 0, re: 0, setupT: 0, setupR: 0 };
+    for (const h of arr) { o.t += h.t; o.r += h.r; o.u += h.u; o.s += h.s; o.re += h.re; if (h.setup) { o.setupT += h.t; o.setupR += h.r; } }
+    return o;
+  }
+
+  function costruisciProduzioni(ev, oraFine) {
+    const { runs, intervalliMarcia, cambiImpostazioni, fermi } = ev;
+    const fineAperta = oraFine || ev.stato.ultimoTs;
+    return runs.map((run, i) => {
+      // inizio reale: primo avvio ispezione dentro il primo intervallo con conteggi
+      const h0 = run.ore[0];
+      let inizio = h0.da;
+      for (const [x] of intervalliMarcia) if (x >= h0.da && x <= h0.ts) { inizio = x; break; }
+      const fine = run.ore[run.ore.length - 1].ts;
+      const tot = somma(run.ore);
+      const segmenti = new Map();
+      for (const h of run.ore) {
+        const T = turnoDi(h.ts - 1000);
+        if (!segmenti.has(T.key)) segmenti.set(T.key, { ...T, ore: [] });
+        segmenti.get(T.key).ore.push(h);
+      }
+      const turni = [...segmenti.values()].map(s => {
+        const a = Math.max(s.inizio, inizio), b = Math.min(s.fine, fine);
+        const marciaMin = sovrapposizione(intervalliMarcia, a, b, fineAperta) / 60e3;
+        return { key: s.key, giorno: s.giorno, n: s.n, nome: s.nome, inizio: a, fine: b, ...somma(s.ore), marciaMin: Math.round(marciaMin) };
+      });
+      const marciaMin = sovrapposizione(intervalliMarcia, inizio, fine, fineAperta) / 60e3;
+      return {
+        id: `${run.prodotto}|${inizio}`, prodotto: run.prodotto, inizio, fine, ...tot,
+        marciaMin: Math.round(marciaMin),
+        fermi: fermi.filter(t => t > inizio && t < fine).length,
+        cambiImpostazioni: cambiImpostazioni.filter(c => c.ts >= inizio - 3600e3 && c.ts <= fine && c.prodotto === run.prodotto).map(c => c.ts),
+        turni,
+        ore: run.ore.map(h => [h.da, h.ts, h.t, h.r, h.s, h.re, h.u, h.setup ? 1 : 0]),
+      };
+    });
+  }
+
+  /* ---------- system_event_trace*.log ---------- */
+  const RE_TR = /^(\d{4})(\d\d)(\d\d) (\d\d):(\d\d):(\d\d)\.\d+ (.*)$/;
+  function parseTrace(text, minuti /* Map */) {
+    let primo = null, ultimo = null, n = 0, e = 0;
+    for (const line of text.split(/\r?\n/)) {
+      const isT = line.includes('InspectTriggerReceived'), isE = !isT && line.includes('Perform eject');
+      if (!isT && !isE) continue;
+      const m = RE_TR.exec(line); if (!m) continue;
+      const k = ms(m[1], m[2], m[3], m[4], m[5]);
+      let b = minuti.get(k); if (!b) minuti.set(k, b = [0, 0]);
+      if (isT) { b[0]++; n++; } else { b[1]++; e++; }
+      if (primo == null) primo = k; ultimo = k;
+    }
+    return { primo, ultimo, cassette: n, scarti: e };
+  }
+
+  /* ---------- error.log ---------- */
+  const RE_ERR = /^(\d{4})-(\d\d)-(\d\d) (\d\d):(\d\d):(\d\d) (\S+) id: (\d+) info: (.*?) severity: (\d+)\s*$/;
+  const TRADUZIONI = [
+    [/Consecutive rejects/i, 'Scarti consecutivi'],
+    [/Not all images captured/i, 'Immagini non acquisite prima del trigger successivo'],
+    [/Capture interrupted|Erfassung unterbrochen/i, 'Acquisizione interrotta'],
+    [/Uninspected image/i, 'Immagine non ispezionata'],
+    [/eject item .* not found/i, 'Espulsione: elemento non trovato'],
+    [/Cameras with serial numbers .* not found/i, 'Telecamera non trovata'],
+    [/Pylon error/i, 'Errore telecamera (Pylon)'],
+    [/RetrieveResult/i, 'Errore telecamera (Pylon)'],
+    [/MqttPublisher|MqttClient/i, 'MQTT non connesso'],
+    [/DOA command/i, 'Timeout comando DOA'],
+    [/no available image sets/i, 'Buffer immagini pieno'],
+    [/Consecutive capture errors/i, 'Errori di acquisizione consecutivi'],
+    [/No IO controllers/i, 'Scheda I/O non trovata'],
+    [/Open input file failed/i, 'File immagine non trovato'],
+  ];
+  const traduci = info => { for (const [re, t] of TRADUZIONI) if (re.test(info)) return t; return info.replace(/\d+/g, 'N').slice(0, 80); };
+  const RUMORE = new Set(['MQTT non connesso', 'Timeout comando DOA', 'Espulsione: elemento non trovato']);
+
+  function parseErrorLog(text, giorni = 30, riferimento) {
+    const righe = text.split(/\r?\n/);
+    let fine = riferimento || 0;
+    if (!fine) for (let i = righe.length - 1; i >= 0; i--) { const m = RE_ERR.exec(righe[i]); if (m) { fine = ms(m[1], m[2], m[3], m[4], m[5], m[6]); break; } }
+    const da = fine - giorni * 864e5;
+    const eventi = [];
+    for (const line of righe) {
+      const m = RE_ERR.exec(line); if (!m) continue;
+      const ts = ms(m[1], m[2], m[3], m[4], m[5], m[6]); if (ts < da) continue;
+      const tipo = traduci(m[9]);
+      eventi.push([ts, tipo, RUMORE.has(tipo) ? 1 : 0, m[9].slice(0, 160)]);
+    }
+    return eventi;
+  }
+
+  /* ---------- ini ---------- */
+  function parseIni(text) {
+    const out = {}; let sez = '';
+    for (const raw of text.split(/\r?\n/)) {
+      const line = raw.trim(); if (!line || line.startsWith(';')) continue;
+      const s = /^\[(.+)\]$/.exec(line); if (s) { sez = s[1]; out[sez] = out[sez] || {}; continue; }
+      const i = line.indexOf('='); if (i < 0) continue;
+      (out[sez] = out[sez] || {})[line.slice(0, i)] = line.slice(i + 1).trim();
+    }
+    return out;
+  }
+
+  function prodottiDaSistema(iniSistema) {
+    const p = iniSistema && iniSistema.PRODUCT_SETTINGS; if (!p) return { nomi: [], attivo: null };
+    const nomi = []; for (let i = 0; i < +p.NUMBER_OF_PRODUCTS; i++) if (p['PRODUCT_NAME' + i]) nomi.push(p['PRODUCT_NAME' + i]);
+    return { nomi, attivo: nomi[+p.ACTIVE_PRODUCT_NUMBER] || null };
+  }
+
+  function parametriPerProdotto(iniAnalisi, nomi) {
+    const sez = iniAnalisi && iniAnalisi.ANALYSIS_SETTINGS; if (!sez) return {};
+    const tutti = [...new Set([...nomi, 'default product'])].sort((a, b) => b.length - a.length);
+    const out = {}; const generali = {};
+    for (const [k, v] of Object.entries(sez)) {
+      let trovato = false;
+      for (const n of tutti) {
+        const i = k.lastIndexOf(n);
+        if (i > 0 && /^\d*$/.test(k.slice(i + n.length))) {
+          const param = k.slice(0, i), cam = k.slice(i + n.length) || '-';
+          ((out[n] = out[n] || {})[cam] = out[n][cam] || {})[param] = v;
+          trovato = true; break;
+        }
+      }
+      if (!trovato) generali[k] = v;
+    }
+    out.__generali = generali;
+    return out;
+  }
+
+  /* ---------- modello completo ---------- */
+  function costruisciModello(f) {
+    // f = { eventLog, traces:[testo], errorLog, analysisIni, systemIni, giorniMinuti }
+    const ev = parseEventLog(f.eventLog || '');
+    const produzioni = costruisciProduzioni(ev);
+    const minuti = new Map(); const tracce = [];
+    for (const t of f.traces || []) tracce.push(parseTrace(t, minuti));
+    const fineDati = Math.max(ev.stato.ultimoTs || 0, ...[...minuti.keys()].slice(-1));
+    const giorniMin = f.giorniMinuti || 7;
+    const minutiArr = [...minuti.entries()].filter(([k]) => k >= fineDati - giorniMin * 864e5).sort((a, b) => a[0] - b[0]).map(([k, v]) => [k, v[0], v[1]]);
+    const sistema = f.systemIni ? parseIni(f.systemIni) : null;
+    const { nomi, attivo } = prodottiDaSistema(sistema);
+    const nomiTutti = [...new Set([...nomi, ...produzioni.map(p => p.prodotto)])];
+    const parametri = f.analysisIni ? parametriPerProdotto(parseIni(f.analysisIni), nomiTutti) : {};
+    const allarmi = f.errorLog ? parseErrorLog(f.errorLog, 30) : [];
+    return {
+      versione: 1,
+      generato: adesso(),
+      fineDati,
+      stato: { ...ev.stato, prodottoAttivoIni: attivo, inMarciaDa: ev.intervalliMarcia.length ? ev.intervalliMarcia[ev.intervalliMarcia.length - 1] : null },
+      produzioni,
+      minuti: minutiArr,
+      allarmi,
+      parametri,
+      prodotti: nomiTutti,
+    };
+  }
+
+  /* ---------- utilità di presentazione ---------- */
+  const pedane = n => Math.floor(n / CASSETTE_PER_PEDANA);
+  const perc = (a, b) => b > 0 ? (100 * a / b) : 0;
+
+  return { CASSETTE_PER_PEDANA, VELOCITA_STD, TURNI, ms, fmtData, fmtOra, isoGiorno, adesso, turnoDi, parseEventLog, costruisciProduzioni, parseTrace, parseErrorLog, parseIni, parametriPerProdotto, costruisciModello, pedane, perc, traduci };
+})();
+if (typeof module !== 'undefined') module.exports = SMI;
+
+</script>
+<script>
+/* ==========================================================================
+   DASHBOARD LINEA SMI — interfaccia, lettore, Supabase
+   ========================================================================== */
+const CONFIG = {
+  SUPABASE_URL: 'https://sszxyritwrkxaictcaaa.supabase.co',
+  SUPABASE_KEY: 'sb_publishable_HkYiyUEqlWXJo_CDyD9Eqw_k8-4cY-3',
+  NOME_LINEA: 'Linea Mogul · SMI',
+};
+const S = {
+  modo: null,             // 'demo' | 'remoto' | 'file' | 'lettore'
+  modello: null, vivo: null, aggiornatoVivo: null,
+  periodo: '7', prodotto: '', prove: false, vista: 'produzioni',
+  sb: null, utente: null,
+};
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const nf = new Intl.NumberFormat('it-IT');
+const n0 = v => nf.format(Math.round(v || 0));
+const n1 = v => (v || 0).toLocaleString('it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const pc = (a, b) => b > 0 ? n1(100 * a / b) + '%' : '—';
+const durata = min => { min = Math.round(min || 0); const h = Math.floor(min / 60), m = min % 60; return h ? `${h} h ${String(m).padStart(2, '0')}′` : `${m}′`; };
+const GIORNI = ['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato'];
+const MESI = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic'];
+const giornoLungo = t => { const d = new Date(t); return `${GIORNI[d.getUTCDay()]} ${d.getUTCDate()} ${MESI[d.getUTCMonth()]} ${d.getUTCFullYear()}`; };
+const giornoCorto = t => { const d = new Date(t); return `${d.getUTCDate()} ${MESI[d.getUTCMonth()]}`; };
+const ICONE = {
+  logo: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 12l9 4 9-4"/><path d="M3 17l9 4 9-4"/></svg>',
+  agg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>',
+  menu: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>',
+  x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>',
+  file: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg>',
+  cartella: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>',
+  pc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>',
+  esci: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>',
+  dash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>',
+  warn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>',
+  play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>',
+  stop: '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>',
+  ok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+};
+
+/* ---------- riferimento temporale ---------- */
+const rif = () => (S.modo === 'remoto' || S.modo === 'lettore') ? SMI.adesso() : (S.modello?.fineDati || SMI.adesso());
+
+/* ---------- toast ---------- */
+let toastT;
+function toast(msg) { const t = $('#toast'); t.innerHTML = msg; t.classList.add('vis'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('vis'), 3200); }
+
+/* ==========================================================================
+   GRAFICI SVG (con tooltip)
+   ========================================================================== */
+const grafici = new Map();
+const ro = new ResizeObserver(es => { for (const e of es) { const f = grafici.get(e.target); if (f) f(); } });
+function montaGrafico(el, disegna) { grafici.set(el, () => disegna(el)); ro.observe(el); disegna(el); }
+
+function scalaNice(max) { if (max <= 0) return { max: 10, passo: 2 }; const p = Math.pow(10, Math.floor(Math.log10(max))); const r = max / p; const s = r <= 1.2 ? .25 : r <= 2.5 ? .5 : r <= 5 ? 1 : 2; const passo = s * p; return { max: Math.ceil(max / passo) * passo, passo }; }
+
+function graficoBarre(el, dati, { altezza = 220, etichetta = d => SMI.fmtOra(d.t0) } = {}) {
+  // dati: [{t0, buone, scarti, setup}]
+  const W = Math.max(280, el.clientWidth), H = altezza, mL = 44, mR = 8, mT = 10, mB = 26;
+  if (!dati.length) { el.innerHTML = '<div class="vuoto">Nessun dato in questo intervallo</div>'; return; }
+  const maxV = Math.max(...dati.map(d => d.buone + d.scarti));
+  const { max, passo } = scalaNice(maxV);
+  const iw = W - mL - mR, ih = H - mT - mB, bw = iw / dati.length, larg = Math.max(2, Math.min(28, bw * .66));
+  const y = v => mT + ih - (v / max) * ih;
+  let g = '<g class="griglia-l">';
+  for (let v = 0; v <= max + 1e-9; v += passo) g += `<line x1="${mL}" x2="${W - mR}" y1="${y(v)}" y2="${y(v)}"/>`;
+  g += '</g><g class="asse">';
+  for (let v = 0; v <= max + 1e-9; v += passo) g += `<text x="${mL - 8}" y="${y(v) + 4}" text-anchor="end">${n0(v)}</text>`;
+  const ogni = Math.ceil(dati.length / Math.max(2, Math.floor(iw / 56)));
+  dati.forEach((d, i) => { if (i % ogni === 0) g += `<text x="${mL + bw * i + bw / 2}" y="${H - 6}" text-anchor="middle">${etichetta(d)}</text>`; });
+  g += '</g>';
+  let b = '';
+  dati.forEach((d, i) => {
+    const x = mL + bw * i + (bw - larg) / 2, r = Math.min(4, larg / 2);
+    const yB = y(d.buone), yS = y(d.buone + d.scarti);
+    if (d.buone > 0) b += barraArrot(x, yB, larg, mT + ih - yB, r, d.scarti > 0 ? 0 : r, 'var(--blue)');
+    if (d.scarti > 0) { const hS = Math.max(1.5, yB - yS - (d.buone > 0 ? 2 : 0)); b += barraArrot(x, yB - (d.buone > 0 ? 2 : 0) - hS, larg, hS, r, r, 'var(--crit)'); }
+  });
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" height="${H}">${g}${b}<rect class="hit" x="${mL}" y="${mT}" width="${iw}" height="${ih}" fill="transparent"/><line class="cursore" y1="${mT}" y2="${mT + ih}" stroke="rgba(255,255,255,.25)" opacity="0"/></svg><div class="tip"></div>`;
+  const svg = el.querySelector('svg'), tip = el.querySelector('.tip'), cur = el.querySelector('.cursore');
+  svg.addEventListener('mousemove', ev => {
+    const r = svg.getBoundingClientRect(), x = (ev.clientX - r.left) * (W / r.width);
+    const i = Math.floor((x - mL) / bw); if (i < 0 || i >= dati.length) return nascondi();
+    const d = dati[i], tot = d.buone + d.scarti, cx = mL + bw * i + bw / 2;
+    cur.setAttribute('x1', cx); cur.setAttribute('x2', cx); cur.setAttribute('opacity', 1);
+    tip.innerHTML = `<b>${d.titolo || (giornoCorto(d.t0) + ' · ' + SMI.fmtOra(d.t0) + '–' + SMI.fmtOra(d.t0 + 3600e3))}</b><br><span class="k">Cassette</span> ${n0(tot)}<br><span class="k">Scarti</span> ${n0(d.scarti)} (${pc(d.scarti, tot)})${d.setup ? '<br><span class="k">⚙︎ avviamento / learning</span>' : ''}`;
+    tip.style.left = (cx / W * r.width) + 'px'; tip.style.top = (y(tot) / H * r.height - 8) + 'px'; tip.style.opacity = 1;
+  });
+  const nascondi = () => { tip.style.opacity = 0; cur.setAttribute('opacity', 0); };
+  svg.addEventListener('mouseleave', nascondi);
+}
+function barraArrot(x, y, w, h, rTop, rBot, col) {
+  if (h <= 0) return '';
+  rTop = Math.min(rTop, h / 2); rBot = Math.min(rBot, h / 2);
+  return `<path fill="${col}" d="M${x},${y + rTop} a${rTop},${rTop} 0 0 1 ${rTop},${-rTop} h${w - 2 * rTop} a${rTop},${rTop} 0 0 1 ${rTop},${rTop} v${h - rTop - rBot} a${rBot},${rBot} 0 0 1 ${-rBot},${rBot} h${-(w - 2 * rBot)} a${rBot},${rBot} 0 0 1 ${-rBot},${-rBot} z"/>`;
+}
+
+function graficoLinea(el, punti, { altezza = 220, riferimento = SMI.VELOCITA_STD, unita = 'cass./min', da, a } = {}) {
+  // punti: [{t, v}] ordinati, interruzioni se gap > 3 min
+  const W = Math.max(280, el.clientWidth), H = altezza, mL = 36, mR = 10, mT = 12, mB = 26;
+  if (!punti.length) { el.innerHTML = '<div class="vuoto">Nessun dato di velocità in questo intervallo</div>'; return; }
+  const t0 = da ?? punti[0].t, t1 = a ?? punti[punti.length - 1].t + 60e3;
+  const { max, passo } = scalaNice(Math.max(riferimento * 1.25, ...punti.map(p => p.v)));
+  const iw = W - mL - mR, ih = H - mT - mB;
+  const x = t => mL + (t - t0) / Math.max(1, t1 - t0) * iw, y = v => mT + ih - (v / max) * ih;
+  let g = '<g class="griglia-l">';
+  for (let v = 0; v <= max + 1e-9; v += passo) g += `<line x1="${mL}" x2="${W - mR}" y1="${y(v)}" y2="${y(v)}"/>`;
+  g += '</g><g class="asse">';
+  for (let v = 0; v <= max + 1e-9; v += passo) g += `<text x="${mL - 8}" y="${y(v) + 4}" text-anchor="end">${n0(v)}</text>`;
+  const span = t1 - t0, step = [15, 30, 60, 120, 180, 240, 360, 720, 1440].map(m => m * 60e3).find(s => span / s <= Math.max(2, iw / 70)) || 1440 * 60e3;
+  for (let t = Math.ceil(t0 / step) * step; t <= t1; t += step) g += `<text x="${x(t)}" y="${H - 6}" text-anchor="middle">${step >= 864e5 ? giornoCorto(t) : SMI.fmtOra(t)}</text>`;
+  g += '</g>';
+  let d = '', area = '', prev = null, seg = [];
+  const flush = () => { if (seg.length) { d += 'M' + seg.map(p => `${x(p.t).toFixed(1)},${y(p.v).toFixed(1)}`).join('L'); area += `M${x(seg[0].t).toFixed(1)},${y(0)}L` + seg.map(p => `${x(p.t).toFixed(1)},${y(p.v).toFixed(1)}`).join('L') + `L${x(seg[seg.length - 1].t).toFixed(1)},${y(0)}Z`; } seg = []; };
+  for (const p of punti) { if (prev && p.t - prev.t > (p.gap || 3 * 60e3)) flush(); seg.push(p); prev = p; }
+  flush();
+  const rifY = y(riferimento);
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" height="${H}"><defs><linearGradient id="gArea${el.id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1fc28a" stop-opacity=".28"/><stop offset="1" stop-color="#1fc28a" stop-opacity="0"/></linearGradient></defs>${g}
+    <path d="${area}" fill="url(#gArea${el.id})"/><path d="${d}" fill="none" stroke="var(--aqua)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    <g class="rif"><line x1="${mL}" x2="${W - mR}" y1="${rifY}" y2="${rifY}"/><text x="${W - mR}" y="${rifY - 6}" text-anchor="end">Standard ${riferimento}</text></g>
+    <line class="cursore" y1="${mT}" y2="${mT + ih}" stroke="rgba(255,255,255,.25)" opacity="0"/><circle class="pt" r="5" fill="var(--aqua)" stroke="#0b1430" stroke-width="2" opacity="0"/>
+    <rect x="${mL}" y="${mT}" width="${iw}" height="${ih}" fill="transparent"/></svg><div class="tip"></div>`;
+  const svg = el.querySelector('svg'), tip = el.querySelector('.tip'), cur = el.querySelector('.cursore'), pt = el.querySelector('.pt');
+  svg.addEventListener('mousemove', ev => {
+    const r = svg.getBoundingClientRect(), xm = (ev.clientX - r.left) * (W / r.width);
+    const tm = t0 + (xm - mL) / iw * (t1 - t0);
+    let best = null, bd = Infinity; for (const p of punti) { const dd = Math.abs(p.t - tm); if (dd < bd) { bd = dd; best = p; } }
+    if (!best) return;
+    const cx = x(best.t), cy = y(best.v);
+    cur.setAttribute('x1', cx); cur.setAttribute('x2', cx); cur.setAttribute('opacity', 1);
+    pt.setAttribute('cx', cx); pt.setAttribute('cy', cy); pt.setAttribute('opacity', 1);
+    tip.innerHTML = `<b>${giornoCorto(best.t)} · ${SMI.fmtOra(best.t)}${best.fine ? '–' + SMI.fmtOra(best.fine) : ''}</b><br><span class="k">Velocità</span> ${n1(best.v)} ${unita}${best.e != null ? `<br><span class="k">Scarti</span> ${n0(best.e)}` : ''}`;
+    tip.style.left = (cx / W * r.width) + 'px'; tip.style.top = (cy / H * r.height - 10) + 'px'; tip.style.opacity = 1;
+  });
+  svg.addEventListener('mouseleave', () => { tip.style.opacity = 0; cur.setAttribute('opacity', 0); pt.setAttribute('opacity', 0); });
+}
+
+/* ---------- dati per i grafici ---------- */
+function orarie(produzioni, da, a) {
+  const b = new Map();
+  for (const p of produzioni) for (const [hda, ts, t, r, , , , setup] of p.ore) {
+    if (ts <= da || ts > a + 1000) continue;
+    const k = Math.floor((ts - 1000) / 3600e3) * 3600e3;
+    const o = b.get(k) || { t0: k, buone: 0, scarti: 0, setup: 0 };
+    o.buone += Math.max(0, t - r); o.scarti += r; o.setup |= setup; b.set(k, o);
+  }
+  const out = []; for (let k = Math.floor(da / 3600e3) * 3600e3; k <= a; k += 3600e3) out.push(b.get(k) || { t0: k, buone: 0, scarti: 0, setup: 0 });
+  return out;
+}
+function puntiVelocita(modello, produzioni, da, a) {
+  // 1° scelta: minuti dai trace (precisi). Media mobile su 3 minuti.
+  const min = (modello.minuti || []).filter(m => m[0] >= da && m[0] <= a);
+  if (min.length >= 10) {
+    return min.map((m, i) => { const w = min.slice(Math.max(0, i - 1), i + 2).filter(z => Math.abs(z[0] - m[0]) <= 60e3); return { t: m[0], v: w.reduce((s, z) => s + z[1], 0) / w.length, e: m[2] }; });
+  }
+  // altrimenti: velocità media per intervallo dai contatori orari
+  const out = [];
+  for (const p of produzioni) for (const [hda, ts, t, r] of p.ore) {
+    if (ts < da || hda > a) continue;
+    const minuti = (ts - hda) / 60e3; if (minuti < 2) continue;
+    out.push({ t: hda, v: t / minuti, fine: ts, gap: 3700e3 }, { t: ts - 1, v: t / minuti, fine: ts, gap: 3700e3 });
+  }
+  return out.sort((x, y) => x.t - y.t);
+}
+function velocitaAttuale(modello) {
+  if (S.vivo?.extra?.velocita1 != null && S.modo !== 'demo' && S.modo !== 'file') return { v: S.vivo.extra.velocita1, fonte: 'in diretta' };
+  const m = modello.minuti || []; const r = rif();
+  const ult = m.filter(x => x[0] > r - 6 * 60e3 && x[0] <= r);
+  if (ult.length) return { v: ult.reduce((s, x) => s + x[1], 0) / ult.length, fonte: 'ultimi minuti' };
+  return null;
+}
+
+/* ==========================================================================
+   VISTA DASHBOARD
+   ========================================================================== */
+function produzioniFiltrate() {
+  const m = S.modello, r = rif();
+  let p = m.produzioni.slice();
+  if (!S.prove) p = p.filter(x => x.t >= SMI.CASSETTE_PER_PEDANA);
+  if (S.prodotto) p = p.filter(x => x.prodotto === S.prodotto);
+  const lim = { oggi: SMI.turnoDi(r).giorno, '7': r - 7 * 864e5, '30': r - 30 * 864e5, tutto: -Infinity }[S.periodo];
+  return p.filter(x => x.fine >= lim);
+}
+function conLive(p, isUltima) {
+  if (!isUltima || !S.vivo?.extra?.cassette || S.modo === 'demo' || S.modo === 'file') return p;
+  return { ...p, t: p.t + S.vivo.extra.cassette, extraLive: S.vivo.extra.cassette };
+}
+
+function vistaDashboard() {
+  const m = S.modello;
+  if (!m || !m.produzioni) return `<div class="centro"><div class="vetro card" style="max-width:520px;text-align:center"><h2 style="justify-content:center">Nessun dato</h2><p class="nota">Il lettore sul PC della linea non ha ancora inviato dati. Apri <b>#lettore</b> su quel PC, oppure carica i file a mano dal menu.</p></div></div>`;
+  const r = rif();
+  const tutte = m.produzioni.filter(x => x.t >= 1);
+  const ultimaRaw = tutte[tutte.length - 1];
+  const ultima = ultimaRaw ? conLive(ultimaRaw, true) : null;
+  const inMarcia = !!(m.stato?.inMarcia || (S.vivo?.extra?.velocita1 > 0));
+  const vel = velocitaAttuale(m);
+  const banner = S.modo === 'demo'
+    ? `<div class="vetro banner"><span class="chip info">Anteprima</span><span>Dati reali dai log che mi hai mandato, fermi al <b>${SMI.fmtData(m.fineDati)} ${SMI.fmtOra(m.fineDati)}</b>. Una volta collegato il lettore, la pagina si aggiorna da sola.</span></div>`
+    : S.modo === 'file' ? `<div class="vetro banner"><span class="chip info">File caricati</span><span>Stai guardando i file caricati a mano, con dati fino al <b>${SMI.fmtData(m.fineDati)} ${SMI.fmtOra(m.fineDati)}</b>.</span></div>` : '';
+
+  // --- produzione corrente/ultima
+  let hero = '';
+  if (ultima) {
+    const scartiNetti = ultima.r - ultima.setupR, totNetti = ultima.t - ultima.setupT;
+    const resa = ultima.marciaMin > 0 ? ultima.t / (ultima.marciaMin * SMI.VELOCITA_STD) : 0;
+    const velMedia = ultima.marciaMin > 0 ? ultima.t / ultima.marciaMin : 0;
+    const resto = ultima.t % SMI.CASSETTE_PER_PEDANA;
+    const v = vel && (inMarcia || S.modo === 'demo') ? vel.v : velMedia;
+    const velCls = v >= 22 ? '' : v >= 18 ? 'bassa' : 'critica';
+    hero = `
+    <section class="vetro card">
+      <h2>${inMarcia ? 'Produzione in corso' : 'Ultima produzione'} <span class="spazio"></span>
+        ${inMarcia ? `<span class="chip marcia">${ICONE.play} In marcia</span>` : `<span class="chip ferma">${ICONE.stop} Ferma${m.stato?.ultimoTs ? ' dalle ' + SMI.fmtOra(m.stato.ultimoTs) : ''}</span>`}</h2>
+      <div class="prodotto-nome">${esc(ultima.prodotto)}</div>
+      <div class="sotto"><span>Iniziata ${giornoLungo(ultima.inizio)} alle ${SMI.fmtOra(ultima.inizio)}</span><span>·</span><span>In marcia ${durata(ultima.marciaMin)}</span><span>·</span><span>${ultima.fermi} fermi</span></div>
+      <div class="kpi">
+        <div class="tile"><div class="lab">Cassette contate</div><div class="val">${n0(ultima.t)}</div><div class="det">${ultima.extraLive ? `di cui ≈${n0(ultima.extraLive)} in diretta` : `${n0(ultima.t - ultima.r)} buone`}</div></div>
+        <div class="tile scarti"><div class="lab">Cassette scartate</div><div class="val">${n0(ultima.r)}<small>${pc(ultima.r, ultimaRaw.t)}</small></div><div class="det">${ultima.setupT ? `${pc(scartiNetti, totNetti)} senza avviamento` : `Amido ${n0(ultima.s)} · Residui ${n0(ultima.re)}`}</div></div>
+        <div class="tile"><div class="lab">Pedane</div><div class="val">${n0(SMI.pedane(ultima.t))}<small>+ ${resto}/80</small></div><div class="barra"><i style="width:${resto / 80 * 100}%"></i></div></div>
+        <div class="tile"><div class="lab">Velocità</div><div class="val">${n1(v)}<small>/min</small></div><div class="barra vel ${velCls}"><i style="width:${Math.min(100, v / SMI.VELOCITA_STD * 100)}%"></i></div><div class="det">${vel && (inMarcia || S.modo === 'demo') ? vel.fonte : 'media produzione'} · resa ${Math.round(resa * 100)}%</div></div>
+      </div>
+      <div class="nota">Clicca sulla produzione nell'elenco qui sotto per vedere andamento, turni e <b>parametri di analisi</b>.</div>
+    </section>`;
+  }
+
+  // --- turno
+  const T = SMI.turnoDi(r);
+  const turniGiorno = [1, 2, 3].map(n => {
+    const key = `${SMI.isoGiorno(T.giorno)}_${n}`;
+    const agg = { t: 0, r: 0, prod: new Set() };
+    for (const p of m.produzioni) for (const t of p.turni) if (t.key === key) { agg.t += t.t; agg.r += t.r; agg.prod.add(p.prodotto); }
+    if (n === T.n && ultima?.extraLive) agg.t += ultima.extraLive;
+    return { n, key, ...agg, nome: SMI.TURNI[n - 1].nome, orario: n === 1 ? '06–14' : n === 2 ? '14–22' : '22–06' };
+  });
+  const tc = turniGiorno[T.n - 1];
+  const turno = `
+    <section class="vetro card turno-box">
+      <h2>Turno ${S.modo === 'remoto' || S.modo === 'lettore' ? 'attuale' : 'del momento'}<span class="spazio"></span><span class="chip">${giornoCorto(T.giorno)}</span></h2>
+      <div class="grande">${tc.nome} <span style="color:var(--text-3);font-weight:500">${tc.orario}</span></div>
+      <div class="sotto">${tc.prod.size ? [...tc.prod].map(esc).join(', ') : 'Nessuna produzione in questo turno'}</div>
+      <div class="turno-kpi">
+        <div class="mini"><div class="lab">Cassette</div><div class="val">${n0(tc.t)}</div></div>
+        <div class="mini"><div class="lab">Scarti</div><div class="val r">${n0(tc.r)} <span style="font-size:13px;color:var(--text-2)">${pc(tc.r, tc.t)}</span></div></div>
+        <div class="mini"><div class="lab">Pedane</div><div class="val">${n0(SMI.pedane(tc.t))}</div></div>
+      </div>
+      <div class="barra" title="Obiettivo turno: ${n0(SMI.VELOCITA_STD * 480)} cassette (24/min × 8 h)"><i style="width:${Math.min(100, tc.t / (SMI.VELOCITA_STD * 480) * 100)}%"></i></div>
+      <div class="nota">Obiettivo teorico del turno: <b>${n0(SMI.VELOCITA_STD * 480)}</b> cassette (24/min × 8 h) = <b>${SMI.VELOCITA_STD * 480 / 80}</b> pedane.</div>
+      <div class="trio-turni">${turniGiorno.map(t => `<div class="t ${t.n === T.n ? 'att' : ''}">${t.nome}<b>${n0(t.t)}</b>${t.t ? `${pc(t.r, t.t)} scarti` : '—'}</div>`).join('')}</div>
+    </section>`;
+
+  // --- grafici ultime 24 h
+  const graf = `
+  <div class="grafici">
+    <section class="vetro card"><h2>Cassette per ora · ultime 24 h</h2>
+      <div class="legenda"><span><i style="background:var(--blue)"></i>Buone</span><span><i style="background:var(--crit)"></i>Scartate</span></div>
+      <div class="chart" id="gOre"></div></section>
+    <section class="vetro card"><h2>Velocità linea · ultime 12 h</h2>
+      <div class="legenda"><span><i class="linea" style="background:var(--aqua)"></i>Cassette al minuto</span><span><i class="linea" style="background:rgba(255,255,255,.5)"></i>Standard 24/min</span></div>
+      <div class="chart" id="gVel"></div></section>
+  </div>`;
+
+  // --- elenco
+  const prodotti = [...new Set(m.produzioni.map(p => p.prodotto))].sort((a, b) => a.localeCompare(b));
+  const lista = `
+  <section class="vetro card">
+    <h2>Produzioni</h2>
+    <div class="barra-filtri">
+      <div class="seg" id="fVista">${[['produzioni', 'Produzioni'], ['turni', 'Per turno']].map(([k, l]) => `<button data-v="${k}" class="${S.vista === k ? 'att' : ''}">${l}</button>`).join('')}</div>
+      <div class="seg" id="fPeriodo">${[['oggi', 'Oggi'], ['7', '7 giorni'], ['30', '30 giorni'], ['tutto', 'Tutto']].map(([k, l]) => `<button data-p="${k}" class="${S.periodo === k ? 'att' : ''}">${l}</button>`).join('')}</div>
+      <select id="fProdotto"><option value="">Tutti i prodotti</option>${prodotti.map(p => `<option ${p === S.prodotto ? 'selected' : ''} value="${esc(p)}">${esc(p)}</option>`).join('')}</select>
+      <span class="spazio"></span>
+      <label class="switch" title="Mostra anche le prove con meno di una pedana (80 cassette)"><input type="checkbox" id="fProve" ${S.prove ? 'checked' : ''}><i></i>Mostra prove</label>
+    </div>
+    <div id="elenco">${S.vista === 'turni' ? elencoTurni() : elencoProduzioni()}</div>
+  </section>`;
+
+  return banner + `<div class="hero">${hero}${turno}</div>` + graf + lista;
+}
+
+function elencoProduzioni() {
+  const lista = produzioniFiltrate();
+  if (!lista.length) return '<div class="vuoto">Nessuna produzione nel periodo scelto.</div>';
+  const ultimaId = S.modello.produzioni.filter(x => x.t >= 1).slice(-1)[0]?.id;
+  const perGiorno = new Map();
+  for (const p of lista.slice().reverse()) { const g = SMI.turnoDi(p.inizio).giorno; if (!perGiorno.has(g)) perGiorno.set(g, []); perGiorno.get(g).push(p); }
+  let h = '';
+  for (const [g, ps] of perGiorno) {
+    const tot = ps.reduce((s, p) => s + p.t, 0), rej = ps.reduce((s, p) => s + p.r, 0);
+    const gl = giornoLungo(g); h += `<div class="giorno-tit">${gl[0].toUpperCase() + gl.slice(1)} <span>${n0(tot)} cassette · ${n0(SMI.pedane(tot))} pedane · ${pc(rej, tot)} scarti</span></div>`;
+    for (const p0 of ps) {
+      const live = p0.id === ultimaId; const p = conLive(p0, live);
+      const vivo = live && (S.modello.stato?.inMarcia) && S.modo !== 'demo' && S.modo !== 'file';
+      const resa = p.marciaMin ? Math.round(p.t / (p.marciaMin * SMI.VELOCITA_STD) * 100) : 0;
+      h += `<div class="vetro prod" data-id="${esc(p.id)}">
+        <div class="principale"><div class="nome">${esc(p.prodotto)} ${vivo ? '<span class="live-badge">IN CORSO</span>' : ''}</div><div class="quando">${giornoCorto(p.inizio)} ${SMI.fmtOra(p.inizio)} → ${SMI.isoGiorno(p.inizio) !== SMI.isoGiorno(p.fine) ? giornoCorto(p.fine) + ' ' : ''}${SMI.fmtOra(p.fine)} · ${durata(p.marciaMin)} in marcia</div></div>
+        <div class="c"><div class="lab">Cassette</div><div class="v">${n0(p.t)}</div></div>
+        <div class="c"><div class="lab">Scarti</div><div class="v r">${n0(p.r)} <span style="font-size:12px;color:var(--text-2);font-weight:500">${pc(p.r, p0.t)}</span></div></div>
+        <div class="c"><div class="lab">Pedane</div><div class="v">${n0(SMI.pedane(p.t))}</div></div>
+        <div class="c"><div class="lab">Resa vel.</div><div class="v">${resa}%</div></div>
+        <div class="turni-chip">${p.turni.map(t => `<span class="tchip">${t.nome.slice(0, 3)} ${giornoCorto(t.giorno)} <b>${n0(t.t)}</b></span>`).join('')}</div>
+        <div class="freccia">›</div>
+      </div>`;
+    }
+  }
+  return h;
+}
+
+function elencoTurni() {
+  const lista = produzioniFiltrate();
+  const turni = new Map();
+  for (const p of lista) for (const t of p.turni) {
+    const o = turni.get(t.key) || { key: t.key, giorno: t.giorno, n: t.n, nome: t.nome, t: 0, r: 0, marcia: 0, prodotti: [] };
+    o.t += t.t; o.r += t.r; o.marcia += t.marciaMin; o.prodotti.push({ id: p.id, nome: p.prodotto, t: t.t }); turni.set(t.key, o);
+  }
+  const righe = [...turni.values()].sort((a, b) => b.key.localeCompare(a.key));
+  if (!righe.length) return '<div class="vuoto">Nessun turno nel periodo scelto.</div>';
+  return `<div class="scroll-x"><table class="tabella"><thead><tr><th>Turno</th><th class="sx">Prodotti</th><th>Cassette</th><th>Scarti</th><th>%</th><th>Pedane</th><th>In marcia</th><th>Resa vel.</th></tr></thead><tbody>
+  ${righe.map(o => `<tr class="clic" data-id="${esc(o.prodotti.sort((a, b) => b.t - a.t)[0].id)}"><td><b>${o.nome}</b> <span style="color:var(--text-3)">${giornoCorto(o.giorno)}</span></td><td style="text-align:left;white-space:normal;text-transform:capitalize">${[...new Set(o.prodotti.map(x => x.nome))].map(esc).join(', ')}</td><td>${n0(o.t)}</td><td class="r">${n0(o.r)}</td><td>${pc(o.r, o.t)}</td><td>${n0(SMI.pedane(o.t))}</td><td>${durata(o.marcia)}</td><td>${o.marcia ? Math.round(o.t / (o.marcia * 24) * 100) : 0}%</td></tr>`).join('')}
+  </tbody></table></div>`;
+}
+
+function collegaDashboard() {
+  const m = S.modello; if (!m?.produzioni) return;
+  const r = rif();
+  const gO = $('#gOre'); if (gO) montaGrafico(gO, el => graficoBarre(el, orarie(m.produzioni, r - 24 * 3600e3, r)));
+  const gV = $('#gVel'); if (gV) montaGrafico(gV, el => graficoLinea(el, puntiVelocita(m, m.produzioni, r - 12 * 3600e3, r), { da: r - 12 * 3600e3, a: r }));
+  $('#fPeriodo')?.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.periodo = b.dataset.p; render(); });
+  $('#fVista')?.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.vista = b.dataset.v; render(); });
+  $('#fProdotto')?.addEventListener('change', e => { S.prodotto = e.target.value; render(); });
+  $('#fProve')?.addEventListener('change', e => { S.prove = e.target.checked; render(); });
+  $('#elenco')?.addEventListener('click', e => { const el = e.target.closest('[data-id]'); if (el) apriProduzione(el.dataset.id); });
+}
+
+/* ==========================================================================
+   FINESTRA PRODUZIONE
+   ========================================================================== */
+const PARAM_PRINCIPALI = [
+  ['GREYLEVEL_THRESHOLD', 'Soglia livello di grigio'],
+  ['MINIMUM_DEFECT_SIZE', 'Dimensione minima difetto (px)'],
+  ['MINIMUM_SUM_OF_DEFECT_SIZES', 'Somma minima difetti (px)'],
+  ['AVERAGE_DIFFERENCE_FACTOR', 'Fattore differenza media'],
+  ['ERODE_DILATE_HOR_SIZE', 'Erosione/dilatazione orizzontale'],
+  ['ERODE_DILATE_VER_SIZE', 'Erosione/dilatazione verticale'],
+  ['ANALYSIS_MATCHING_RANGE_X', 'Range allineamento X'],
+  ['ANALYSIS_MATCHING_RANGE_Y', 'Range allineamento Y'],
+  ['MAX_SHIFT_X', 'Spostamento massimo X'],
+  ['MAX_SHIFT_Y', 'Spostamento massimo Y'],
+  ['MAX_ROTATION', 'Rotazione massima (°)'],
+  ['m_camera_exposure', 'Esposizione telecamera'],
+  ['m_camera_gain', 'Guadagno telecamera'],
+  ['RADIUS_MM', 'Raggio prodotto (mm)'],
+  ['CAMERA_DISTANCE_MM', 'Distanza telecamera (mm)'],
+  ['AUTO_UPDATE_GREYLEVEL_THRESHOLD', 'Auto-update: soglia grigio'],
+  ['AUTO_UPDATE_MINIMUM_DEFECT_SIZE', 'Auto-update: difetto minimo'],
+  ['m_reject_in_learning_mode', 'Scarta durante il learning (1 = sì)'],
+  ['AUTO_STOP_AFTER_LEARNING', 'Stop automatico dopo learning'],
+];
+
+function apriProduzione(id) {
+  const m = S.modello; const p0 = m.produzioni.find(x => x.id === id); if (!p0) return;
+  const ultimaId = m.produzioni.filter(x => x.t >= 1).slice(-1)[0]?.id;
+  const p = conLive(p0, p0.id === ultimaId);
+  const par = (m.parametri || {})[p.prodotto];
+  const def = (m.parametri || {})['default product'];
+  const resa = p.marciaMin ? p.t / (p.marciaMin * SMI.VELOCITA_STD) : 0;
+  const allarmi = (m.allarmi || []).filter(a => a[0] >= p.inizio && a[0] <= p.fine);
+  const allRilev = allarmi.filter(a => !a[2]);
+  const durataTot = (p.fine - p.inizio) / 60e3;
+
+  const riepilogo = `
+    <div class="kpi" style="margin-top:0">
+      <div class="tile"><div class="lab">Cassette contate</div><div class="val">${n0(p.t)}</div><div class="det">${n0(p.t - p.r)} buone${p.extraLive ? ` · ≈${n0(p.extraLive)} in diretta` : ''}</div></div>
+      <div class="tile scarti"><div class="lab">Scartate</div><div class="val">${n0(p.r)}<small>${pc(p.r, p0.t)}</small></div><div class="det">${n0(p.u)} non ispezionate</div></div>
+      <div class="tile"><div class="lab">Pedane</div><div class="val">${n0(SMI.pedane(p.t))}<small>+ ${p.t % 80}/80</small></div><div class="barra"><i style="width:${p.t % 80 / 80 * 100}%"></i></div></div>
+      <div class="tile"><div class="lab">Resa velocità</div><div class="val">${Math.round(resa * 100)}<small>%</small></div><div class="det">media ${n1(p.marciaMin ? p.t / p.marciaMin : 0)}/min su 24</div></div>
+    </div>
+    <div class="dueco sezione">
+      <div class="pannello"><h3>Tempi</h3>
+        <table class="tabella"><tbody>
+          <tr><td>Inizio</td><td>${giornoCorto(p.inizio)} ${SMI.fmtOra(p.inizio)}</td></tr>
+          <tr><td>Fine</td><td>${giornoCorto(p.fine)} ${SMI.fmtOra(p.fine)}</td></tr>
+          <tr><td>Durata totale</td><td>${durata(durataTot)}</td></tr>
+          <tr><td>In marcia (ispezione attiva)</td><td>${durata(p.marciaMin)}</td></tr>
+          <tr><td>Fermi ispezione</td><td>${p.fermi}</td></tr>
+          <tr><td>Modifiche ai parametri</td><td>${p.cambiImpostazioni.length}</td></tr>
+        </tbody></table></div>
+      <div class="pannello"><h3>Tipo di scarto</h3>
+        ${p.r ? `<div class="split"><i style="flex:${p.s};background:var(--serious)"></i><i style="flex:${p.re};background:var(--crit)"></i></div>
+        <div class="legenda"><span><i style="background:var(--serious)"></i>Amido (Starch) <b style="color:var(--text-1)">${n0(p.s)}</b></span><span><i style="background:var(--crit)"></i>Residui (Residual) <b style="color:var(--text-1)">${n0(p.re)}</b></span></div>` : '<div class="nota">Nessuno scarto.</div>'}
+        ${p.setupT ? `<div class="nota">⚙︎ Durante l'avviamento / learning: <b>${n0(p.setupR)}</b> scarti su <b>${n0(p.setupT)}</b> cassette. Esclusi questi, gli scarti sono <b>${pc(p.r - p.setupR, p.t - p.setupT)}</b>.</div>` : ''}
+        ${p.cambiImpostazioni.length ? `<h3 style="margin-top:14px">Modifiche ai parametri di analisi</h3><div class="turni-chip" style="display:flex;gap:6px;flex-wrap:wrap">${p.cambiImpostazioni.map(t => `<span class="tchip">${giornoCorto(t)} ${SMI.fmtOra(t)}</span>`).join('')}</div>` : ''}
+      </div>
+    </div>
+    <div class="sezione pannello"><h3>Divisione per turno</h3><div class="scroll-x"><table class="tabella"><thead><tr><th>Turno</th><th>Da</th><th>A</th><th>Cassette</th><th>Scarti</th><th>%</th><th>Pedane</th><th>In marcia</th><th>Resa vel.</th></tr></thead><tbody>
+      ${p.turni.map(t => `<tr><td><b>${t.nome}</b> ${giornoCorto(t.giorno)}</td><td>${SMI.fmtOra(t.inizio)}</td><td>${SMI.fmtOra(t.fine)}</td><td>${n0(t.t)}</td><td class="r">${n0(t.r)}</td><td>${pc(t.r, t.t)}</td><td>${n0(SMI.pedane(t.t))}</td><td>${durata(t.marciaMin)}</td><td>${t.marciaMin ? Math.round(t.t / (t.marciaMin * 24) * 100) : 0}%</td></tr>`).join('')}
+    </tbody></table></div></div>`;
+
+  const andamento = `
+    <div class="pannello"><h3>Cassette per ora</h3><div class="legenda"><span><i style="background:var(--blue)"></i>Buone</span><span><i style="background:var(--crit)"></i>Scartate</span></div><div class="chart" id="mOre"></div></div>
+    <div class="pannello sezione"><h3>Velocità (cassette al minuto)</h3><div class="legenda"><span><i class="linea" style="background:var(--aqua)"></i>Velocità</span><span><i class="linea" style="background:rgba(255,255,255,.5)"></i>Standard 24/min</span></div><div class="chart" id="mVel"></div>
+    <div class="nota">Dove ci sono i file <b>system_event_trace</b> la velocità è minuto per minuto. Altrimenti è la media di ogni intervallo dei contatori orari.</div></div>`;
+
+  let parametri = '<div class="vuoto">Parametri non disponibili: manca il file SMI_ANALYSIS.ini oppure il prodotto non c\'è più nella lista.</div>';
+  if (par) {
+    const cam = par['0'] || {}, com = par['-'] || {};
+    const valore = k => cam[k] ?? com[k];
+    const valDef = k => (def?.['0'] || {})[k] ?? (def?.['-'] || {})[k];
+    const princ = PARAM_PRINCIPALI.filter(([k]) => valore(k) != null).map(([k, l]) => {
+      const v = valore(k), d = valDef(k);
+      return `<div class="param"><div class="n">${l}${d != null && d !== v ? '<span class="diverso" title="Valore del default: ' + esc(d) + '">≠ default</span>' : ''}</div><div class="v">${esc(v)}</div><div class="k">${k}</div></div>`;
+    }).join('');
+    const tutti = [...Object.entries(com).map(([k, v]) => [k, v, '-']), ...Object.entries(cam).map(([k, v]) => [k, v, '0'])].sort((a, b) => a[0].localeCompare(b[0]));
+    parametri = `
+      <div class="nota" style="margin-top:0;margin-bottom:12px">Valori <b>attuali</b> letti da SMI_ANALYSIS.ini per <b style="text-transform:capitalize">${esc(p.prodotto)}</b>. Il segno <span class="diverso" style="margin:0">≠ default</span> indica che il valore è diverso da quello del "default product".</div>
+      <div class="param-grid">${princ}</div>
+      <div class="sezione pannello"><h3 style="display:flex;align-items:center;gap:10px">Tutti i parametri (${tutti.length}) <span class="spazio" style="flex:1"></span><input type="search" id="cercaParam" placeholder="Cerca parametro…" style="max-width:240px"></h3>
+      <div class="scroll-x" style="max-height:420px;overflow:auto"><table class="tabella lista-param" id="tabParam"><thead><tr><th>Parametro</th><th>Valore</th><th>Default</th></tr></thead><tbody>
+      ${tutti.map(([k, v]) => { const d = valDef(k); return `<tr data-k="${esc(k.toLowerCase())}"><td>${esc(k)}</td><td>${esc(v)}</td><td style="color:${d != null && d !== v ? '#cfe2ff' : 'var(--text-3)'}">${esc(d ?? '—')}</td></tr>`; }).join('')}
+      </tbody></table></div></div>`;
+  }
+
+  const raggr = new Map(); for (const a of allRilev) raggr.set(a[1], (raggr.get(a[1]) || 0) + 1);
+  const allarmiH = allarmi.length || (m.allarmi || []).length ? `
+    <div class="dueco">
+      <div class="pannello"><h3>Allarmi durante la produzione</h3>${raggr.size ? [...raggr.entries()].sort((a, b) => b[1] - a[1]).map(([t, c]) => `<div class="allarme">${ICONE.warn}<span>${esc(t)}</span><span class="conta">${c}×</span></div>`).join('') : '<div class="nota">Nessun allarme rilevante.</div>'}
+      ${allarmi.length - allRilev.length ? `<div class="nota">Esclusi ${n0(allarmi.length - allRilev.length)} messaggi di servizio (MQTT, DOA, espulsione) che compaiono di continuo.</div>` : ''}</div>
+      <div class="pannello"><h3>Ultimi allarmi</h3>${allRilev.slice(-12).reverse().map(a => `<div class="allarme"><span class="ora">${giornoCorto(a[0])} ${SMI.fmtOra(a[0])}</span><span>${esc(a[1])}</span></div>`).join('') || '<div class="nota">—</div>'}</div>
+    </div>` : '<div class="vuoto">Il file error.log non è disponibile.</div>';
+
+  const velo = $('#velo');
+  velo.innerHTML = `<div class="vetro modale" role="dialog" aria-modal="true">
+    <button class="btn icona chiudi" id="chiudiM" aria-label="Chiudi">${ICONE.x}</button>
+    <h2 style="font-size:12px;letter-spacing:.6px;text-transform:uppercase;color:var(--text-3);margin:0">Produzione</h2>
+    <div class="prodotto-nome">${esc(p.prodotto)}</div>
+    <div class="sotto"><span>${giornoLungo(p.inizio)} ${SMI.fmtOra(p.inizio)} → ${SMI.isoGiorno(p.inizio) !== SMI.isoGiorno(p.fine) ? giornoCorto(p.fine) + ' ' : ''}${SMI.fmtOra(p.fine)}</span>${p.turni.map(t => `<span class="chip">${t.nome} ${giornoCorto(t.giorno)}</span>`).join('')}</div>
+    <div class="schede" id="schede">${[['r', 'Riepilogo'], ['a', 'Andamento'], ['p', 'Parametri di analisi'], ['e', `Allarmi${allRilev.length ? ' (' + allRilev.length + ')' : ''}`]].map(([k, l], i) => `<button data-s="${k}" class="${i ? '' : 'att'}">${l}</button>`).join('')}</div>
+    <div data-pan="r">${riepilogo}</div><div data-pan="a" class="nascosto">${andamento}</div><div data-pan="p" class="nascosto">${parametri}</div><div data-pan="e" class="nascosto">${allarmiH}</div>
+  </div>`;
+  velo.classList.add('aperto'); document.body.style.overflow = 'hidden';
+  const chiudi = () => { velo.classList.remove('aperto'); velo.innerHTML = ''; document.body.style.overflow = ''; };
+  $('#chiudiM').onclick = chiudi;
+  velo.onclick = e => { if (e.target === velo) chiudi(); };
+  document.onkeydown = e => { if (e.key === 'Escape') chiudi(); };
+  let disegnati = false;
+  $('#schede').onclick = e => {
+    const b = e.target.closest('button'); if (!b) return;
+    velo.querySelectorAll('#schede button').forEach(x => x.classList.toggle('att', x === b));
+    velo.querySelectorAll('[data-pan]').forEach(x => x.classList.toggle('nascosto', x.dataset.pan !== b.dataset.s));
+    if (b.dataset.s === 'a' && !disegnati) {
+      disegnati = true;
+      const da = Math.floor(p.inizio / 3600e3) * 3600e3, a = p.fine;
+      montaGrafico($('#mOre'), el => graficoBarre(el, orarie([p0], da, a)));
+      montaGrafico($('#mVel'), el => graficoLinea(el, puntiVelocita(m, [p0], p.inizio, p.fine), { da: p.inizio, a: p.fine }));
+    }
+  };
+  $('#cercaParam')?.addEventListener('input', e => { const q = e.target.value.toLowerCase().trim(); velo.querySelectorAll('#tabParam tbody tr').forEach(tr => tr.style.display = !q || tr.dataset.k.includes(q) ? '' : 'none'); });
+}
+
+/* ==========================================================================
+   HEADER + RENDER
+   ========================================================================== */
+function statoLettore() {
+  if (S.modo === 'demo') return `<span class="pill"><span class="dot file"></span><span class="testo-pill">Anteprima</span></span>`;
+  if (S.modo === 'file') return `<span class="pill"><span class="dot file"></span><span class="testo-pill">File caricati</span></span>`;
+  if (S.modo === 'lettore') return `<span class="pill" id="pillLettore"><span class="dot ${L.attivo ? 'on' : 'off'}"></span>${L.attivo ? 'Lettore attivo' : 'Lettore fermo'}</span>`;
+  const age = S.aggiornatoVivo ? (Date.now() - S.aggiornatoVivo) / 1000 : Infinity;
+  const limite = Math.max(30, (S.vivo?.intervallo || 5) * 3 + 20);
+  if (age < limite) return `<span class="pill" title="Il PC della linea sta inviando i dati"><span class="dot on"></span><span class="nascondi-m">Lettore collegato · </span>${age < 60 ? Math.round(age) + ' s fa' : Math.round(age / 60) + ' min fa'}</span>`;
+  return `<span class="pill" title="Il PC della linea non invia dati: la scheda del lettore è chiusa o il PC è spento"><span class="dot off"></span>${isFinite(age) ? 'Lettore fermo da ' + tempoFa(age) : 'Lettore mai collegato'}</span>`;
+}
+const tempoFa = s => s < 3600 ? Math.round(s / 60) + ' min' : s < 86400 ? Math.round(s / 3600) + ' h' : Math.round(s / 86400) + ' giorni';
+
+function header() {
+  const puoAggiornare = S.modo === 'remoto';
+  return `<header class="vetro top">
+    <div class="logo">${ICONE.logo}</div>
+    <div class="titolo"><b>${esc(CONFIG.NOME_LINEA)}</b><span>${S.modello?.fineDati ? 'Dati fino al ' + SMI.fmtData(S.modello.fineDati) + ' ' + SMI.fmtOra(S.modello.fineDati) : 'Controllo produzione'}</span></div>
+    <span class="spazio"></span>
+    <span id="statoPill">${statoLettore()}</span>
+    ${S.modo !== 'lettore' ? `<button class="btn primario" id="btnAgg" ${puoAggiornare ? '' : 'disabled title="Disponibile quando il lettore è collegato"'}>${ICONE.agg}<span class="nascondi-m">Aggiorna</span></button>` : ''}
+    <div class="menu" id="menu"><button class="btn icona" id="btnMenu" aria-label="Menu">${ICONE.menu}</button>
+      <div class="lista vetro">
+        <button data-a="dash">${ICONE.dash} Dashboard</button>
+        <button data-a="file">${ICONE.file} Carica file a mano</button>
+        <button data-a="lettore">${ICONE.pc} Lettore (PC della linea)</button>
+        ${S.utente ? `<button data-a="esci">${ICONE.esci} Esci (${esc(S.utente.email)})</button>` : ''}
+      </div></div>
+  </header>`;
+}
+
+function render() {
+  grafici.clear(); ro.disconnect();
+  const app = $('#app');
+  const vista = location.hash.replace('#', '');
+  if (vista === 'lettore') { if (!L.preparato) { L.preparato = true; preparaLettore(); } S.modo = 'lettore'; app.innerHTML = header() + vistaLettore(); collegaHeader(); collegaLettore(); return; }
+  if (vista === 'file') { app.innerHTML = header() + vistaFile(); collegaHeader(); collegaFile(); return; }
+  if (S.modo === 'lettore') S.modo = null;
+  if (!S.modo) { avvio(); return; }
+  if (S.modo === 'login') { app.innerHTML = vistaLogin(); collegaLogin(); return; }
+  const y = window.scrollY;
+  app.innerHTML = header() + vistaDashboard();
+  collegaHeader(); collegaDashboard();
+  window.scrollTo(0, y);
+}
+function collegaHeader() {
+  $('#btnMenu').onclick = e => { e.stopPropagation(); $('#menu').classList.toggle('aperto'); };
+  document.addEventListener('click', () => $('#menu')?.classList.remove('aperto'), { once: true });
+  $('#menu .lista').onclick = async e => {
+    const b = e.target.closest('button'); if (!b) return;
+    const a = b.dataset.a;
+    if (a === 'dash') { location.hash = ''; S.modo = null; render(); }
+    if (a === 'file') location.hash = 'file';
+    if (a === 'lettore') location.hash = 'lettore';
+    if (a === 'esci') { await S.sb?.auth.signOut(); S.utente = null; S.modo = null; location.hash = ''; render(); }
+  };
+  $('#btnAgg')?.addEventListener('click', richiediAggiornamento);
+}
+setInterval(() => { const p = $('#statoPill'); if (p && S.modo === 'remoto') p.innerHTML = statoLettore(); }, 5000);
+window.addEventListener('hashchange', render);
+
+/* ==========================================================================
+   SUPABASE
+   ========================================================================== */
+function sb() {
+  if (S.sb) return S.sb;
+  if (!window.supabase?.createClient) return null;
+  S.sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
+  return S.sb;
+}
+async function utenteCorrente() { const c = sb(); if (!c) return null; const { data } = await c.auth.getSession(); S.utente = data.session?.user || null; return S.utente; }
+
+async function avvio() {
+  if (window.SMI_DEMO) { S.modo = 'demo'; S.modello = window.SMI_DEMO; render(); return; }
+  $('#app').innerHTML = `<div class="centro"><div class="pill"><span class="dot"></span>Caricamento…</div></div>`;
+  const u = await utenteCorrente();
+  if (!u) { S.modo = 'login'; render(); return; }
+  S.modo = 'remoto';
+  await caricaRemoto();
+  iscriviRemoto();
+  render();
+}
+async function caricaRemoto() {
+  const { data, error } = await sb().from('smi_dati').select('id,dati,aggiornato');
+  if (error) { toast('Errore lettura dati: ' + esc(error.message)); return; }
+  applicaRighe(data || []);
+}
+function applicaRighe(righe) {
+  const r = Object.fromEntries(righe.map(x => [x.id, x]));
+  const storico = r.storico?.dati || S.modello || {};
+  S.modello = { ...storico, parametri: r.parametri?.dati ?? S.modello?.parametri, allarmi: r.allarmi?.dati ?? S.modello?.allarmi };
+  if (r.vivo) { S.vivo = r.vivo.dati; S.aggiornatoVivo = new Date(r.vivo.aggiornato).getTime(); if (S.vivo?.stato && S.modello) S.modello.stato = S.vivo.stato; }
+  if (!r.storico && !S.modello.produzioni) S.modello = null;
+}
+let canaleRemoto, attesaAgg = false;
+function iscriviRemoto() {
+  if (canaleRemoto) return;
+  canaleRemoto = sb().channel('smi-dash').on('postgres_changes', { event: '*', schema: 'public', table: 'smi_dati' }, async ev => {
+    const id = ev.new?.id || ev.old?.id;
+    const { data } = await sb().from('smi_dati').select('id,dati,aggiornato').eq('id', id);
+    if (data?.length) { applicaRighe(data); if (!$('#velo').classList.contains('aperto')) render(); else { const p = $('#statoPill'); if (p) p.innerHTML = statoLettore(); } }
+    if (attesaAgg && id === 'vivo') { attesaAgg = false; toast(`${ICONE.ok.replace('<svg', '<svg style="width:14px;height:14px;vertical-align:-2px"')} Dati aggiornati dal PC della linea`); }
+  }).subscribe();
+  // rete di sicurezza: se il realtime non arriva, rileggo ogni 30 s
+  setInterval(() => { if (S.modo === 'remoto' && !$('#velo').classList.contains('aperto')) caricaRemoto().then(render); }, 30000);
+}
+async function richiediAggiornamento() {
+  const b = $('#btnAgg'); if (!b || b.disabled) return;
+  b.disabled = true; b.querySelector('svg').classList.add('gira');
+  const { error } = await sb().from('smi_comandi').insert({ comando: 'aggiorna' });
+  if (error) toast('Non riesco a inviare la richiesta: ' + esc(error.message));
+  else { attesaAgg = true; toast('Richiesta inviata al PC della linea…'); setTimeout(() => { if (attesaAgg) { attesaAgg = false; toast('Il lettore non ha risposto: controlla che la scheda sia aperta sul PC della linea'); } }, 20000); }
+  setTimeout(() => { const b2 = $('#btnAgg'); if (b2) { b2.disabled = false; b2.querySelector('svg')?.classList.remove('gira'); } }, 2500);
+}
+
+function vistaLogin(msg = '') {
+  return `<div class="centro"><form class="vetro box-login" id="fLogin">
+    <div class="logo">${ICONE.logo}</div>
+    <h1>${esc(CONFIG.NOME_LINEA)}</h1>
+    <p>Accedi con lo stesso account del sito Validazione SMI.</p>
+    <label class="campo">Email<input type="email" name="email" autocomplete="username" required></label>
+    <label class="campo">Password<input type="password" name="password" autocomplete="current-password" required></label>
+    <div class="errore" id="errLogin">${esc(msg)}</div>
+    <button class="btn primario" style="width:100%;justify-content:center;padding:12px">Accedi</button>
+    <div class="nota" style="text-align:center">oppure <a href="#file" style="color:#9ec5f4">carica i file a mano</a> senza accedere</div>
+  </form></div>`;
+}
+function collegaLogin(dopo) {
+  $('#fLogin').onsubmit = async e => {
+    e.preventDefault(); const f = new FormData(e.target);
+    if (!sb()) { $('#errLogin').textContent = 'Libreria Supabase non caricata: controlla la connessione.'; return; }
+    $('#errLogin').textContent = '';
+    const { data, error } = await sb().auth.signInWithPassword({ email: f.get('email'), password: f.get('password') });
+    if (error) { $('#errLogin').textContent = error.message === 'Invalid login credentials' ? 'Email o password non corretti' : error.message; return; }
+    S.utente = data.user;
+    if (dopo) dopo(); else { S.modo = null; render(); }
+  };
+}
+
+/* ==========================================================================
+   CARICAMENTO FILE A MANO
+   ========================================================================== */
+function vistaFile() {
+  return `<div class="lettore"><section class="vetro card">
+    <h2>Carica i file dalla chiavetta</h2>
+    <div class="drop" id="drop">${ICONE.cartella.replace('<svg', '<svg style="width:34px;height:34px;opacity:.7"')}<p style="margin:10px 0 4px;font-size:15px;color:var(--text-1)">Trascina qui i file</p>
+    <p style="margin:0 0 14px;font-size:13px">event.log, error.log, system_event_trace*.log, SMI_ANALYSIS.ini, EI_SYSTEM.ini</p>
+    <label class="btn primario">${ICONE.file} Scegli file<input type="file" id="inFile" multiple hidden></label></div>
+    <div class="file-trovati" id="fileInfo"></div>
+    <div class="nota">I file vengono letti solo nel tuo browser: non vengono inviati a nessuno.</div>
+  </section></div>`;
+}
+function collegaFile() {
+  const drop = $('#drop');
+  const gestisci = async files => {
+    const testi = await leggiFile([...files]);
+    if (!testi.eventLog) { $('#fileInfo').innerHTML = '<span style="color:#ffb4ae">Manca event.log: senza quello non posso ricostruire le produzioni.</span>'; return; }
+    S.modello = SMI.costruisciModello(testi); S.modo = 'file'; S.vivo = null;
+    location.hash = ''; render();
+  };
+  drop.ondragover = e => { e.preventDefault(); drop.classList.add('sopra'); };
+  drop.ondragleave = () => drop.classList.remove('sopra');
+  drop.ondrop = e => { e.preventDefault(); drop.classList.remove('sopra'); gestisci(e.dataTransfer.files); };
+  $('#inFile').onchange = e => gestisci(e.target.files);
+}
+const dec = new TextDecoder('windows-1252');
+async function testoDi(file) { return dec.decode(await file.arrayBuffer()); }
+function tipoFile(nome) {
+  const n = nome.toLowerCase();
+  if (/(^|[-_])event\.log$/.test(n) || n === 'event.log') return 'eventLog';
+  if (/(^|[-_])error\.log$/.test(n) || n === 'error.log') return 'errorLog';
+  if (n.includes('system_event_trace') && n.endsWith('.log')) return 'trace';
+  if (n.endsWith('smi_analysis.ini')) return 'analysisIni';
+  if (n.endsWith('ei_system.ini')) return 'systemIni';
+  if (/analysis_time\.log$/.test(n)) return 'analysisTime';
+  return null;
+}
+async function leggiFile(files) {
+  const out = { traces: [] };
+  for (const f of files) {
+    const t = tipoFile(f.name); if (!t) continue;
+    const testo = await testoDi(f);
+    if (t === 'trace') out.traces.push(testo); else if (t !== 'analysisTime') out[t] = testo;
+  }
+  return out;
+}
+
+/* ==========================================================================
+   LETTORE (gira nel browser del PC della linea)
+   ========================================================================== */
+const L = {
+  attivo: false, cartelle: [], file: new Map(), cache: new Map(), ultimoScan: 0,
+  intervallo: +(localStorage.getItem('smi_intervallo') || 5), ultimoInvio: {}, registro: [],
+  analisi: { offset: 0, righePrec: null, campioni: [] }, ticker: null, ciclo: 0, inCorso: false,
+  canale: null, ultimoModello: null,
+};
+const IDB = {
+  db: () => new Promise((ok, ko) => { const r = indexedDB.open('smi-lettore', 1); r.onupgradeneeded = () => r.result.createObjectStore('h'); r.onsuccess = () => ok(r.result); r.onerror = () => ko(r.error); }),
+  async get(k) { const db = await this.db(); return new Promise(ok => { const r = db.transaction('h').objectStore('h').get(k); r.onsuccess = () => ok(r.result); r.onerror = () => ok(null); }); },
+  async set(k, v) { const db = await this.db(); return new Promise(ok => { const t = db.transaction('h', 'readwrite'); t.objectStore('h').put(v, k); t.oncomplete = ok; }); },
+};
+function log(msg) {
+  const r = `${SMI.fmtOra(SMI.adesso())}:${String(new Date().getSeconds()).padStart(2, '0')}  ${msg}`;
+  L.registro.unshift(r); L.registro = L.registro.slice(0, 80);
+  const el = $('#registro'); if (el) el.innerHTML = L.registro.map(esc).join('<br>');
+}
+
+function vistaLettore() {
+  const supportato = 'showDirectoryPicker' in window;
+  const loggato = !!S.utente;
+  const haCartelle = L.cartelle.length > 0;
+  return `<div class="lettore">
+    <section class="vetro stato-grande">
+      <div class="anello ${L.attivo ? 'on' : ''}">${L.attivo ? ICONE.ok.replace('currentColor', '#7ff59a') : ICONE.pc}</div>
+      <div style="flex:1"><div style="font-size:22px;font-weight:700">${L.attivo ? 'Lettore attivo' : 'Lettore fermo'}</div>
+        <div class="sotto" id="statoLett">${L.attivo ? `Legge i file ogni ${L.intervallo} s e li invia alla dashboard. <b style="color:var(--text-1)">Lascia aperta questa scheda.</b>` : 'Completa i passaggi qui sotto per avviarlo.'}</div></div>
+      ${L.attivo ? `<button class="btn" id="btnStop">${ICONE.stop} Ferma</button>` : ''}
+    </section>
+    ${!supportato ? `<section class="vetro banner" style="margin-top:16px">${ICONE.warn.replace('<svg', '<svg style="width:18px;height:18px;color:var(--warn)"')} Questo browser non può leggere le cartelle. Apri questa pagina con <b>Microsoft Edge</b> o <b>Google Chrome</b>.</section>` : ''}
+    <div class="passi">
+      <div class="vetro passo ${loggato ? 'fatto' : ''}"><div class="num">${loggato ? '✓' : '1'}</div><div class="testo">Accedi<small>${loggato ? esc(S.utente.email) : 'Con lo stesso account della dashboard'}</small></div>${loggato ? '' : '<button class="btn primario" id="btnLoginL">Accedi</button>'}</div>
+      <div class="vetro passo ${haCartelle ? 'fatto' : ''}"><div class="num">${haCartelle ? '✓' : '2'}</div><div class="testo">Scegli la cartella del programma SMI<small>${haCartelle ? L.cartelle.map(c => esc(c.name)).join(', ') + ` · ${L.file.size} file trovati` : 'Di solito C:\\SMI oppure la cartella di Eagle Inspector. Si fa una volta sola.'}</small></div>
+        <button class="btn ${haCartelle ? '' : 'primario'}" id="btnCartella" ${supportato ? '' : 'disabled'}>${ICONE.cartella} ${haCartelle ? 'Aggiungi cartella' : 'Scegli cartella'}</button>
+        ${L.permessoDaRiattivare ? `<button class="btn primario" id="btnRiattiva">Riattiva accesso</button>` : ''}</div>
+      <div class="vetro passo ${L.attivo ? 'fatto' : ''}"><div class="num">${L.attivo ? '✓' : '3'}</div><div class="testo">Avvia la lettura<small>Ogni quanto leggere i file</small></div>
+        <select id="selInt">${[2, 5, 10, 30, 60].map(s => `<option value="${s}" ${s === L.intervallo ? 'selected' : ''}>ogni ${s} s</option>`).join('')}</select>
+        <button class="btn primario" id="btnAvvia" ${loggato && haCartelle && !L.attivo ? '' : 'disabled'}>${ICONE.play} Avvia</button></div>
+    </div>
+    <section class="vetro card" style="margin-top:16px"><h2>File letti</h2><div class="file-trovati" id="elencoFile">${elencoFileHtml()}</div></section>
+    <section class="vetro" style="margin-top:16px"><h2 style="padding:16px 16px 0;margin:0;font-size:13px;letter-spacing:.6px;text-transform:uppercase;color:var(--text-3)">Registro</h2><div class="registro" id="registro">${L.registro.map(esc).join('<br>') || 'Nessuna attività.'}</div></section>
+    <div class="nota" style="margin-top:14px">💡 Per non far "addormentare" la scheda: in Edge apri <b>Impostazioni → Sistema e prestazioni → Non sospendere mai questi siti</b> e aggiungi l'indirizzo di questa pagina.</div>
+  </div>`;
+}
+function elencoFileHtml() {
+  if (!L.file.size) return '<span style="color:var(--text-3)">Nessun file ancora.</span>';
+  return [...L.file.entries()].sort().map(([nome, v]) => `<div>${ICONE.file.replace('<svg', '<svg style="width:12px;height:12px;vertical-align:-1px"')} ${esc(v.percorso)} <span style="color:var(--text-3)">· ${(v.size / 1024).toFixed(0)} KB${v.mod ? ' · modificato ' + new Date(v.mod).toLocaleTimeString('it-IT') : ''}</span></div>`).join('');
+}
+function collegaLettore() {
+  $('#btnLoginL')?.addEventListener('click', () => { $('#app').innerHTML = vistaLogin(); collegaLogin(() => { render(); }); });
+  $('#btnCartella')?.addEventListener('click', scegliCartella);
+  $('#btnRiattiva')?.addEventListener('click', riattivaPermessi);
+  $('#btnAvvia')?.addEventListener('click', avviaLettore);
+  $('#btnStop')?.addEventListener('click', fermaLettore);
+  $('#selInt')?.addEventListener('change', e => { L.intervallo = +e.target.value; localStorage.setItem('smi_intervallo', L.intervallo); if (L.attivo) { avviaTicker(); render(); } });
+}
+async function preparaLettore() {
+  await utenteCorrente();
+  const salvate = await IDB.get('cartelle').catch(() => null);
+  if (salvate?.length && !L.cartelle.length) {
+    let tutteOk = true;
+    for (const h of salvate) { const p = await h.queryPermission({ mode: 'read' }); if (p !== 'granted') tutteOk = false; }
+    L.cartelle = salvate;
+    if (tutteOk) { await scansiona(); if (S.utente && localStorage.getItem('smi_autostart') === '1') avviaLettore(); }
+    else L.permessoDaRiattivare = true;
+  }
+  if (location.hash === '#lettore') render();
+}
+async function riattivaPermessi() {
+  for (const h of L.cartelle) await h.requestPermission({ mode: 'read' });
+  L.permessoDaRiattivare = false; await scansiona();
+  if (S.utente && localStorage.getItem('smi_autostart') === '1') avviaLettore(); else render();
+}
+async function scegliCartella() {
+  try {
+    const h = await window.showDirectoryPicker({ id: 'smi', mode: 'read' });
+    if (!L.cartelle.some(x => x.name === h.name)) L.cartelle.push(h);
+    await IDB.set('cartelle', L.cartelle);
+    log(`Cartella scelta: ${h.name}`);
+    await scansiona(); render();
+  } catch (e) { if (e.name !== 'AbortError') log('Errore cartella: ' + e.message); }
+}
+const SALTA = /image|immag|reference|backup|saved|asc|^\$|recycle|windows|program files/i;
+async function scansiona() {
+  const trovati = new Map();
+  const visita = async (dir, percorso, prof) => {
+    if (prof > 4) return;
+    for await (const [nome, h] of dir.entries()) {
+      if (h.kind === 'directory') { if (!SALTA.test(nome)) await visita(h, percorso + '\\' + nome, prof + 1); continue; }
+      const tipo = tipoFile(nome); if (!tipo) continue;
+      const f = await h.getFile();
+      const chiave = tipo === 'trace' ? nome : tipo;
+      const prec = trovati.get(chiave);
+      if (!prec || f.lastModified > prec.mod) trovati.set(chiave, { h, tipo, nome, percorso: percorso + '\\' + nome, size: f.size, mod: f.lastModified });
+    }
+  };
+  for (const c of L.cartelle) { try { await visita(c, c.name, 0); } catch (e) { log('Scansione: ' + e.message); } }
+  L.file = trovati; L.ultimoScan = Date.now();
+  const tipi = [...trovati.values()].map(v => v.tipo);
+  log(`Trovati ${trovati.size} file (${tipi.filter(t => t === 'trace').length} trace${tipi.includes('eventLog') ? ', event.log' : ', ⚠ event.log mancante'}${tipi.includes('analysisTime') ? ', analysis_time.log' : ''})`);
+  const el = $('#elencoFile'); if (el) el.innerHTML = elencoFileHtml();
+}
+async function leggiTesto(v) {
+  const f = await v.h.getFile(); v.size = f.size; v.mod = f.lastModified;
+  const c = L.cache.get(v.percorso);
+  if (c && c.size === f.size && c.mod === f.lastModified) return { testo: c.testo, cambiato: false };
+  const testo = await testoDi(f);
+  L.cache.set(v.percorso, { size: f.size, mod: f.lastModified, testo });
+  return { testo, cambiato: true };
+}
+function avviaTicker() {
+  if (L.ticker) L.ticker.terminate();
+  // il timer gira in un Worker: i browser rallentano i timer delle schede in background, non quelli dei Worker
+  const src = `let t;onmessage=e=>{clearInterval(t);t=setInterval(()=>postMessage(1),e.data)}`;
+  L.ticker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
+  L.ticker.onmessage = () => cicloLettore();
+  L.ticker.postMessage(L.intervallo * 1000);
+}
+async function avviaLettore() {
+  if (!S.utente) return;
+  L.attivo = true; localStorage.setItem('smi_autostart', '1');
+  log('Lettore avviato');
+  avviaTicker();
+  try { await navigator.wakeLock?.request('screen'); } catch { }
+  if (!L.canale) {
+    L.canale = sb().channel('smi-lettore').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'smi_comandi' }, ev => {
+      log('Richiesta "Aggiorna" ricevuta dalla dashboard'); cicloLettore(ev.new?.id);
+    }).subscribe();
+  }
+  render(); cicloLettore();
+}
+function fermaLettore() { L.attivo = false; localStorage.setItem('smi_autostart', '0'); L.ticker?.terminate(); L.ticker = null; log('Lettore fermato'); render(); }
+
+function fnv(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36) + ':' + s.length; }
+
+async function cicloLettore(comandoId) {
+  if (!L.attivo || L.inCorso) return; L.inCorso = true;
+  try {
+    if (Date.now() - L.ultimoScan > 60000) await scansiona();
+    const testi = { traces: [] }; let cambiato = false, righeAnalisi = null;
+    for (const v of L.file.values()) {
+      try {
+        const { testo, cambiato: c } = await leggiTesto(v);
+        if (v.tipo === 'analysisTime') { righeAnalisi = (testo.match(/\n/g) || []).length; continue; }
+        if (c) cambiato = true;
+        if (v.tipo === 'trace') testi.traces.push(testo); else testi[v.tipo] = testo;
+      } catch (e) { log(`Non riesco a leggere ${v.nome}: ${e.message}`); L.ultimoScan = 0; }
+    }
+    if (!testi.eventLog) { log('⚠ event.log non trovato nella cartella scelta'); return; }
+    if (cambiato || !L.ultimoModello) L.ultimoModello = SMI.costruisciModello(testi);
+    const m = L.ultimoModello;
+    // conteggio in diretta da analysis_time.log (4 righe per cassetta)
+    const ora = SMI.adesso(); const A = L.analisi;
+    if (righeAnalisi != null) {
+      if (A.righePrec != null && righeAnalisi < A.righePrec) A.offset += A.righePrec; // file ruotato in .bak
+      A.righePrec = righeAnalisi;
+      A.campioni.push([ora, (A.offset + righeAnalisi) / 4]);
+      A.campioni = A.campioni.filter(c => c[0] > ora - 2 * 3600e3);
+    }
+    const valoreA = t => { let best = null; for (const c of A.campioni) if (c[0] <= t) best = c; return best; };
+    let extra = null;
+    if (A.campioni.length) {
+      const now = A.campioni[A.campioni.length - 1];
+      const snap = m.stato.ultimiContatoriTs || 0;
+      const base = valoreA(snap) || A.campioni.find(c => c[0] >= snap) || now;
+      const v1 = valoreA(ora - 60e3), v5 = valoreA(ora - 300e3);
+      extra = {
+        daTs: base[0], cassette: Math.max(0, Math.round(now[1] - base[1])),
+        velocita1: v1 && now[0] - v1[0] > 0 ? (now[1] - v1[1]) / ((now[0] - v1[0]) / 60e3) : null,
+        velocita5: v5 && now[0] - v5[0] > 0 ? (now[1] - v5[1]) / ((now[0] - v5[0]) / 60e3) : null,
+      };
+    }
+    const vivo = { battito: ora, intervallo: L.intervallo, stato: m.stato, extra, versione: 1, file: [...L.file.values()].map(v => [v.nome, v.size, v.mod]) };
+    const righe = [
+      ['storico', { versione: m.versione, generato: m.generato, fineDati: m.fineDati, stato: m.stato, produzioni: m.produzioni, minuti: m.minuti, prodotti: m.prodotti }],
+      ['parametri', m.parametri],
+      ['allarmi', (m.allarmi || []).map(a => a.slice(0, 3))],
+    ];
+    const daInviare = [];
+    for (const [id, dati] of righe) { const s = JSON.stringify(dati); const h = fnv(s); if (L.ultimoInvio[id] !== h) daInviare.push({ id, dati, h }); }
+    daInviare.push({ id: 'vivo', dati: vivo });
+    const { error } = await sb().from('smi_dati').upsert(daInviare.map(({ id, dati }) => ({ id, dati, aggiornato: new Date().toISOString() })));
+    if (error) { log('Errore invio: ' + error.message); return; }
+    for (const d of daInviare) if (d.h) L.ultimoInvio[d.id] = d.h;
+    L.ciclo++;
+    if (daInviare.length > 1) log(`Inviato: ${daInviare.filter(d => d.h).map(d => d.id).join(', ')} + stato`);
+    else if (L.ciclo % Math.max(1, Math.round(60 / L.intervallo)) === 0) log(`Tutto ok · ${extra ? n0(extra.cassette) + ' cassette dall\'ultimo contatore · ' + (extra.velocita1 != null ? n1(extra.velocita1) + '/min' : '') : 'nessun dato in diretta'}`);
+    if (comandoId) await sb().from('smi_comandi').update({ eseguito: new Date().toISOString() }).eq('id', comandoId);
+    else {
+      const { data: pend } = await sb().from('smi_comandi').select('id').is('eseguito', null).limit(20);
+      if (pend?.length) await sb().from('smi_comandi').update({ eseguito: new Date().toISOString() }).in('id', pend.map(p => p.id));
+    }
+    const el = $('#elencoFile'); if (el) el.innerHTML = elencoFileHtml();
+  } catch (e) { log('Errore: ' + e.message); }
+  finally { L.inCorso = false; }
+}
+
+/* ---------- avvio ---------- */
+document.addEventListener('DOMContentLoaded', () => {
+    render();
+});
+
+</script>
+</body>
+</html>
