@@ -773,7 +773,7 @@ const CONFIG = {
   SUPABASE_URL: 'https://sszxyritwrkxaictcaaa.supabase.co',
   SUPABASE_KEY: 'sb_publishable_HkYiyUEqlWXJo_CDyD9Eqw_k8-4cY-3',
   NOME_LINEA: 'Linea NID 1',
-  VERSIONE: 'v10 · 6 nov 15:55',
+  VERSIONE: 'v11 · 6 nov 16:05',
 };
 const S = {
   modo: null,             // 'demo' | 'remoto' | 'file' | 'lettore'
@@ -933,7 +933,7 @@ function puntiVelocita(modello, produzioni, da, a) {
   return out.sort((x, y) => x.t - y.t);
 }
 function velocitaAttuale(modello) {
-  if (S.vivo?.extra?.velocita1 != null && S.modo !== 'demo' && S.modo !== 'file') return { v: S.vivo.extra.velocita1, fonte: 'in diretta' };
+  if (S.vivo?.extra?.velocita1 != null && S.modo !== 'demo' && S.modo !== 'file' && lettoreCollegato()) return { v: S.vivo.extra.velocita1, fonte: 'in diretta' };
   const m = modello.minuti || []; const r = rif();
   const ult = m.filter(x => x[0] > r - 6 * 60e3 && x[0] <= r);
   if (ult.length) return { v: ult.reduce((s, x) => s + x[1], 0) / ult.length, fonte: 'ultimi minuti' };
@@ -953,7 +953,14 @@ function lettoreCollegato() {
 function statoLinea() {
   const m = S.modello, st = m?.stato || {}, ora = rif();
   // in diretta, se il lettore non invia dati non possiamo sapere se la linea gira
-  if (inDiretta() && !lettoreCollegato()) return { ignoto: true, da: S.aggiornatoVivo, inMarcia: !!st.inMarcia };
+  if (inDiretta() && !lettoreCollegato()) {
+    // ultimo stato noto al momento dell'ultimo invio
+    const batt = S.vivo?.battito, ult = S.vivo?.extra?.ultimaCassetta;
+    let fermaDa = null;
+    if (!st.inMarcia) fermaDa = st.inMarciaDa?.[1] ?? st.ultimoTs;
+    else if (batt && ult && batt - ult > 2 * 60e3) fermaDa = ult;
+    return { ignoto: true, da: S.aggiornatoVivo, inMarcia: !!st.inMarcia, fermaDa, battito: batt };
+  }
   const ult = inDiretta() ? S.vivo?.extra?.ultimaCassetta : null;
   const cIn = cambioInCorso();
   if (cIn?.inCorso) return { ferma: true, cambio: true, da: cIn.da, motivo: `cambio prodotto da ${cIn.dal} a ${cIn.al}`, c: cIn };
@@ -971,6 +978,8 @@ function statoLinea() {
 const durataDa = ms => durata(Math.max(0, ms) / 60e3);
 function htmlStatoLinea() {
   const s = statoLinea(), ora = rif();
+  if (s.ignoto && s.fermaDa) return `<div class="stato-linea ferma"><span class="ico">${ICONE.stop}</span><div><b>Linea ferma da ${durataDa(ora - s.fermaDa)}</b><span>dalle ${giornoCorto(s.fermaDa)} ${SMI.fmtOra(s.fermaDa)} · ultimo dato alle ${s.battito ? SMI.fmtOra(s.battito) : '—'}, poi il lettore si è spento: potrebbe essere ripartita</span></div></div>`;
+  if (s.ignoto && s.battito) return `<div class="stato-linea ignoto"><span class="ico">${ICONE.pc}</span><div><b>Ultimo dato alle ${SMI.fmtOra(s.battito)}: la linea era in marcia</b><span>Poi il lettore sul PC della linea si è spento, quindi non so cosa sia successo dopo. Sul PC della linea clicca <b style="display:inline;font-size:inherit;color:var(--text-1)">"Clicca qui per riavviare"</b>.</span></div></div>`;
   if (s.ignoto) return `<div class="stato-linea ignoto"><span class="ico">${ICONE.pc}</span><div><b>Non so se la linea è ferma: il lettore è spento</b><span>Nessun dato dal PC della linea${s.da ? ' dalle ' + new Date(s.da).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : ''}. Sul PC della linea clicca <b style="display:inline;font-size:inherit;color:var(--text-1)">"Clicca qui per riavviare"</b>.</span></div></div>`;
   if (s.cambio) {
     const dur = ora - s.da;
@@ -999,6 +1008,7 @@ function avvisoEspulsione() {
 function pillStatoLinea() {
   if (!S.modello?.stato) return '';
   const s = statoLinea(), ora = rif();
+  if (s.ignoto && s.fermaDa) return `<span class="pill ferma-pill" title="Ultimo stato noto: il lettore non invia dati"><span class="dot off"></span>Ferma da ${durataDa(ora - s.fermaDa)}?</span>`;
   if (s.ignoto) return `<span class="pill" title="Il lettore non invia dati"><span class="dot"></span>Stato sconosciuto</span>`;
   if (s.cambio) return `<span class="pill cambio-pill" title="Cambio prodotto: ${esc(s.c.dal)} → ${esc(s.c.al)}"><span class="dot file"></span>Cambio prodotto${inDiretta() ? ' da ' + durataDa(ora - s.da) : ''}</span>`;
   return s.ferma ? `<span class="pill ferma-pill" title="${esc('Dalle ' + (s.da ? SMI.fmtOra(s.da) : '') + ' · ' + s.motivo)}"><span class="dot off"></span>Ferma${inDiretta() ? ' da ' + durataDa(ora - (s.da || ora)) : ''}</span>`
@@ -1836,6 +1846,8 @@ async function controllaAggiornamento() {
     const testo = await r.text();
     const v = /VERSIONE: '([^']+)'/.exec(testo)?.[1];
     if (v && v !== CONFIG.VERSIONE) {
+      // ricarico solo se so che Edge ridà il permesso sulla cartella da solo ("Consenti a ogni visita")
+      if (localStorage.getItem('smi_perm_persistente') !== '1') { if (!L.avvisatoVersione) log(`Nuova versione del sito (${v}): non ricarico da solo per non perdere il permesso sulla cartella`); L.avvisatoVersione = true; return; }
       log(`Nuova versione del sito (${v}): ricarico la pagina`);
       L.ricaricoAuto = true;
       setTimeout(() => location.reload(), 1500);
@@ -1869,8 +1881,8 @@ async function preparaLettore() {
     let tutteOk = true;
     for (const h of salvate) { const p = await h.queryPermission({ mode: 'read' }); if (p !== 'granted') tutteOk = false; }
     L.cartelle = salvate;
-    if (tutteOk) { await scansiona(); if (L.config && S.utente && localStorage.getItem('smi_autostart') === '1') { L.pronto = true; await avviaLettore(); } }
-    else L.permessoDaRiattivare = true;
+    if (tutteOk) { localStorage.setItem('smi_perm_persistente', '1'); await scansiona(); if (L.config && S.utente && localStorage.getItem('smi_autostart') === '1') { L.pronto = true; await avviaLettore(); } }
+    else { L.permessoDaRiattivare = true; localStorage.setItem('smi_perm_persistente', '0'); }
   }
   L.pronto = true;
   if (location.hash === '#lettore') render();
@@ -1879,6 +1891,7 @@ async function riattivaPermessi() {
   let ok = true;
   for (const h of L.cartelle) { const p = await h.requestPermission({ mode: 'read' }); if (p !== 'granted') ok = false; }
   if (!ok) { toast('Serve il permesso sulla cartella per leggere i file'); return; }
+  localStorage.setItem('smi_perm_persistente', '0'); // dopo una ricarica manuale saprò se il permesso è rimasto
   L.permessoDaRiattivare = false; await scansiona();
   if (S.utente && L.config) avviaLettore(); else render();
 }
