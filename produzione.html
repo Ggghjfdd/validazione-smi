@@ -769,7 +769,7 @@ const CONFIG = {
   SUPABASE_URL: 'https://sszxyritwrkxaictcaaa.supabase.co',
   SUPABASE_KEY: 'sb_publishable_HkYiyUEqlWXJo_CDyD9Eqw_k8-4cY-3',
   NOME_LINEA: 'Linea NID 1',
-  VERSIONE: 'v7 · 6 nov 13:55',
+  VERSIONE: 'v8 · 6 nov 14:30',
 };
 const S = {
   modo: null,             // 'demo' | 'remoto' | 'file' | 'lettore'
@@ -1792,7 +1792,26 @@ function vistaRiavvia() {
 function statoInvio() { return L.ultimoOk && Date.now() - L.ultimoOk < Math.max(30e3, L.intervallo * 3000 + 15e3) ? 'ok' : L.ultimoErrore ? 'ko' : ''; }
 function collegaNonChiudere() { $('#ncGear').onclick = () => { L.impostazioni = true; render(); }; }
 setInterval(() => { const d = $('#ncDot'); if (d) d.className = 'nc-dot ' + statoInvio(); }, 3000);
-window.addEventListener('beforeunload', e => { if (L.attivo) { e.preventDefault(); e.returnValue = ''; } });
+window.addEventListener('beforeunload', e => { if (L.attivo && !L.ricaricoAuto) { e.preventDefault(); e.returnValue = ''; } });
+
+/* ---------- aggiornamento automatico del lettore ----------
+   Ogni 3 minuti il PC della linea controlla se sul sito c'è una versione nuova della pagina.
+   Se c'è, si ricarica da solo e il lettore riparte (serve il permesso "Consenti a ogni visita"). */
+async function controllaAggiornamento() {
+  if (S.modo !== 'lettore' || !L.attivo) return;
+  try {
+    const r = await fetch(location.pathname + '?v=' + Date.now(), { cache: 'no-store' });
+    if (!r.ok) return;
+    const testo = await r.text();
+    const v = /VERSIONE: '([^']+)'/.exec(testo)?.[1];
+    if (v && v !== CONFIG.VERSIONE) {
+      log(`Nuova versione del sito (${v}): ricarico la pagina`);
+      L.ricaricoAuto = true;
+      setTimeout(() => location.reload(), 1500);
+    }
+  } catch { }
+}
+setInterval(controllaAggiornamento, 3 * 60e3);
 
 function elencoFileHtml() {
   if (!L.file.size) return '<span style="color:var(--text-3)">Nessun file ancora.</span>';
