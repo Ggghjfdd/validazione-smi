@@ -258,6 +258,35 @@ input:focus,select:focus{border-color:rgba(57,135,229,.7);box-shadow:0 0 0 3px r
 }
 .tabella th.sx{text-align:left}
 
+/* stato linea + fermi */
+.stato-linea{display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:16px;margin:2px 0 14px;border:1px solid}
+.stato-linea .ico{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;flex:none}
+.stato-linea .ico svg{width:16px;height:16px}
+.stato-linea b{display:block;font-size:18px;letter-spacing:-.2px}
+.stato-linea span:not(.ico){font-size:13px;color:var(--text-2)}
+.stato-linea.ferma{background:linear-gradient(135deg,rgba(229,83,75,.24),rgba(229,83,75,.08));border-color:rgba(229,83,75,.45)}
+.stato-linea.ferma .ico{background:rgba(229,83,75,.3);color:#ffd6d3;animation:lampeggia 1.6s infinite}
+.stato-linea.ferma b{color:#ffd6d3}
+.stato-linea.marcia{background:linear-gradient(135deg,rgba(12,163,12,.2),rgba(12,163,12,.06));border-color:rgba(12,163,12,.4)}
+.stato-linea.marcia .ico{background:rgba(12,163,12,.3);color:#bff5c9}
+.stato-linea.marcia b{color:#d6ffde}
+@keyframes lampeggia{50%{box-shadow:0 0 0 8px rgba(229,83,75,.12)}}
+@media (prefers-reduced-motion:reduce){.stato-linea.ferma .ico{animation:none}}
+.ferma-pill{color:#ffd6d3;border-color:rgba(229,83,75,.4);background:rgba(229,83,75,.14)}
+.tempo{position:relative;padding-bottom:18px}
+.tempo-barra{position:relative;height:22px;border-radius:8px;background:rgba(255,255,255,.07);overflow:hidden}
+.tempo-barra i{position:absolute;top:0;bottom:0;display:block}
+.tempo-barra i.p{background:var(--blue);opacity:.85}
+.tempo-barra i.f{background:var(--crit);box-shadow:0 0 0 1px rgba(11,20,48,.6)}
+.tempo-tacche{position:relative;height:16px;margin-top:4px}
+.tempo-tacche span{position:absolute;transform:translateX(-50%);font-size:11px;color:var(--text-3)}
+.tipo-f{font-size:12px;padding:3px 8px;border-radius:8px;border:1px solid var(--line-soft)}
+.tipo-f.ispezione{background:rgba(250,178,25,.12);color:#ffe2a6;border-color:rgba(250,178,25,.35)}
+.tipo-f.linea{background:rgba(229,83,75,.12);color:#ffc9c4;border-color:rgba(229,83,75,.35)}
+.live-badge.rosso{background:rgba(229,83,75,.2);color:#ffd6d3;border-color:rgba(229,83,75,.45)}
+.tabella tfoot td{border-bottom:0;padding-top:12px;color:var(--text-2)}
+.fermi-recenti{margin-top:10px}
+
 </style>
 </head>
 <body>
@@ -307,7 +336,7 @@ const SMI = (() => {
   const ZERO = { t: 0, r: 0, u: 0, s: 0, re: 0 };
 
   function parseEventLog(text) {
-    const runs = [], intervalliMarcia = [], cambiImpostazioni = [], fermi = [];
+    const runs = [], intervalliMarcia = [], cambiImpostazioni = [], fermi = [], storiaProdotti = [];
     let prodotto = null, prev = { ...ZERO }, prevTs = null, learn = false, modo = 'ANALYSIS';
     let inMarcia = false, marciaDa = null, cur = null, ultimoTs = null;
 
@@ -320,7 +349,7 @@ const SMI = (() => {
       ultimoTs = ts;
       switch (tipo) {
         case 'PRODUCT CHANGED':
-          if (msg && msg !== prodotto) { chiudi(); prodotto = msg; }
+          if (msg && msg !== prodotto) { chiudi(); prodotto = msg; storiaProdotti.push([ts, msg]); }
           break;
         case 'COUNTERS RESET':
         case 'SYSTEM STARTUP INITIALISATION COMPLETED':
@@ -354,7 +383,7 @@ const SMI = (() => {
     }
     if (inMarcia) intervalliMarcia.push([marciaDa, null]);
     chiudi();
-    return { runs, intervalliMarcia, cambiImpostazioni, fermi, stato: { prodotto, inMarcia, modo, ultimoTs, ultimiContatori: prev, ultimiContatoriTs: prevTs } };
+    return { runs, intervalliMarcia, cambiImpostazioni, fermi, storiaProdotti, stato: { prodotto, inMarcia, modo, ultimoTs, ultimiContatori: prev, ultimiContatoriTs: prevTs } };
   }
 
   function sovrapposizione(intervalli, a, b, fineAperta) {
@@ -404,7 +433,8 @@ const SMI = (() => {
 
   /* ---------- system_event_trace*.log ---------- */
   const RE_TR = /^(\d{4})(\d\d)(\d\d) (\d\d):(\d\d):(\d\d)\.\d+ (.*)$/;
-  function parseTrace(text, minuti /* Map */) {
+  const BUCO_LINEA = 2 * 60e3; // 2 minuti senza cassette con ispezione attiva = fermo linea
+  function parseTrace(text, minuti /* Map */, trigger /* array di ts */) {
     let primo = null, ultimo = null, n = 0, e = 0;
     for (const line of text.split(/\r?\n/)) {
       const isT = line.includes('InspectTriggerReceived'), isE = !isT && line.includes('Perform eject');
@@ -412,7 +442,10 @@ const SMI = (() => {
       const m = RE_TR.exec(line); if (!m) continue;
       const k = ms(m[1], m[2], m[3], m[4], m[5]);
       let b = minuti.get(k); if (!b) minuti.set(k, b = [0, 0]);
-      if (isT) { b[0]++; n++; } else { b[1]++; e++; }
+      if (isT) {
+        b[0]++; n++;
+        if (trigger) trigger.push(ms(m[1], m[2], m[3], m[4], m[5], m[6]));
+      } else { b[1]++; e++; }
       if (primo == null) primo = k; ultimo = k;
     }
     return { primo, ultimo, cassette: n, scarti: e };
@@ -492,13 +525,43 @@ const SMI = (() => {
     return out;
   }
 
+  /* ---------- fermi ----------
+     due tipi:
+       'ispezione' = l'operatore ha fermato l'ispezione (INSPECTION STOPPED → STARTED in event.log)
+       'linea'     = ispezione attiva ma nessuna cassetta per ≥ 2 minuti (dai file system_event_trace)
+  */
+  function calcolaFermi(ev, buchi, fineDati, giorni) {
+    const da0 = fineDati - giorni * 864e5;
+    const IM = ev.intervalliMarcia, out = [];
+    const prodottoAl = t => { let p = null; for (const [ts, n] of ev.storiaProdotti) { if (ts <= t) p = n; else break; } return p; };
+    for (let i = 0; i < IM.length; i++) {
+      const stop = IM[i][1]; if (stop == null) continue;
+      const ripresa = i + 1 < IM.length ? IM[i + 1][0] : null;
+      if (ripresa != null && ripresa - stop < 60e3) continue; // riavvio rapido, non è un fermo
+      if ((ripresa ?? fineDati) < da0) continue;
+      out.push({ da: stop, a: ripresa, tipo: 'ispezione', prodotto: prodottoAl(stop) });
+    }
+    for (const [a, b] of buchi) {
+      if (b < da0) continue;
+      // conta solo se l'ispezione era attiva per tutto il buco (altrimenti è già un fermo ispezione)
+      const coperto = IM.some(([x, y]) => x <= a && (y == null || y >= b));
+      if (!coperto) continue;
+      out.push({ da: a, a: b, tipo: 'linea', prodotto: prodottoAl(a) });
+    }
+    return out.sort((x, y) => x.da - y.da).map(f => ({ ...f, turno: turnoDi(f.da).key }));
+  }
+
   /* ---------- modello completo ---------- */
   function costruisciModello(f) {
     // f = { eventLog, traces:[testo], errorLog, analysisIni, systemIni, giorniMinuti }
     const ev = parseEventLog(f.eventLog || '');
     const produzioni = costruisciProduzioni(ev);
-    const minuti = new Map(); const tracce = [];
-    for (const t of f.traces || []) tracce.push(parseTrace(t, minuti));
+    const minuti = new Map(); const tracce = []; const trigger = [];
+    for (const t of f.traces || []) tracce.push(parseTrace(t, minuti, trigger));
+    // i trace possono sovrapporsi: unisco tutte le cassette e cerco i buchi una volta sola
+    trigger.sort((a, b) => a - b);
+    const buchi = [];
+    for (let i = 1; i < trigger.length; i++) if (trigger[i] - trigger[i - 1] >= BUCO_LINEA) buchi.push([trigger[i - 1], trigger[i]]);
     const fineDati = Math.max(ev.stato.ultimoTs || 0, ...[...minuti.keys()].slice(-1));
     const giorniMin = f.giorniMinuti || 7;
     const minutiArr = [...minuti.entries()].filter(([k]) => k >= fineDati - giorniMin * 864e5).sort((a, b) => a[0] - b[0]).map(([k, v]) => [k, v[0], v[1]]);
@@ -507,6 +570,12 @@ const SMI = (() => {
     const nomiTutti = [...new Set([...nomi, ...produzioni.map(p => p.prodotto)])];
     const parametri = f.analysisIni ? parametriPerProdotto(parseIni(f.analysisIni), nomiTutti) : {};
     const allarmi = f.errorLog ? parseErrorLog(f.errorLog, 30) : [];
+    const fermi = calcolaFermi(ev, buchi, fineDati, f.giorniFermi || 60);
+    for (const p of produzioni) {
+      const dentro = fermi.filter(x => x.da < p.fine && (x.a ?? fineDati) > p.inizio);
+      p.fermi = dentro.length;
+      p.fermoMin = Math.round(dentro.reduce((s, x) => s + Math.min(p.fine, x.a ?? fineDati) - Math.max(p.inizio, x.da), 0) / 60e3);
+    }
     return {
       versione: 1,
       generato: adesso(),
@@ -515,6 +584,7 @@ const SMI = (() => {
       produzioni,
       minuti: minutiArr,
       allarmi,
+      fermi,
       parametri,
       prodotti: nomiTutti,
     };
@@ -524,7 +594,7 @@ const SMI = (() => {
   const pedane = n => Math.floor(n / CASSETTE_PER_PEDANA);
   const perc = (a, b) => b > 0 ? (100 * a / b) : 0;
 
-  return { CASSETTE_PER_PEDANA, VELOCITA_STD, TURNI, ms, fmtData, fmtOra, isoGiorno, adesso, turnoDi, parseEventLog, costruisciProduzioni, parseTrace, parseErrorLog, parseIni, parametriPerProdotto, costruisciModello, pedane, perc, traduci };
+  return { calcolaFermi, CASSETTE_PER_PEDANA, VELOCITA_STD, TURNI, ms, fmtData, fmtOra, isoGiorno, adesso, turnoDi, parseEventLog, costruisciProduzioni, parseTrace, parseErrorLog, parseIni, parametriPerProdotto, costruisciModello, pedane, perc, traduci };
 })();
 if (typeof module !== 'undefined') module.exports = SMI;
 
@@ -704,6 +774,96 @@ function velocitaAttuale(modello) {
 }
 
 /* ==========================================================================
+   STATO LINEA E FERMI
+   ========================================================================== */
+const inDiretta = () => S.modo === 'remoto' || S.modo === 'lettore';
+function statoLinea() {
+  const m = S.modello, st = m?.stato || {}, ora = rif();
+  const ult = inDiretta() ? S.vivo?.extra?.ultimaCassetta : null;
+  if (!st.inMarcia) {
+    const da = st.inMarciaDa?.[1] ?? st.ultimoTs;
+    return { ferma: true, da, motivo: 'ispezione fermata', tipo: 'ispezione' };
+  }
+  let ultima = ult;
+  if (!ultima) { const mm = (m.minuti || []).filter(x => x[1] > 0); if (mm.length) ultima = mm[mm.length - 1][0] + 59e3; }
+  if (ultima && ora - ultima > 2 * 60e3) return { ferma: true, da: ultima, motivo: 'nessuna cassetta', tipo: 'linea' };
+  return { ferma: false, da: st.inMarciaDa?.[0], ultima };
+}
+const durataDa = ms => durata(Math.max(0, ms) / 60e3);
+function htmlStatoLinea() {
+  const s = statoLinea(), ora = rif();
+  if (s.ferma) {
+    const dur = ora - (s.da || ora);
+    const testo = inDiretta() || dur >= 60e3 ? `Linea ferma da ${durataDa(dur)}` : `Linea ferma`;
+    return `<div class="stato-linea ferma"><span class="ico">${ICONE.stop}</span><div><b>${testo}</b><span>dalle ${s.da ? giornoCorto(s.da) + ' ' + SMI.fmtOra(s.da) : '—'} · ${s.motivo}</span></div></div>`;
+  }
+  const agoUlt = s.ultima ? Math.max(0, (ora - s.ultima) / 1000) : null;
+  return `<div class="stato-linea marcia"><span class="ico">${ICONE.play}</span><div><b>In marcia${s.da ? ' da ' + durataDa(ora - s.da) : ''}</b><span>${agoUlt != null ? (agoUlt < 90 ? 'ultima cassetta ' + Math.round(agoUlt) + ' s fa' : 'ultima cassetta alle ' + SMI.fmtOra(s.ultima)) : 'ispezione attiva'}</span></div></div>`;
+}
+function pillStatoLinea() {
+  if (!S.modello?.stato) return '';
+  const s = statoLinea(), ora = rif();
+  return s.ferma ? `<span class="pill ferma-pill" title="${esc('Dalle ' + (s.da ? SMI.fmtOra(s.da) : '') + ' · ' + s.motivo)}"><span class="dot off"></span>Ferma${inDiretta() ? ' da ' + durataDa(ora - (s.da || ora)) : ''}</span>`
+    : `<span class="pill"><span class="dot on"></span>In marcia</span>`;
+}
+// tutti i fermi, compreso quello in corso adesso
+function tuttiIFermi() {
+  const m = S.modello; const lista = (m?.fermi || []).map(f => ({ ...f }));
+  const s = m?.stato ? statoLinea() : null;
+  if (s?.ferma && s.tipo === 'linea' && !lista.some(f => f.a == null)) lista.push({ da: s.da, a: null, tipo: 'linea', prodotto: m.stato.prodotto, turno: SMI.turnoDi(s.da).key });
+  return lista;
+}
+const fineF = f => f.a ?? rif();
+const TIPO_FERMO = { ispezione: 'Ispezione fermata', linea: 'Nessuna cassetta' };
+function tabellaFermi(lista, { mostraProdotto = true } = {}) {
+  if (!lista.length) return '<div class="vuoto">Nessun fermo nel periodo scelto.</div>';
+  const tot = lista.reduce((s, f) => s + fineF(f) - f.da, 0);
+  return `<div class="scroll-x"><table class="tabella"><thead><tr><th>Giorno</th><th>Dalle</th><th>Alle</th><th>Durata</th><th class="sx">Motivo</th>${mostraProdotto ? '<th class="sx">Prodotto</th>' : ''}<th class="sx">Turno</th></tr></thead><tbody>
+    ${lista.slice().reverse().map(f => { const T = SMI.turnoDi(f.da); const lungo = fineF(f) - f.da >= 15 * 60e3; return `<tr><td>${giornoCorto(f.da)}</td><td>${SMI.fmtOra(f.da)}</td><td>${f.a ? SMI.fmtOra(f.a) : '<span class="live-badge rosso">IN CORSO</span>'}</td><td class="${lungo ? 'r' : ''}"><b>${durataDa(fineF(f) - f.da)}</b></td><td style="text-align:left"><span class="tipo-f ${f.tipo}">${TIPO_FERMO[f.tipo]}</span></td>${mostraProdotto ? `<td style="text-align:left;text-transform:capitalize">${esc(f.prodotto || '—')}</td>` : ''}<td style="text-align:left">${T.nome} ${giornoCorto(T.giorno)}</td></tr>`; }).join('')}
+  </tbody><tfoot><tr><td colspan="3"><b>${lista.length} fermi</b></td><td><b>${durataDa(tot)}</b></td><td colspan="${mostraProdotto ? 3 : 2}"></td></tr></tfoot></table></div>
+  <div class="nota"><b>Ispezione fermata</b>: l'operatore ha fermato l'ispezione (dal file event.log). <b>Nessuna cassetta</b>: ispezione attiva ma nessuna cassetta per almeno 2 minuti (dai file system_event_trace e, in diretta, da analysis_time.log). I riavvii più brevi di 1 minuto non sono contati.</div>`;
+}
+// barra del tempo: produzioni in blu, fermi in rosso
+function lineaTempo(da, a, produzioni, fermi) {
+  const L = a - da; if (L <= 0) return '';
+  const pos = t => Math.max(0, Math.min(100, (t - da) / L * 100));
+  const seg = (x, y, cls, tit) => { const l = pos(x), w = pos(y) - l; return w > 0 ? `<i class="${cls}" style="left:${l}%;width:${Math.max(w, .35)}%" title="${esc(tit)}"></i>` : ''; };
+  let h = '';
+  for (const p of produzioni) h += seg(p.inizio, p.fine, 'p', `${p.prodotto} ${SMI.fmtOra(p.inizio)}–${SMI.fmtOra(p.fine)}`);
+  for (const f of fermi) h += seg(f.da, fineF(f), 'f', `Fermo ${SMI.fmtOra(f.da)}–${f.a ? SMI.fmtOra(f.a) : 'in corso'} · ${durataDa(fineF(f) - f.da)} · ${TIPO_FERMO[f.tipo]}`);
+  const tacche = []; const passo = L > 36 * 3600e3 ? 6 * 3600e3 : L > 12 * 3600e3 ? 2 * 3600e3 : L > 4 * 3600e3 ? 3600e3 : 30 * 60e3;
+  for (let t = Math.ceil(da / passo) * passo; t <= a; t += passo) tacche.push(`<span style="left:${pos(t)}%">${SMI.fmtOra(t)}</span>`);
+  return `<div class="tempo"><div class="tempo-barra">${h}</div><div class="tempo-tacche">${tacche.join('')}</div></div>
+    <div class="legenda" style="margin-top:8px"><span><i style="background:var(--blue)"></i>In produzione</span><span><i style="background:var(--crit)"></i>Fermo</span><span><i style="background:rgba(255,255,255,.12)"></i>Nessuna produzione</span></div>`;
+}
+function cardFermiOggi() {
+  const m = S.modello; if (!m?.stato) return '';
+  const r = rif(), T = SMI.turnoDi(r), da = T.giorno + 6 * 3600e3, a = da + 24 * 3600e3;
+  const fermi = tuttiIFermi().filter(f => fineF(f) > da && f.da < a);
+  const clip = f => Math.min(fineF(f), Math.min(a, r)) - Math.max(f.da, da);
+  const tot = fermi.reduce((s, f) => s + Math.max(0, clip(f)), 0);
+  const lungo = fermi.reduce((b, f) => !b || clip(f) > clip(b) ? f : b, null);
+  const prod = m.produzioni.filter(p => p.fine > da && p.inizio < a);
+  return `<section class="vetro card" style="margin-bottom:16px">
+    <h2>Fermi di oggi <span class="chip">${giornoCorto(T.giorno)} · 06:00 → 06:00</span><span class="spazio"></span><button class="btn" id="vediFermi" style="text-transform:none;letter-spacing:0">Tutti i fermi ›</button></h2>
+    <div class="turno-kpi" style="grid-template-columns:repeat(3,1fr);margin-top:0;margin-bottom:16px">
+      <div class="mini"><div class="lab">Numero di fermi</div><div class="val">${fermi.length}</div></div>
+      <div class="mini"><div class="lab">Tempo totale fermo</div><div class="val r">${durataDa(tot)}</div></div>
+      <div class="mini"><div class="lab">Fermo più lungo</div><div class="val">${lungo ? durataDa(clip(lungo)) : '—'}</div>${lungo ? `<div class="lab">${SMI.fmtOra(lungo.da)} · ${TIPO_FERMO[lungo.tipo].toLowerCase()}</div>` : ''}</div>
+    </div>
+    ${lineaTempo(da, a, prod, fermi)}
+    ${fermi.length ? `<div class="fermi-recenti">${fermi.slice(-5).reverse().map(f => `<div class="allarme"><span class="ora">${SMI.fmtOra(f.da)} → ${f.a ? SMI.fmtOra(f.a) : 'adesso'}</span><span><b>${durataDa(fineF(f) - f.da)}</b> · ${TIPO_FERMO[f.tipo]}</span><span class="conta" style="text-transform:capitalize;font-weight:500">${esc(f.prodotto || '')}</span></div>`).join('')}</div>` : ''}
+  </section>`;
+}
+function elencoFermi() {
+  const r = rif();
+  const lim = { oggi: SMI.turnoDi(r).giorno + 6 * 3600e3, '7': r - 7 * 864e5, '30': r - 30 * 864e5, tutto: -Infinity }[S.periodo];
+  let l = tuttiIFermi().filter(f => fineF(f) >= lim);
+  if (S.prodotto) l = l.filter(f => f.prodotto === S.prodotto);
+  return tabellaFermi(l);
+}
+
+/* ==========================================================================
    VISTA DASHBOARD
    ========================================================================== */
 function produzioniFiltrate() {
@@ -726,7 +886,7 @@ function vistaDashboard() {
   const tutte = m.produzioni.filter(x => x.t >= 1);
   const ultimaRaw = tutte[tutte.length - 1];
   const ultima = ultimaRaw ? conLive(ultimaRaw, true) : null;
-  const inMarcia = !!(m.stato?.inMarcia || (S.vivo?.extra?.velocita1 > 0));
+  const inMarcia = !statoLinea().ferma;
   const vel = velocitaAttuale(m);
   const banner = S.modo === 'demo'
     ? `<div class="vetro banner"><span class="chip info">Anteprima</span><span>Dati reali dai log che mi hai mandato, fermi al <b>${SMI.fmtData(m.fineDati)} ${SMI.fmtOra(m.fineDati)}</b>. Una volta collegato il lettore, la pagina si aggiorna da sola.</span></div>`
@@ -743,10 +903,10 @@ function vistaDashboard() {
     const velCls = v >= 22 ? '' : v >= 18 ? 'bassa' : 'critica';
     hero = `
     <section class="vetro card">
-      <h2>${inMarcia ? 'Produzione in corso' : 'Ultima produzione'} <span class="spazio"></span>
-        ${inMarcia ? `<span class="chip marcia">${ICONE.play} In marcia</span>` : `<span class="chip ferma">${ICONE.stop} Ferma${m.stato?.ultimoTs ? ' dalle ' + SMI.fmtOra(m.stato.ultimoTs) : ''}</span>`}</h2>
+      <h2>${inMarcia ? 'Produzione in corso' : 'Ultima produzione'}</h2>
+      <div id="statoLinea">${htmlStatoLinea()}</div>
       <div class="prodotto-nome">${esc(ultima.prodotto)}</div>
-      <div class="sotto"><span>Iniziata ${giornoLungo(ultima.inizio)} alle ${SMI.fmtOra(ultima.inizio)}</span><span>·</span><span>In marcia ${durata(ultima.marciaMin)}</span><span>·</span><span>${ultima.fermi} fermi</span></div>
+      <div class="sotto"><span>Iniziata ${giornoLungo(ultima.inizio)} alle ${SMI.fmtOra(ultima.inizio)}</span><span>·</span><span>In marcia ${durata(ultima.marciaMin)}</span><span>·</span><span>${ultima.fermi} fermi (${durata(ultima.fermoMin)})</span></div>
       <div class="kpi">
         <div class="tile"><div class="lab">Cassette contate</div><div class="val">${n0(ultima.t)}</div><div class="det">${ultima.extraLive ? `di cui ≈${n0(ultima.extraLive)} in diretta` : `${n0(ultima.t - ultima.r)} buone`}</div></div>
         <div class="tile scarti"><div class="lab">Cassette scartate</div><div class="val">${n0(ultima.r)}<small>${pc(ultima.r, ultimaRaw.t)}</small></div><div class="det">${ultima.setupT ? `${pc(scartiNetti, totNetti)} senza avviamento` : `Amido ${n0(ultima.s)} · Residui ${n0(ultima.re)}`}</div></div>
@@ -799,16 +959,16 @@ function vistaDashboard() {
   <section class="vetro card">
     <h2>Produzioni</h2>
     <div class="barra-filtri">
-      <div class="seg" id="fVista">${[['produzioni', 'Produzioni'], ['turni', 'Per turno']].map(([k, l]) => `<button data-v="${k}" class="${S.vista === k ? 'att' : ''}">${l}</button>`).join('')}</div>
+      <div class="seg" id="fVista">${[['produzioni', 'Produzioni'], ['turni', 'Per turno'], ['fermi', 'Fermi']].map(([k, l]) => `<button data-v="${k}" class="${S.vista === k ? 'att' : ''}">${l}</button>`).join('')}</div>
       <div class="seg" id="fPeriodo">${[['oggi', 'Oggi'], ['7', '7 giorni'], ['30', '30 giorni'], ['tutto', 'Tutto']].map(([k, l]) => `<button data-p="${k}" class="${S.periodo === k ? 'att' : ''}">${l}</button>`).join('')}</div>
       <select id="fProdotto"><option value="">Tutti i prodotti</option>${prodotti.map(p => `<option ${p === S.prodotto ? 'selected' : ''} value="${esc(p)}">${esc(p)}</option>`).join('')}</select>
       <span class="spazio"></span>
       <label class="switch" title="Mostra anche le prove con meno di una pedana (80 cassette)"><input type="checkbox" id="fProve" ${S.prove ? 'checked' : ''}><i></i>Mostra prove</label>
     </div>
-    <div id="elenco">${S.vista === 'turni' ? elencoTurni() : elencoProduzioni()}</div>
+    <div id="elenco">${S.vista === 'turni' ? elencoTurni() : S.vista === 'fermi' ? elencoFermi() : elencoProduzioni()}</div>
   </section>`;
 
-  return banner + `<div class="hero">${hero}${turno}</div>` + graf + lista;
+  return banner + `<div class="hero">${hero}${turno}</div>` + cardFermiOggi() + graf + lista;
 }
 
 function elencoProduzioni() {
@@ -862,6 +1022,7 @@ function collegaDashboard() {
   $('#fVista')?.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.vista = b.dataset.v; render(); });
   $('#fProdotto')?.addEventListener('change', e => { S.prodotto = e.target.value; render(); });
   $('#fProve')?.addEventListener('change', e => { S.prove = e.target.checked; render(); });
+  $('#vediFermi')?.addEventListener('click', () => { S.vista = 'fermi'; render(); document.querySelector('#elenco')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
   $('#elenco')?.addEventListener('click', e => { const el = e.target.closest('[data-id]'); if (el) apriProduzione(el.dataset.id); });
 }
 
@@ -900,6 +1061,7 @@ function apriProduzione(id) {
   const allarmi = (m.allarmi || []).filter(a => a[0] >= p.inizio && a[0] <= p.fine);
   const allRilev = allarmi.filter(a => !a[2]);
   const durataTot = (p.fine - p.inizio) / 60e3;
+  const fermiP = tuttiIFermi().filter(f => f.da < p.fine && fineF(f) > p.inizio);
 
   const riepilogo = `
     <div class="kpi" style="margin-top:0">
@@ -915,7 +1077,7 @@ function apriProduzione(id) {
           <tr><td>Fine</td><td>${giornoCorto(p.fine)} ${SMI.fmtOra(p.fine)}</td></tr>
           <tr><td>Durata totale</td><td>${durata(durataTot)}</td></tr>
           <tr><td>In marcia (ispezione attiva)</td><td>${durata(p.marciaMin)}</td></tr>
-          <tr><td>Fermi ispezione</td><td>${p.fermi}</td></tr>
+          <tr><td>Fermi</td><td>${p.fermi} · ${durata(p.fermoMin)}</td></tr>
           <tr><td>Modifiche ai parametri</td><td>${p.cambiImpostazioni.length}</td></tr>
         </tbody></table></div>
       <div class="pannello"><h3>Tipo di scarto</h3>
@@ -925,6 +1087,7 @@ function apriProduzione(id) {
         ${p.cambiImpostazioni.length ? `<h3 style="margin-top:14px">Modifiche ai parametri di analisi</h3><div class="turni-chip" style="display:flex;gap:6px;flex-wrap:wrap">${p.cambiImpostazioni.map(t => `<span class="tchip">${giornoCorto(t)} ${SMI.fmtOra(t)}</span>`).join('')}</div>` : ''}
       </div>
     </div>
+    <div class="sezione pannello"><h3>Linea del tempo</h3>${lineaTempo(p.inizio, p.fine, [p0], fermiP)}</div>
     <div class="sezione pannello"><h3>Divisione per turno</h3><div class="scroll-x"><table class="tabella"><thead><tr><th>Turno</th><th>Da</th><th>A</th><th>Cassette</th><th>Scarti</th><th>%</th><th>Pedane</th><th>In marcia</th><th>Resa vel.</th></tr></thead><tbody>
       ${p.turni.map(t => `<tr><td><b>${t.nome}</b> ${giornoCorto(t.giorno)}</td><td>${SMI.fmtOra(t.inizio)}</td><td>${SMI.fmtOra(t.fine)}</td><td>${n0(t.t)}</td><td class="r">${n0(t.r)}</td><td>${pc(t.r, t.t)}</td><td>${n0(SMI.pedane(t.t))}</td><td>${durata(t.marciaMin)}</td><td>${t.marciaMin ? Math.round(t.t / (t.marciaMin * 24) * 100) : 0}%</td></tr>`).join('')}
     </tbody></table></div></div>`;
@@ -967,8 +1130,8 @@ function apriProduzione(id) {
     <h2 style="font-size:12px;letter-spacing:.6px;text-transform:uppercase;color:var(--text-3);margin:0">Produzione</h2>
     <div class="prodotto-nome">${esc(p.prodotto)}</div>
     <div class="sotto"><span>${giornoLungo(p.inizio)} ${SMI.fmtOra(p.inizio)} → ${SMI.isoGiorno(p.inizio) !== SMI.isoGiorno(p.fine) ? giornoCorto(p.fine) + ' ' : ''}${SMI.fmtOra(p.fine)}</span>${p.turni.map(t => `<span class="chip">${t.nome} ${giornoCorto(t.giorno)}</span>`).join('')}</div>
-    <div class="schede" id="schede">${[['r', 'Riepilogo'], ['a', 'Andamento'], ['p', 'Parametri di analisi'], ['e', `Allarmi${allRilev.length ? ' (' + allRilev.length + ')' : ''}`]].map(([k, l], i) => `<button data-s="${k}" class="${i ? '' : 'att'}">${l}</button>`).join('')}</div>
-    <div data-pan="r">${riepilogo}</div><div data-pan="a" class="nascosto">${andamento}</div><div data-pan="p" class="nascosto">${parametri}</div><div data-pan="e" class="nascosto">${allarmiH}</div>
+    <div class="schede" id="schede">${[['r', 'Riepilogo'], ['a', 'Andamento'], ['p', 'Parametri di analisi'], ['f', `Fermi (${fermiP.length})`], ['e', `Allarmi${allRilev.length ? ' (' + allRilev.length + ')' : ''}`]].map(([k, l], i) => `<button data-s="${k}" class="${i ? '' : 'att'}">${l}</button>`).join('')}</div>
+    <div data-pan="r">${riepilogo}</div><div data-pan="a" class="nascosto">${andamento}</div><div data-pan="p" class="nascosto">${parametri}</div><div data-pan="f" class="nascosto"><div class="pannello"><h3>Linea del tempo</h3>${lineaTempo(p.inizio, p.fine, [p0], fermiP)}</div><div class="sezione">${tabellaFermi(fermiP, { mostraProdotto: false })}</div></div><div data-pan="e" class="nascosto">${allarmiH}</div>
   </div>`;
   velo.classList.add('aperto'); document.body.style.overflow = 'hidden';
   const chiudi = () => { velo.classList.remove('aperto'); velo.innerHTML = ''; document.body.style.overflow = ''; };
@@ -1010,7 +1173,8 @@ function header() {
     <div class="logo">${ICONE.logo}</div>
     <div class="titolo"><b>${esc(CONFIG.NOME_LINEA)}</b><span>${S.modello?.fineDati ? 'Dati fino al ' + SMI.fmtData(S.modello.fineDati) + ' ' + SMI.fmtOra(S.modello.fineDati) : 'Controllo produzione'}</span></div>
     <span class="spazio"></span>
-    <span id="statoPill">${statoLettore()}</span>
+    ${S.modo !== 'lettore' ? `<span id="pillLinea">${pillStatoLinea()}</span>` : ''}
+    <span id="statoPill" class="nascondi-m">${statoLettore()}</span>
     ${S.modo !== 'lettore' ? `<button class="btn primario" id="btnAgg" ${puoAggiornare ? '' : 'disabled title="Disponibile quando il lettore è collegato"'}>${ICONE.agg}<span class="nascondi-m">Aggiorna</span></button>` : ''}
     <div class="menu" id="menu"><button class="btn icona" id="btnMenu" aria-label="Menu">${ICONE.menu}</button>
       <div class="lista vetro">
@@ -1049,7 +1213,10 @@ function collegaHeader() {
   };
   $('#btnAgg')?.addEventListener('click', richiediAggiornamento);
 }
-setInterval(() => { const p = $('#statoPill'); if (p && S.modo === 'remoto') p.innerHTML = statoLettore(); }, 5000);
+setInterval(() => {
+  const p = $('#statoPill'); if (p && S.modo === 'remoto') p.innerHTML = statoLettore();
+  if (S.modello?.stato) { const a = $('#statoLinea'); if (a) a.innerHTML = htmlStatoLinea(); const b = $('#pillLinea'); if (b) b.innerHTML = pillStatoLinea(); }
+}, 5000);
 window.addEventListener('hashchange', render);
 
 /* ==========================================================================
@@ -1319,11 +1486,11 @@ async function cicloLettore(comandoId) {
   if (!L.attivo || L.inCorso) return; L.inCorso = true;
   try {
     if (Date.now() - L.ultimoScan > 60000) await scansiona();
-    const testi = { traces: [] }; let cambiato = false, righeAnalisi = null;
+    const testi = { traces: [] }; let cambiato = false, righeAnalisi = null, modAnalisi = null;
     for (const v of L.file.values()) {
       try {
         const { testo, cambiato: c } = await leggiTesto(v);
-        if (v.tipo === 'analysisTime') { righeAnalisi = (testo.match(/\n/g) || []).length; continue; }
+        if (v.tipo === 'analysisTime') { righeAnalisi = (testo.match(/\n/g) || []).length; modAnalisi = v.mod; continue; }
         if (c) cambiato = true;
         if (v.tipo === 'trace') testi.traces.push(testo); else testi[v.tipo] = testo;
       } catch (e) { log(`Non riesco a leggere ${v.nome}: ${e.message}`); L.ultimoScan = 0; }
@@ -1351,10 +1518,11 @@ async function cicloLettore(comandoId) {
         velocita1: v1 && now[0] - v1[0] > 0 ? (now[1] - v1[1]) / ((now[0] - v1[0]) / 60e3) : null,
         velocita5: v5 && now[0] - v5[0] > 0 ? (now[1] - v5[1]) / ((now[0] - v5[0]) / 60e3) : null,
       };
+      if (modAnalisi) { const d = new Date(modAnalisi); extra.ultimaCassetta = SMI.ms(d.getFullYear(), d.getMonth() + 1, d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds()); }
     }
     const vivo = { battito: ora, intervallo: L.intervallo, stato: m.stato, extra, versione: 1, file: [...L.file.values()].map(v => [v.nome, v.size, v.mod]) };
     const righe = [
-      ['storico', { versione: m.versione, generato: m.generato, fineDati: m.fineDati, stato: m.stato, produzioni: m.produzioni, minuti: m.minuti, prodotti: m.prodotti }],
+      ['storico', { versione: m.versione, generato: m.generato, fineDati: m.fineDati, stato: m.stato, produzioni: m.produzioni, minuti: m.minuti, fermi: m.fermi, prodotti: m.prodotti }],
       ['parametri', m.parametri],
       ['allarmi', (m.allarmi || []).map(a => a.slice(0, 3))],
     ];
