@@ -773,7 +773,7 @@ const CONFIG = {
   SUPABASE_URL: 'https://sszxyritwrkxaictcaaa.supabase.co',
   SUPABASE_KEY: 'sb_publishable_HkYiyUEqlWXJo_CDyD9Eqw_k8-4cY-3',
   NOME_LINEA: 'Linea NID 1',
-  VERSIONE: 'v9 · 6 nov 15:50',
+  VERSIONE: 'v10 · 6 nov 15:55',
 };
 const S = {
   modo: null,             // 'demo' | 'remoto' | 'file' | 'lettore'
@@ -1536,11 +1536,16 @@ function statoLettore() {
 }
 const tempoFa = s => s < 3600 ? Math.round(s / 60) + ' min' : s < 86400 ? Math.round(s / 3600) + ' h' : Math.round(s / 86400) + ' giorni';
 
+function sottotitolo() {
+  if (S.modo === 'remoto' && S.aggiornatoVivo) return 'Ultimo invio dalla linea alle ' + new Date(S.aggiornatoVivo).toLocaleTimeString('it-IT');
+  if (S.modo === 'lettore') return L.ultimoOk ? 'Ultimo invio alle ' + new Date(L.ultimoOk).toLocaleTimeString('it-IT') : 'Lettore';
+  return S.modello?.fineDati ? 'Dati fino al ' + SMI.fmtData(S.modello.fineDati) + ' ' + SMI.fmtOra(S.modello.fineDati) : 'Controllo produzione';
+}
 function header() {
   const puoAggiornare = S.modo === 'remoto';
   return `<header class="vetro top">
     <div class="logo-img" role="img" aria-label="Logo"></div>
-    <div class="titolo"><b>${esc(CONFIG.NOME_LINEA)}</b><span>${S.modello?.fineDati ? 'Dati fino al ' + SMI.fmtData(S.modello.fineDati) + ' ' + SMI.fmtOra(S.modello.fineDati) : 'Controllo produzione'}</span></div>
+    <div class="titolo"><b>${esc(CONFIG.NOME_LINEA)}</b><span id="sottotitolo">${sottotitolo()}</span></div>
     <span class="spazio"></span>
     ${S.modo !== 'lettore' ? `<span id="pillEsp">${pillEspulsione()}</span><span id="pillLinea">${pillStatoLinea()}</span>` : ''}
     <span id="statoPill" class="nascondi-m">${statoLettore()}</span>
@@ -1599,6 +1604,7 @@ function collegaHeader() {
 }
 setInterval(() => {
   const p = $('#statoPill'); if (p && S.modo === 'remoto') p.innerHTML = statoLettore();
+  const st = $('#sottotitolo'); if (st) st.textContent = sottotitolo();
   if (S.modello?.stato) { const a = $('#statoLinea'); if (a) a.innerHTML = htmlStatoLinea(); const b = $('#pillLinea'); if (b) b.innerHTML = pillStatoLinea(); const c = $('#pillEsp'); if (c) c.innerHTML = pillEspulsione(); }
 }, 5000);
 window.addEventListener('hashchange', render);
