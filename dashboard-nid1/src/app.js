@@ -5,7 +5,7 @@ const CONFIG = {
   SUPABASE_URL: 'https://sszxyritwrkxaictcaaa.supabase.co',
   SUPABASE_KEY: 'sb_publishable_HkYiyUEqlWXJo_CDyD9Eqw_k8-4cY-3',
   NOME_LINEA: 'Linea NID 1',
-  VERSIONE: 'v13 · 9 nov 11:55',
+  VERSIONE: 'v14 · 9 nov 12:20',
 };
 const S = {
   modo: null,             // 'demo' | 'remoto' | 'file' | 'lettore'
@@ -973,7 +973,7 @@ async function leggiFile(files) {
   for (const f of files) {
     const t = tipoFile(f.name); if (!t) continue;
     const testo = await testoDi(f);
-    if (t === 'trace') out.traces.push(testo); else if (t !== 'analysisTime') out[t] = testo;
+    if (t === 'trace') out.traces.push({ nome: f.name, testo }); else if (t !== 'analysisTime') out[t] = testo;
   }
   return out;
 }
@@ -1252,7 +1252,7 @@ async function cicloLettore(comandoId) {
         const { testo, cambiato: c } = await leggiTesto(v);
         if (v.tipo === 'analysisTime') { righeAnalisi = (testo.match(/\n/g) || []).length; modAnalisi = v.mod; continue; }
         if (c) cambiato = true;
-        if (v.tipo === 'trace') testi.traces.push(testo); else testi[v.tipo] = testo;
+        if (v.tipo === 'trace') testi.traces.push({ nome: v.nome, testo }); else testi[v.tipo] = testo;
       } catch (e) { log(`Non riesco a leggere ${v.nome}: ${e.message}`); L.ultimoScan = 0; }
     }
     if (!testi.eventLog) { log('⚠ event.log non trovato nella cartella scelta'); return; }

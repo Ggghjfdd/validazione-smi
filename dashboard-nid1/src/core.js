@@ -142,21 +142,34 @@ const SMI = (() => {
   /* ---------- system_event_trace*.log ---------- */
   const RE_TR = /^(\d{4})(\d\d)(\d\d) (\d\d):(\d\d):(\d\d)\.\d+ (.*)$/;
   const BUCO_LINEA = 2 * 60e3; // 2 minuti senza cassette con ispezione attiva = fermo linea
-  function parseTrace(text, minuti /* Map */, trigger /* array di ts */) {
+  /* Alcuni trace (circa uno su quattro) hanno gli orari in UTC invece che in ora locale: 1 h indietro
+     d'inverno, 2 h d'estate. Il nome del file invece è sempre in ora locale ed è l'istante in cui il file
+     è stato scritto, cioè subito dopo l'ultima riga. Lo scarto tra i due, arrotondato all'ora, è la correzione. */
+  const RE_NOME_TR = /(\d{4})(\d\d)(\d\d)T(\d\d)(\d\d)(\d\d)/;
+  function correzioneTrace(righe, nome) {
+    const n = nome && RE_NOME_TR.exec(nome); if (!n) return 0;
+    let ultima = null;
+    for (let i = righe.length - 1; i >= 0 && i >= righe.length - 50; i--) { const m = RE_TR.exec(righe[i]); if (m) { ultima = ms(m[1], m[2], m[3], m[4], m[5], m[6]); break; } }
+    if (ultima == null) return 0;
+    const d = ms(n[1], n[2], n[3], n[4], n[5], n[6]) - ultima, ore = Math.round(d / 3600e3);
+    return ore !== 0 && Math.abs(ore) <= 3 && Math.abs(d - ore * 3600e3) < 5 * 60e3 ? ore * 3600e3 : 0;
+  }
+  function parseTrace(text, minuti /* Map */, trigger /* array di ts */, nome) {
     let primo = null, ultimo = null, n = 0, e = 0;
-    for (const line of text.split(/\r?\n/)) {
+    const righe = text.split(/\r?\n/), corr = correzioneTrace(righe, nome);
+    for (const line of righe) {
       const isT = line.includes('InspectTriggerReceived'), isE = !isT && line.includes('Perform eject');
       if (!isT && !isE) continue;
       const m = RE_TR.exec(line); if (!m) continue;
-      const k = ms(m[1], m[2], m[3], m[4], m[5]);
+      const k = ms(m[1], m[2], m[3], m[4], m[5]) + corr;
       let b = minuti.get(k); if (!b) minuti.set(k, b = [0, 0]);
       if (isT) {
         b[0]++; n++;
-        if (trigger) trigger.push(ms(m[1], m[2], m[3], m[4], m[5], m[6]));
+        if (trigger) trigger.push(ms(m[1], m[2], m[3], m[4], m[5], m[6]) + corr);
       } else { b[1]++; e++; }
       if (primo == null) primo = k; ultimo = k;
     }
-    return { primo, ultimo, cassette: n, scarti: e };
+    return { primo, ultimo, cassette: n, scarti: e, correzione: corr };
   }
 
   /* ---------- error.log ---------- */
@@ -283,7 +296,8 @@ const SMI = (() => {
     const ev = parseEventLog(f.eventLog || '');
     const produzioni = costruisciProduzioni(ev);
     const minuti = new Map(); const tracce = []; const trigger = [];
-    for (const t of f.traces || []) tracce.push(parseTrace(t, minuti, trigger));
+    // ogni trace è { nome, testo } (il nome serve a correggere l'ora); accetto anche il solo testo
+    for (const t of f.traces || []) tracce.push(typeof t === 'string' ? parseTrace(t, minuti, trigger) : parseTrace(t.testo, minuti, trigger, t.nome));
     // i trace possono sovrapporsi: unisco tutte le cassette e cerco i buchi una volta sola
     trigger.sort((a, b) => a - b);
     const buchi = [];
