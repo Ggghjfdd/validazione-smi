@@ -5,7 +5,7 @@ const CONFIG = {
   SUPABASE_URL: 'https://sszxyritwrkxaictcaaa.supabase.co',
   SUPABASE_KEY: 'sb_publishable_HkYiyUEqlWXJo_CDyD9Eqw_k8-4cY-3',
   NOME_LINEA: 'Linea NID 1',
-  VERSIONE: 'v17 · 9 nov 13:25',
+  VERSIONE: 'v18 · 9 nov 13:40',
 };
 const S = {
   modo: null,             // 'demo' | 'remoto' | 'file' | 'lettore'
@@ -745,6 +745,7 @@ function perchéNienteParametri(m, prodotto) {
   const err = (ini && v.erroriFile?.[ini]) || (errNome && v.erroriFile[errNome]);
   if (!v.file) return 'Parametri non ancora arrivati dal PC della linea.';
   if (!v.app) return 'Parametri non ancora arrivati: il PC della linea ha una versione vecchia della pagina. Si aggiorna da solo entro pochi minuti; se no, ricarica la scheda del lettore.';
+  if (!ini && /not allowed|NotAllowed|TypeError/i.test(err || '')) return `Edge non lascia leggere i file <b>.ini</b> (blocco di sicurezza del browser). Sul PC della linea apri una volta il file <b>Attiva_parametri_dashboard.bat</b> (lo trovi nel repository, o chiedilo a chi gestisce la dashboard): copia i parametri in C:\\SMI\\copie_dashboard ogni 5 minuti, in un formato che Edge può leggere.`;
   if (!ini && err) return `Il PC della linea <b>non riesce ad aprire SMI_ANALYSIS.ini</b>: ${esc(err)}`;
   if (!ini) return `Il PC della linea <b>non trova SMI_ANALYSIS.ini</b> nella cartella scelta (file trovati: ${file.length}). Controlla che la cartella del lettore sia C:\\SMI.`;
   if (err) return `Il PC della linea trova SMI_ANALYSIS.ini ma <b>non riesce a leggerlo</b>: ${esc(err)}`;
@@ -1061,8 +1062,9 @@ function tipoFile(nome) {
   if (/(^|[-_])event\.log$/.test(n) || n === 'event.log') return 'eventLog';
   if (/(^|[-_])error\.log$/.test(n) || n === 'error.log') return 'errorLog';
   if (n.includes('system_event_trace') && n.endsWith('.log')) return 'trace';
-  if (n.endsWith('smi_analysis.ini')) return 'analysisIni';
-  if (n.endsWith('ei_system.ini')) return 'systemIni';
+  // Edge non lascia leggere i .ini: si leggono le copie .ini.txt fatte da Attiva_parametri_dashboard.bat
+  if (/smi_analysis\.ini(\.txt)?$/.test(n)) return 'analysisIni';
+  if (/ei_system\.ini(\.txt)?$/.test(n)) return 'systemIni';
   if (/analysis_time\.log$/.test(n)) return 'analysisTime';
   return null;
 }
