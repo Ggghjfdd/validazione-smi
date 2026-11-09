@@ -331,10 +331,97 @@ const SMI = (() => {
     };
   }
 
+  /* ---------- periodi esclusi ("spacchettare" una produzione) ----------
+     Un periodo escluso { id, da, a, motivo, chi, quando } toglie dalla produzione le cassette e gli scarti
+     di quel periodo (es. cassette neutre lette perché l'ispezione era rimasta accesa).
+     I contatori di SMI sono orari: dentro ogni ora la parte esclusa si ricava dai trace minuto per minuto
+     (cassette e espulsioni esatte); se per quell'ora i trace mancano, in proporzione al tempo. */
+  function quotaEsclusa(h, xa, xb, minuti) {
+    const [da, ts, t, r] = h;
+    const a = Math.max(da, xa), b = Math.min(ts, xb);
+    if (b <= a || t <= 0) return null;
+    const m0 = Math.floor(da / 60e3) * 60e3;
+    let sc = 0, se = 0, xc = 0, xe = 0;
+    for (const [k, c, e] of minuti) {
+      if (k < m0 || k >= ts) continue;
+      sc += c; se += e;
+      if (k >= Math.floor(a / 60e3) * 60e3 && k < b) { xc += c; xe += e; }
+    }
+    let ct, cr;
+    if (sc >= 0.9 * t && sc <= 1.1 * t + 2) { // i trace coprono quest'ora
+      ct = Math.min(t, Math.round(xc * t / sc));
+      cr = se > 0 && Math.abs(se - r) <= Math.max(3, 0.1 * r) ? Math.min(r, Math.round(xe * r / se)) : Math.round(r * ct / t);
+    } else {
+      const f = (b - a) / (ts - da);
+      ct = Math.round(t * f); cr = Math.round(r * f);
+    }
+    return { t: ct, r: Math.min(cr, ct), min: (b - a) / 60e3 };
+  }
+
+  function applicaEsclusioni(modello, esclusioni) {
+    if (!modello || !modello.produzioni || !esclusioni || !esclusioni.length) return modello;
+    const minuti = modello.minuti || [];
+    const produzioni = modello.produzioni.map(p0 => {
+      const E = esclusioni.filter(x => x.a > p0.inizio && x.da < p0.fine).sort((x, y) => x.da - y.da);
+      if (!E.length) return p0;
+      const periodi = E.map(x => ({ ...x, t: 0, r: 0, min: 0 }));
+      const ore = p0.ore.map(h0 => {
+        const h = h0.slice();
+        let dt = 0, dr = 0;
+        for (const x of periodi) {
+          const q = quotaEsclusa(h0, x.da, x.a, minuti); if (!q) continue;
+          x.t += q.t; x.r += q.r; x.min += q.min; dt += q.t; dr += q.r;
+        }
+        dt = Math.min(dt, h0[2]); dr = Math.min(dr, h0[3]);
+        if (!dt && !dr) return h;
+        const ds = h0[3] ? Math.round(h0[4] * dr / h0[3]) : 0;
+        h[2] -= dt; h[3] -= dr; h[4] -= ds; h[5] = Math.max(0, h[5] - (dr - ds));
+        h[6] = Math.max(0, h[6] - (h0[2] ? Math.round(h0[6] * dt / h0[2]) : 0));
+        return h;
+      });
+      // ricalcolo totali e turni con le ore corrette (stessa regola di costruisciProduzioni)
+      const tot = { t: 0, r: 0, s: 0, re: 0, u: 0, setupT: 0, setupR: 0 };
+      const perTurno = new Map();
+      for (const h of ore) {
+        const [, ts, t, r, s, re, u, setup] = h;
+        tot.t += t; tot.r += r; tot.s += s; tot.re += re; tot.u += u; if (setup) { tot.setupT += t; tot.setupR += r; }
+        const k = turnoDi(ts - 1000).key; const o = perTurno.get(k) || { t: 0, r: 0, s: 0, re: 0, u: 0, setupT: 0, setupR: 0 };
+        o.t += t; o.r += r; o.s += s; o.re += re; o.u += u; if (setup) { o.setupT += t; o.setupR += r; }
+        perTurno.set(k, o);
+      }
+      const minIn = (a, b) => E.reduce((s, x) => s + Math.max(0, Math.min(b, x.a) - Math.max(a, x.da)), 0) / 60e3;
+      const turni = p0.turni.map(tt => ({ ...tt, ...(perTurno.get(tt.key) || {}), marciaMin: Math.max(0, Math.round(tt.marciaMin - minIn(tt.inizio, tt.fine))) }));
+      return {
+        ...p0, ...tot, ore, turni,
+        marciaMin: Math.max(0, Math.round(p0.marciaMin - minIn(p0.inizio, p0.fine))),
+        escluse: { t: p0.t - tot.t, r: p0.r - tot.r, periodi: periodi.map(x => ({ ...x, min: Math.round(x.min) })) },
+      };
+    });
+    return { ...modello, produzioni };
+  }
+
+  /* periodi sospetti dentro una produzione: almeno 3 minuti e 20 cassette di fila con oltre l'80% espulse
+     (tipico delle cassette neutre lette con l'ispezione accesa). Servono le espulsioni dei trace. */
+  function periodiSospetti(p, minuti, esclusioni = []) {
+    const out = []; let cur = null;
+    const chiudi = () => { if (cur && cur.t >= 20 && cur.a - cur.da >= 3 * 60e3 && cur.r / cur.t >= 0.8) out.push(cur); cur = null; };
+    for (const [k, c, e] of minuti) {
+      if (k < p.inizio - 60e3 || k > p.fine) continue;
+      if (esclusioni.some(x => k >= x.da && k < x.a)) { chiudi(); continue; }
+      if (c >= 2 && e / c >= 0.7) {
+        if (cur && k - cur.a > 2 * 60e3) chiudi();
+        if (!cur) cur = { da: k, a: k + 60e3, t: 0, r: 0 };
+        cur.a = k + 60e3; cur.t += c; cur.r += e;
+      } else if (c >= 2) chiudi();
+    }
+    chiudi();
+    return out;
+  }
+
   /* ---------- utilità di presentazione ---------- */
   const pedane = n => Math.floor(n / CASSETTE_PER_PEDANA);
   const perc = (a, b) => b > 0 ? (100 * a / b) : 0;
 
-  return { MAX_PAUSA, calcolaCambi, calcolaFermi, CASSETTE_PER_PEDANA, VELOCITA_STD, TURNI, ms, fmtData, fmtOra, isoGiorno, adesso, turnoDi, parseEventLog, costruisciProduzioni, parseTrace, parseErrorLog, parseIni, parametriPerProdotto, costruisciModello, pedane, perc, traduci };
+  return { applicaEsclusioni, periodiSospetti, MAX_PAUSA, calcolaCambi, calcolaFermi, CASSETTE_PER_PEDANA, VELOCITA_STD, TURNI, ms, fmtData, fmtOra, isoGiorno, adesso, turnoDi, parseEventLog, costruisciProduzioni, parseTrace, parseErrorLog, parseIni, parametriPerProdotto, costruisciModello, pedane, perc, traduci };
 })();
 if (typeof module !== 'undefined') module.exports = SMI;

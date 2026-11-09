@@ -5,11 +5,12 @@ const CONFIG = {
   SUPABASE_URL: 'https://sszxyritwrkxaictcaaa.supabase.co',
   SUPABASE_KEY: 'sb_publishable_HkYiyUEqlWXJo_CDyD9Eqw_k8-4cY-3',
   NOME_LINEA: 'Linea NID 1',
-  VERSIONE: 'v14 · 9 nov 12:20',
+  VERSIONE: 'v15 · 9 nov 12:45',
 };
 const S = {
   modo: null,             // 'demo' | 'remoto' | 'file' | 'lettore'
   modello: null, vivo: null, aggiornatoVivo: null,
+  grezzo: null, esclusioni: [], // grezzo = dati come arrivano da SMI; modello = grezzo meno i periodi esclusi
   periodo: '7', prodotto: '', prove: false, vista: 'produzioni',
   sb: null, utente: null,
 };
@@ -596,7 +597,7 @@ function elencoProduzioni() {
       const vivo = live && (S.modello.stato?.inMarcia) && S.modo !== 'demo' && S.modo !== 'file';
       const resa = p.marciaMin ? Math.round(p.t / (p.marciaMin * SMI.VELOCITA_STD) * 100) : 0;
       h += `<div class="vetro prod" data-id="${esc(p.id)}">
-        <div class="principale"><div class="nome">${esc(p.prodotto)} ${vivo ? '<span class="live-badge">IN CORSO</span>' : ''}</div><div class="quando">${giornoCorto(p.inizio)} ${SMI.fmtOra(p.inizio)} → ${SMI.isoGiorno(p.inizio) !== SMI.isoGiorno(p.fine) ? giornoCorto(p.fine) + ' ' : ''}${SMI.fmtOra(p.fine)} · ${durata(p.marciaMin)} in marcia</div></div>
+        <div class="principale"><div class="nome">${esc(p.prodotto)} ${vivo ? '<span class="live-badge">IN CORSO</span>' : ''}</div><div class="quando">${giornoCorto(p.inizio)} ${SMI.fmtOra(p.inizio)} → ${SMI.isoGiorno(p.inizio) !== SMI.isoGiorno(p.fine) ? giornoCorto(p.fine) + ' ' : ''}${SMI.fmtOra(p.fine)} · ${durata(p.marciaMin)} in marcia${p.escluse ? ` · <span title="Periodi esclusi dal conteggio">✂︎ ${n0(p.escluse.t)} escluse</span>` : ''}</div></div>
         <div class="c"><div class="lab">Cassette</div><div class="v">${n0(p.t)}</div></div>
         <div class="c"><div class="lab">Scarti</div><div class="v r">${n0(p.r)} <span style="font-size:12px;color:var(--text-2);font-weight:500">${pc(p.r, p0.t)}</span></div></div>
         <div class="c"><div class="lab">Pedane</div><div class="v">${n0(SMI.pedane(p.t))}</div></div>
@@ -661,6 +662,80 @@ const PARAM_PRINCIPALI = [
   ['AUTO_STOP_AFTER_LEARNING', 'Stop automatico dopo learning'],
 ];
 
+/* ---------- periodi esclusi ---------- */
+const MOTIVI = { neutre: 'Cassette neutre (ispezione rimasta accesa)', prova: 'Prova / avviamento', altro: 'Altro' };
+const dtIn = t => new Date(t).toISOString().slice(0, 16);           // ms "pseudo-UTC" → valore di <input type=datetime-local>
+const dtDa = v => v ? Date.parse(v + ':00Z') : NaN;
+function aggiornaModello() { S.modello = S.grezzo ? SMI.applicaEsclusioni(S.grezzo, S.esclusioni) : null; }
+// anteprima: cosa toglierebbe un periodo dalla produzione grezza
+function anteprimaEsclusione(pr, da, a) {
+  if (!(a > da)) return null;
+  const q = SMI.applicaEsclusioni({ produzioni: [pr], minuti: S.grezzo.minuti || [] }, [{ id: '_', da, a }]).produzioni[0].escluse;
+  return q ? q.periodi[0] : { t: 0, r: 0, min: 0 };
+}
+async function salvaEsclusioni(modifica) {
+  if (S.modo === 'remoto') {
+    const { data, error } = await sb().from('smi_dati').select('dati').eq('id', 'esclusioni');
+    if (error) { toast('Non riesco a leggere i periodi esclusi: ' + esc(error.message)); return false; }
+    const lista = modifica((data?.[0]?.dati?.lista || []).slice());
+    if (!lista) return false;
+    const { error: e2 } = await sb().from('smi_dati').upsert({ id: 'esclusioni', dati: { lista }, aggiornato: new Date().toISOString() });
+    if (e2) { toast('Non riesco a salvare: ' + esc(e2.message)); return false; }
+    S.esclusioni = lista;
+  } else {
+    const lista = modifica(S.esclusioni.slice()); if (!lista) return false;
+    S.esclusioni = lista;
+    try { localStorage.setItem('smi_esclusioni_file', JSON.stringify(lista)); } catch { }
+  }
+  aggiornaModello(); return true;
+}
+async function escludiPeriodo(id, da, a, motivo) {
+  const ok = await salvaEsclusioni(lista => {
+    if (lista.some(x => x.da < a && x.a > da)) { toast('Questo periodo si sovrappone a uno già escluso: ripristina prima quello.'); return null; }
+    lista.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), da, a, motivo, chi: S.utente?.email || '', quando: SMI.adesso() });
+    return lista;
+  });
+  if (ok) { toast('Periodo escluso dal conteggio'); render(); apriProduzione(id); }
+}
+async function ripristinaPeriodo(id, idEscl) {
+  if (!confirm('Rimettere nel conteggio le cassette di questo periodo?')) return;
+  const ok = await salvaEsclusioni(lista => lista.filter(x => x.id !== idEscl));
+  if (ok) { toast('Periodo rimesso nel conteggio'); render(); apriProduzione(id); }
+}
+function pannelloEsclusioni(p, pr) {
+  const sosp = pr ? SMI.periodiSospetti(pr, S.grezzo.minuti || [], S.esclusioni) : [];
+  const per = p.escluse?.periodi || [];
+  const quando = t => `${giornoCorto(t)} ${SMI.fmtOra(t)}`;
+  const daDef = sosp[0]?.da ?? Math.max(p.inizio, p.fine - 15 * 60e3), aDef = sosp[0]?.a ?? p.fine;
+  return `<div class="sezione pannello" id="pEscl"><h3>Periodi esclusi dal conteggio</h3>
+    ${per.length ? `<div class="nota" style="margin-top:0">Tolte da questa produzione <b>${n0(p.escluse.t)}</b> cassette e <b>${n0(p.escluse.r)}</b> scarti. I numeri sopra sono già senza questi periodi.</div>
+      ${per.map(x => `<div class="allarme escl"><span class="ora">${quando(x.da)} → ${SMI.fmtOra(x.a)}</span><span style="flex:1">${esc(MOTIVI[x.motivo] || x.motivo || '')}<br><small style="color:var(--text-3)">${n0(x.t)} cassette · ${n0(x.r)} scarti${x.chi ? ' · ' + esc(x.chi.split('@')[0]) : ''}</small></span><button class="btn" data-rip="${esc(x.id)}">Ripristina</button></div>`).join('')}` : ''}
+    ${sosp.map((x, i) => `<div class="allarme escl sospetto">${ICONE.warn}<span style="flex:1"><b>Possibili cassette neutre</b> ${quando(x.da)} → ${SMI.fmtOra(x.a)}<br><small style="color:var(--text-3)">${n0(x.t)} cassette, ${Math.round(100 * x.r / x.t)}% espulse</small></span><button class="btn" data-sosp="${i}">Escludi</button></div>`).join('')}
+    <details class="escl-form" ${per.length || sosp.length ? '' : 'open'}><summary>Escludi un periodo a mano</summary>
+      <div class="escl-campi">
+        <label class="campo">Da<input type="datetime-local" step="60" id="eDa" value="${dtIn(daDef)}"></label>
+        <label class="campo">A<input type="datetime-local" step="60" id="eA" value="${dtIn(aDef)}"></label>
+        <label class="campo">Motivo<select id="eMot">${Object.entries(MOTIVI).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
+      </div>
+      <div class="escl-piede"><span id="eAnt" class="nota" style="margin:0"></span><button class="btn primario" id="eOk">Escludi periodo</button></div>
+    </details>
+    <div class="nota">Le cassette e gli scarti del periodo escluso spariscono da produzione, turni e OEE per tutti. Si può sempre ripristinare.</div>
+  </div>`;
+}
+function collegaEsclusioni(p, pr) {
+  const box = $('#pEscl'); if (!box) return;
+  const sosp = pr ? SMI.periodiSospetti(pr, S.grezzo.minuti || [], S.esclusioni) : [];
+  const ant = () => {
+    const da = dtDa($('#eDa').value), a = dtDa($('#eA').value), q = pr && anteprimaEsclusione(pr, da, a);
+    $('#eAnt').innerHTML = !(a > da) ? '<span style="color:#ffb4ae">L\'orario di fine deve essere dopo l\'inizio</span>' : q ? `In questo periodo: <b>${n0(q.t)}</b> cassette, <b>${n0(q.r)}</b> scarti` : '';
+    $('#eOk').disabled = !(a > da);
+  };
+  ['#eDa', '#eA'].forEach(s => $(s).addEventListener('input', ant)); ant();
+  $('#eOk').onclick = () => escludiPeriodo(p.id, dtDa($('#eDa').value), dtDa($('#eA').value), $('#eMot').value);
+  box.querySelectorAll('[data-sosp]').forEach(b => b.onclick = () => { const x = sosp[+b.dataset.sosp]; escludiPeriodo(p.id, x.da, x.a, 'neutre'); });
+  box.querySelectorAll('[data-rip]').forEach(b => b.onclick = () => ripristinaPeriodo(p.id, b.dataset.rip));
+}
+
 function apriProduzione(id) {
   const m = S.modello; const p0 = m.produzioni.find(x => x.id === id); if (!p0) return;
   const ultimaId = m.produzioni.filter(x => x.t >= 1).slice(-1)[0]?.id;
@@ -672,11 +747,12 @@ function apriProduzione(id) {
   const allRilev = allarmi.filter(a => !a[2]);
   const durataTot = (p.fine - p.inizio) / 60e3;
   const FP = fermiDi(p0), fermiP = FP.lista;
+  const pr = S.grezzo?.produzioni?.find(x => x.id === id);
 
   const riepilogo = `
     <div class="kpi" style="margin-top:0">
       <div class="tile"><div class="lab">Cassette contate</div><div class="val">${n0(p.t)}</div><div class="det">${n0(p.t - p.r)} buone${p.extraLive ? ` · ≈${n0(p.extraLive)} in diretta` : ''}</div></div>
-      <div class="tile scarti"><div class="lab">Scartate</div><div class="val">${n0(p.r)}<small>${pc(p.r, p0.t)}</small></div><div class="det">${n0(p.u)} non ispezionate</div></div>
+      <div class="tile scarti"><div class="lab">Scartate</div><div class="val">${n0(p.r)}<small>${pc(p.r, p0.t)}</small></div><div class="det">${n0(p.u)} non ispezionate${p.escluse ? ` · ${n0(p.escluse.t)} cassette escluse` : ''}</div></div>
       <div class="tile"><div class="lab">Pedane</div><div class="val">${n0(SMI.pedane(p.t))}<small>+ ${p.t % 80}/80</small></div><div class="barra"><i style="width:${p.t % 80 / 80 * 100}%"></i></div></div>
       <div class="tile"><div class="lab">Resa velocità</div><div class="val">${Math.round(resa * 100)}<small>%</small></div><div class="det">media ${n1(p.marciaMin ? p.t / p.marciaMin : 0)}/min su 24</div></div>
     </div>
@@ -698,6 +774,7 @@ function apriProduzione(id) {
         ${p.cambiImpostazioni.length ? `<h3 style="margin-top:14px">Modifiche ai parametri di analisi</h3><div class="turni-chip" style="display:flex;gap:6px;flex-wrap:wrap">${p.cambiImpostazioni.map(t => `<span class="tchip">${giornoCorto(t)} ${SMI.fmtOra(t)}</span>`).join('')}</div>` : ''}
       </div>
     </div>
+    ${pannelloEsclusioni(p0, pr)}
     <div class="sezione pannello"><h3>Linea del tempo</h3>${lineaTempo(p.inizio, fineProd(p0), [p0], fermiP)}</div>
     <div class="sezione pannello"><h3>Divisione per turno</h3><div class="scroll-x"><table class="tabella"><thead><tr><th>Turno</th><th>Da</th><th>A</th><th>Cassette</th><th>Scarti</th><th>%</th><th>Pedane</th><th>In marcia</th><th>Resa vel.</th></tr></thead><tbody>
       ${p.turni.map(t => `<tr><td><b>${t.nome}</b> ${giornoCorto(t.giorno)}</td><td>${SMI.fmtOra(t.inizio)}</td><td>${SMI.fmtOra(t.fine)}</td><td>${n0(t.t)}</td><td class="r">${n0(t.r)}</td><td>${pc(t.r, t.t)}</td><td>${n0(SMI.pedane(t.t))}</td><td>${durata(t.marciaMin)}</td><td>${t.marciaMin ? Math.round(t.t / (t.marciaMin * 24) * 100) : 0}%</td></tr>`).join('')}
@@ -761,6 +838,7 @@ function apriProduzione(id) {
       montaGrafico($('#mVel'), el => graficoLinea(el, puntiVelocita(m, [p0], p.inizio, p.fine), { da: p.inizio, a: p.fine }));
     }
   };
+  collegaEsclusioni(p0, pr);
   $('#cercaParam')?.addEventListener('input', e => { const q = e.target.value.toLowerCase().trim(); velo.querySelectorAll('#tabParam tbody tr').forEach(tr => tr.style.display = !q || tr.dataset.k.includes(q) ? '' : 'none'); });
 }
 
@@ -863,7 +941,7 @@ function sb() {
 async function utenteCorrente() { const c = sb(); if (!c) return null; const { data } = await c.auth.getSession(); S.utente = data.session?.user || null; return S.utente; }
 
 async function avvio() {
-  if (window.SMI_DEMO) { S.modo = 'demo'; S.modello = window.SMI_DEMO; render(); return; }
+  if (window.SMI_DEMO) { S.modo = 'demo'; S.grezzo = window.SMI_DEMO; aggiornaModello(); render(); return; }
   $('#app').innerHTML = `<div class="centro"><div class="pill"><span class="dot"></span>Caricamento…</div></div>`;
   const u = await utenteCorrente();
   if (!u) { S.modo = 'login'; render(); return; }
@@ -879,11 +957,13 @@ async function caricaRemoto() {
 }
 function applicaRighe(righe) {
   const r = Object.fromEntries(righe.map(x => [x.id, x]));
-  const storico = r.storico?.dati || S.modello || {};
-  S.modello = { ...storico, parametri: r.parametri?.dati ?? S.modello?.parametri, allarmi: r.allarmi?.dati ?? S.modello?.allarmi };
+  if (r.esclusioni) S.esclusioni = r.esclusioni.dati?.lista || [];
+  const storico = r.storico?.dati || S.grezzo || {};
+  S.grezzo = { ...storico, parametri: r.parametri?.dati ?? S.grezzo?.parametri, allarmi: r.allarmi?.dati ?? S.grezzo?.allarmi };
   if (r.pc_linea) S.pcLinea = r.pc_linea.dati;
-  if (r.vivo) { S.vivo = r.vivo.dati; S.aggiornatoVivo = new Date(r.vivo.aggiornato).getTime(); if (S.vivo?.stato && S.modello) S.modello.stato = S.vivo.stato; }
-  if (!r.storico && !S.modello.produzioni) S.modello = null;
+  if (r.vivo) { S.vivo = r.vivo.dati; S.aggiornatoVivo = new Date(r.vivo.aggiornato).getTime(); if (S.vivo?.stato) S.grezzo.stato = S.vivo.stato; }
+  if (!r.storico && !S.grezzo.produzioni) S.grezzo = null;
+  aggiornaModello();
 }
 let canaleRemoto, attesaAgg = false;
 function iscriviRemoto() {
@@ -948,7 +1028,9 @@ function collegaFile() {
   const gestisci = async files => {
     const testi = await leggiFile([...files]);
     if (!testi.eventLog) { $('#fileInfo').innerHTML = '<span style="color:#ffb4ae">Manca event.log: senza quello non posso ricostruire le produzioni.</span>'; return; }
-    S.modello = SMI.costruisciModello(testi); S.modo = 'file'; S.vivo = null;
+    S.grezzo = SMI.costruisciModello(testi); S.modo = 'file'; S.vivo = null;
+    try { S.esclusioni = JSON.parse(localStorage.getItem('smi_esclusioni_file') || '[]'); } catch { S.esclusioni = []; }
+    aggiornaModello();
     location.hash = ''; render();
   };
   drop.ondragover = e => { e.preventDefault(); drop.classList.add('sopra'); };
