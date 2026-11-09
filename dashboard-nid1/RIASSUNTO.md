@@ -72,3 +72,9 @@ Una pagina web "in vetro" che mostra in tempo reale la produzione della **linea 
 - **Verificare che la v12 funzioni sul PC della linea**: in basso a destra deve comparire "ultimo invio … · v12" e sulla dashboard il pallino verde "Lettore collegato". Il 6/11 alle 15:58 il lettore si era bloccato e la v12 è la correzione.
 - **Comando a distanza** (cambio prodotto, start/stop, learning, reset): il programma SMI ha già un'interfaccia **OPC** (KEPServerEX, voci `product`, `start`, `stop`, `learn_product`, `reset_counters`), ma è spenta (`m_use_opc_communication=0`). Va attivata dal fornitore Smart Eagle, d'accordo con la qualità. Servirebbe poi un piccolo programma sul PC della linea, perché una pagina web può solo leggere file. Alternativa semplice: accesso remoto allo schermo (risulta già OpenVPN per l'assistenza del fornitore).
 - Idea: mail al fornitore per OPC e `LOG_RESULTS`.
+
+## Aggiornamento 9 novembre 2026 (v13, v14)
+- **v13**: la velocità in diretta si misura tra due scritture di SMI su analysis_time.log (prima usava l'ora di lettura e arrivava a 27/min con la linea a 24).
+- **v14**: circa 1 trace su 4 ha gli orari in **UTC** (−1 h d'inverno, −2 h d'estate); il nome del file è sempre in ora locale. La correzione si ricava dal nome del file. Prima: minuti fino a 49 cassette, velocità > 24, buchi fittizi.
+- Verificato sui file del 9/11: i contatori orari di event.log coincidono con le cassette dei trace (±1), e le righe di analysis_time.log / 4 coincidono con i trace (13.578 contro 13.580).
+- Da chiarire col fornitore: l'evento `NON-INSPECTING MODE STARTED` (384 volte, senza evento di fine; compare anche con l'ispezione ferma) e il contatore `Uninspected`, che sale anche quando tutte le cassette dei trace risultano analizzate.
