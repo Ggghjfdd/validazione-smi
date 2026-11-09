@@ -887,7 +887,7 @@ const CONFIG = {
   SUPABASE_URL: 'https://sszxyritwrkxaictcaaa.supabase.co',
   SUPABASE_KEY: 'sb_publishable_HkYiyUEqlWXJo_CDyD9Eqw_k8-4cY-3',
   NOME_LINEA: 'Linea NID 1',
-  VERSIONE: 'v16 · 9 nov 13:20',
+  VERSIONE: 'v17 · 9 nov 13:25',
 };
 const S = {
   modo: null,             // 'demo' | 'remoto' | 'file' | 'lettore'
@@ -1623,9 +1623,11 @@ function perchéNienteParametri(m, prodotto) {
   if (n) return `Nessun parametro per <b>${esc(prodotto)}</b> in SMI_ANALYSIS.ini: il prodotto potrebbe essere stato rinominato o tolto dalla lista. Prodotti con parametri: ${Object.keys(m.parametri).filter(k => k !== 'default product').map(esc).join(', ')}.`;
   if (S.modo !== 'remoto') return 'Parametri non disponibili: tra i file caricati manca SMI_ANALYSIS.ini.';
   const v = S.vivo || {}, file = (v.file || []).map(f => f[0]), ini = file.find(f => /smi_analysis\.ini$/i.test(f));
-  const err = ini && v.erroriFile?.[ini];
+  const errNome = Object.keys(v.erroriFile || {}).find(k => /smi_analysis\.ini$/i.test(k));
+  const err = (ini && v.erroriFile?.[ini]) || (errNome && v.erroriFile[errNome]);
   if (!v.file) return 'Parametri non ancora arrivati dal PC della linea.';
   if (!v.app) return 'Parametri non ancora arrivati: il PC della linea ha una versione vecchia della pagina. Si aggiorna da solo entro pochi minuti; se no, ricarica la scheda del lettore.';
+  if (!ini && err) return `Il PC della linea <b>non riesce ad aprire SMI_ANALYSIS.ini</b>: ${esc(err)}`;
   if (!ini) return `Il PC della linea <b>non trova SMI_ANALYSIS.ini</b> nella cartella scelta (file trovati: ${file.length}). Controlla che la cartella del lettore sia C:\\SMI.`;
   if (err) return `Il PC della linea trova SMI_ANALYSIS.ini ma <b>non riesce a leggerlo</b>: ${esc(err)}`;
   if (!v.nParametri) return 'Il PC della linea legge SMI_ANALYSIS.ini ma non riconosce i prodotti: manca EI_SYSTEM.ini o la lista prodotti è vuota.';
@@ -2138,15 +2140,27 @@ async function scansiona() {
   const visita = async (dir, percorso, prof) => {
     if (prof > 4) return;
     for await (const [nome, h] of dir.entries()) {
-      if (h.kind === 'directory') { if (!SALTA.test(nome)) await visita(h, percorso + '\\' + nome, prof + 1); continue; }
-      const tipo = tipoFile(nome); if (!tipo) continue;
-      const f = await h.getFile();
-      const chiave = tipo === 'trace' ? nome : tipo;
-      const prec = trovati.get(chiave);
-      if (!prec || f.lastModified > prec.mod) trovati.set(chiave, { h, tipo, nome, percorso: percorso + '\\' + nome, size: f.size, mod: f.lastModified });
+      // ogni file nel suo try: un file bloccato non deve fermare la scansione degli altri
+      try {
+        if (h.kind === 'directory') { if (!SALTA.test(nome)) await visita(h, percorso + '\\' + nome, prof + 1); continue; }
+        const tipo = tipoFile(nome); if (!tipo) continue;
+        const f = await h.getFile();
+        const chiave = tipo === 'trace' ? nome : tipo;
+        const prec = trovati.get(chiave);
+        if (!prec || f.lastModified > prec.mod) trovati.set(chiave, { h, tipo, nome, percorso: percorso + '\\' + nome, size: f.size, mod: f.lastModified });
+        if (L.erroriFile) delete L.erroriFile[nome];
+      } catch (e) { (L.erroriFile ||= {})[nome] = e.name + ': ' + e.message; log(`Scansione, ${nome}: ${e.message}`); }
     }
   };
-  for (const c of L.cartelle) { try { await visita(c, c.name, 0); } catch (e) { log('Scansione: ' + e.message); } }
+  for (const c of L.cartelle) {
+    try { await visita(c, c.name, 0); } catch (e) { log('Scansione: ' + e.message); }
+    // se gli ini non sono comparsi nell'elenco, li cerco per nome nella cartella principale
+    for (const [nome, tipo] of [['SMI_ANALYSIS.ini', 'analysisIni'], ['EI_SYSTEM.ini', 'systemIni']]) {
+      if (trovati.has(tipo)) continue;
+      try { const h = await c.getFileHandle(nome); const f = await h.getFile(); trovati.set(tipo, { h, tipo, nome, percorso: c.name + '\\' + nome, size: f.size, mod: f.lastModified }); log(`${nome} trovato cercandolo per nome`); }
+      catch (e) { (L.erroriFile ||= {})[nome] = e.name + ': ' + e.message; }
+    }
+  }
   L.file = trovati; L.ultimoScan = Date.now();
   const tipi = [...trovati.values()].map(v => v.tipo);
   log(`Trovati ${trovati.size} file (${tipi.filter(t => t === 'trace').length} trace${tipi.includes('eventLog') ? ', event.log' : ', ⚠ event.log mancante'}${tipi.includes('analysisTime') ? ', analysis_time.log' : ''})`);
