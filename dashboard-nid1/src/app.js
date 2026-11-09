@@ -5,7 +5,7 @@ const CONFIG = {
   SUPABASE_URL: 'https://sszxyritwrkxaictcaaa.supabase.co',
   SUPABASE_KEY: 'sb_publishable_HkYiyUEqlWXJo_CDyD9Eqw_k8-4cY-3',
   NOME_LINEA: 'Linea NID 1',
-  VERSIONE: 'v19 · 9 nov 14:10',
+  VERSIONE: 'v20 · 9 nov 15:50',
 };
 const S = {
   modo: null,             // 'demo' | 'remoto' | 'file' | 'lettore'
@@ -404,7 +404,7 @@ function oeeTurno(key) {
   if (a <= da) return { futuro: true, T };
   let t = 0, rej = 0; const prod = new Set();
   for (const p of m.produzioni) for (const tt of p.turni) if (tt.key === key) { t += tt.t; rej += tt.r; prod.add(p.prodotto); }
-  if (inDiretta() && SMI.turnoDi(r).key === key && S.vivo?.extra?.cassette) t += S.vivo.extra.cassette;
+  if (inDiretta() && SMI.turnoDi(r).key === key && S.vivo?.extra?.cassette) { t += S.vivo.extra.cassette; rej += Math.min(S.vivo.extra.scarti || 0, S.vivo.extra.cassette); }
   const cIn = cambioInCorso(); if (cIn && SMI.turnoDi(r).key === key) prod.add(cIn.al);
   const F = finestre().filter(([x, y]) => y > da && x < a);
   const fermi = tuttiIFermi().filter(f => fineF(f) > da && f.da < a);
@@ -440,7 +440,8 @@ function produzioniFiltrate() {
 }
 function conLive(p, isUltima) {
   if (!isUltima || !S.vivo?.extra?.cassette || S.modo === 'demo' || S.modo === 'file' || cambioInCorso()) return p;
-  return { ...p, t: p.t + S.vivo.extra.cassette, extraLive: S.vivo.extra.cassette };
+  const sc = Math.min(S.vivo.extra.scarti || 0, S.vivo.extra.cassette);
+  return { ...p, t: p.t + S.vivo.extra.cassette, extraLive: S.vivo.extra.cassette, r: p.r + sc, scartiLive: S.vivo.extra.scarti != null ? sc : null };
 }
 
 function vistaDashboard() {
@@ -477,7 +478,7 @@ function vistaDashboard() {
         : `<div class="sotto"><span>Iniziata ${giornoLungo(ultima.inizio)} alle ${SMI.fmtOra(ultima.inizio)}</span><span>·</span><span>In marcia ${durata(ultima.marciaMin)}</span><span>·</span><span>${(() => { const f = fermiDi(ultima); return `${f.n} fermi (${durata(f.min)})`; })()}</span></div>`}
       <div class="kpi">
         <div class="tile"><div class="lab">Cassette contate</div><div class="val">${n0(ultima.t)}</div><div class="det">${ultima.nuova ? 'dalla prima cassetta del nuovo prodotto' : `contatori SMI delle ${m.stato?.ultimiContatoriTs ? SMI.fmtOra(m.stato.ultimiContatoriTs) : '—'}${ultima.extraLive ? ` + ≈${n0(ultima.extraLive)} in diretta` : ''}`}</div></div>
-        <div class="tile scarti"><div class="lab">Cassette scartate</div><div class="val">${n0(ultima.r)}<small>${pc(ultima.r, ultimaRaw.t)}</small></div><div class="det">${ultima.setupT ? `${pc(scartiNetti, totNetti)} senza avviamento` : `Amido ${n0(ultima.s)} · Residui ${n0(ultima.re)}`}<br><span style="color:var(--text-3)">aggiornati alle ${m.stato?.ultimiContatoriTs ? SMI.fmtOra(m.stato.ultimiContatoriTs) : '—'} (ogni ora)</span></div></div>
+        <div class="tile scarti"><div class="lab">Cassette scartate</div><div class="val">${n0(ultima.r)}<small>${pc(ultima.r, ultima.scartiLive != null ? ultima.t : ultimaRaw.t)}</small></div><div class="det">${ultima.setupT ? `${pc(scartiNetti, totNetti)} senza avviamento` : `Amido ${n0(ultima.s)} · Residui ${n0(ultima.re)}`}<br><span style="color:var(--text-3)">${ultima.scartiLive != null ? `contatori delle ${m.stato?.ultimiContatoriTs ? SMI.fmtOra(m.stato.ultimiContatoriTs) : '—'} + ≈${n0(ultima.scartiLive)} in diretta (foto degli scarti)` : `aggiornati alle ${m.stato?.ultimiContatoriTs ? SMI.fmtOra(m.stato.ultimiContatoriTs) : '—'} (ogni ora)`}</span></div></div>
         <div class="tile"><div class="lab">Pedane</div><div class="val">${n0(SMI.pedane(ultima.t))}<small>+ ${resto}/80</small></div><div class="barra"><i style="width:${resto / 80 * 100}%"></i></div></div>
         <div class="tile"><div class="lab">Velocità</div><div class="val">${n1(v)}<small>/min</small></div><div class="barra vel ${velCls}"><i style="width:${Math.min(100, v / SMI.VELOCITA_STD * 100)}%"></i></div><div class="det">${vel && (inMarcia || S.modo === 'demo') ? vel.fonte : 'media produzione'} · resa ${Math.round(resa * 100)}%</div></div>
       </div>
@@ -1143,6 +1144,7 @@ const dec = new TextDecoder('windows-1252');
 async function testoDi(file) { return dec.decode(await file.arrayBuffer()); }
 function tipoFile(nome) {
   const n = nome.toLowerCase();
+  if (/^image_last_number.*\.dat$/.test(n)) return 'immagini'; // D:\images: progressivo delle foto degli scarti
   if (/(^|[-_])event\.log$/.test(n) || n === 'event.log') return 'eventLog';
   if (/(^|[-_])error\.log$/.test(n) || n === 'error.log') return 'errorLog';
   if (n.includes('system_event_trace') && n.endsWith('.log')) return 'trace';
@@ -1157,7 +1159,7 @@ async function leggiFile(files) {
   for (const f of files) {
     const t = tipoFile(f.name); if (!t) continue;
     const testo = await testoDi(f);
-    if (t === 'trace') out.traces.push({ nome: f.name, testo }); else if (t !== 'analysisTime') out[t] = testo;
+    if (t === 'trace') out.traces.push({ nome: f.name, testo }); else if (t !== 'analysisTime' && t !== 'immagini') out[t] = testo;
   }
   return out;
 }
@@ -1167,6 +1169,7 @@ async function leggiFile(files) {
    ========================================================================== */
 const L = {
   attivo: false, cartelle: [], file: new Map(), cache: new Map(), ultimoScan: 0,
+  immagini: (() => { try { return JSON.parse(localStorage.getItem('smi_immagini')) || { offset: 0, prec: null, campioni: [] }; } catch { return { offset: 0, prec: null, campioni: [] }; } })(),
   intervallo: +(localStorage.getItem('smi_intervallo') || 5), ultimoInvio: {}, registro: [],
   analisi: { offset: 0, righePrec: null, campioni: [] }, ticker: null, ciclo: 0, inCorso: false,
   canale: null, ultimoModello: null,
@@ -1460,13 +1463,24 @@ async function aggiornaStoriaParametri(m) {
   log(!st.ultimo ? 'Storico parametri: prima fotografia salvata' : nuove.length ? `Parametri cambiati: ${nuove.length} valori (${[...new Set(nuove.map(x => x.prodotto))].join(', ')})` : 'Storico parametri aggiornato');
 }
 
+const msLocale = t => { const d = new Date(t); return SMI.ms(d.getFullYear(), d.getMonth() + 1, d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds()); };
+async function leggiProgressivoImmagini(v) {
+  const f = await v.h.getFile(), b = new Uint8Array(await f.arrayBuffer());
+  const txt = new TextDecoder('latin1').decode(b).trim();
+  let n = /^\d+$/.test(txt) ? +txt : null;                       // testo, es. "9255"
+  if (n == null && b.length >= 4) n = new DataView(b.buffer).getUint32(0, true); // oppure intero binario
+  if (n == null || !isFinite(n)) throw new Error('progressivo foto non leggibile');
+  return { n, mod: msLocale(f.lastModified) };
+}
+
 async function cicloLettore(comandoId) {
   if (!L.attivo || L.inCorso) return; L.inCorso = true; L.inCorsoDa = Date.now();
   try {
     if (Date.now() - L.ultimoScan > 60000) await scansiona();
-    const testi = { traces: [] }; let cambiato = false, righeAnalisi = null, modAnalisi = null;
+    const testi = { traces: [] }; let cambiato = false, righeAnalisi = null, modAnalisi = null, immagini = null;
     for (const v of L.file.values()) {
       try {
+        if (v.tipo === 'immagini') { immagini = await leggiProgressivoImmagini(v); continue; }
         const { testo, cambiato: c } = await leggiTesto(v);
         if (v.tipo === 'analysisTime') { righeAnalisi = (testo.match(/\n/g) || []).length; modAnalisi = v.mod; continue; }
         if (c) cambiato = true;
@@ -1491,6 +1505,17 @@ async function cicloLettore(comandoId) {
       A.campioni.push(ultimo && n === ultimo[1] ? [tc, n] : [tc, n, 1]); // 1 = qui SMI ha appena scritto
       A.campioni = A.campioni.filter(c => c[0] > ora - 3 * 3600e3);
       try { localStorage.setItem('smi_analisi', JSON.stringify(A)); } catch { } // così il conteggio sopravvive a un riavvio
+    }
+    // scarti in diretta: SMI salva 2 foto (le due metà della telecamera) per ogni cassetta scartata e tiene il
+    // progressivo in D:\images\image_last_number.dat. Il progressivo è circolare: se torna indietro, riparto da lì.
+    const I = L.immagini;
+    if (immagini) {
+      if (I.prec != null && immagini.n < I.prec) I.offset += I.prec;
+      I.prec = immagini.n;
+      const n = I.offset + immagini.n, u = I.campioni[I.campioni.length - 1];
+      if (!u || u[1] !== n) I.campioni.push([u ? Math.max(u[0], Math.min(ora, immagini.mod)) : Math.min(ora, immagini.mod), n]);
+      I.campioni = I.campioni.filter(c => c[0] > ora - 3 * 3600e3);
+      try { localStorage.setItem('smi_immagini', JSON.stringify(I)); } catch { }
     }
     const valoreA = t => { let best = null; for (const c of A.campioni) if (c[0] <= t) best = c; return best; };
     // valore al momento t, interpolato tra il campione prima e quello dopo
@@ -1517,6 +1542,15 @@ async function cicloLettore(comandoId) {
         velocita1: vel(120e3),
         velocita5: vel(300e3),
       };
+      if (immagini && I.campioni.length) {
+        // foto scritte dopo l'ultimo contatore orario (prima di quell'ora conta già il contatore di SMI)
+        const snapI = m.stato.ultimiContatoriTs || 0;
+        let baseI = null; for (const c of I.campioni) if (c[0] <= snapI) baseI = c;
+        if (!baseI) baseI = I.campioni[0];
+        const ultimoI = I.campioni[I.campioni.length - 1];
+        extra.scarti = Math.max(0, Math.round((ultimoI[1] - baseI[1]) / 2));
+        extra.ultimoScarto = ultimoI[0];
+      }
       if (modAnalisi) { const d = new Date(modAnalisi); extra.ultimaCassetta = SMI.ms(d.getFullYear(), d.getMonth() + 1, d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds()); }
     }
     const vivo = { battito: ora, intervallo: L.intervallo, stato: m.stato, extra, versione: 1, file: [...L.file.values()].map(v => [v.nome, v.size, v.mod]), erroriFile: L.erroriFile || {}, nParametri: Object.keys(m.parametri || {}).length, app: CONFIG.VERSIONE.split(' ')[0] };
