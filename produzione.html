@@ -441,6 +441,21 @@ select option{background:#16213f;color:#f3f5fb}
 input[type=datetime-local]{appearance:none;font:inherit;font-size:13.5px;color:var(--text-1);background:rgba(255,255,255,.07);border:1px solid var(--line);border-radius:12px;padding:8px 12px;outline:none;color-scheme:dark}
 .escl-piede{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 
+/* storico parametri */
+.mod-voce{display:flex;justify-content:space-between;gap:14px;font-size:12.5px;padding:2px 0}
+.mod-voce small{color:var(--text-3)}
+.mod-val{white-space:nowrap;color:var(--text-2)}
+.mod-val b{color:var(--text-1)}
+.mod-tab td{vertical-align:top}
+.mod-tab small{color:var(--text-3)}
+.mod-tab tr.dentro td{background:rgba(255,190,80,.06)}
+.mod-tab .giu{color:var(--good,#1fc28a)}
+.mod-tab .su{color:var(--crit)}
+.mod-linea line{stroke:var(--warn);stroke-width:2;stroke-dasharray:4 4;opacity:.8}
+.mod-linea:hover line{opacity:1;stroke-width:3}
+.mod-punto{fill:var(--crit);fill-opacity:.55;stroke:var(--crit);stroke-width:1.5}
+.mod-punto:hover{fill-opacity:.9}
+
 </style>
 </head>
 <body>
@@ -778,6 +793,7 @@ const SMI = (() => {
       allarmi,
       fermi,
       cambi: calcolaCambi(produzioni, ev.storiaProdotti),
+      eventiParametri: ev.cambiImpostazioni.slice(-1000).map(c => [c.ts, c.prodotto]), // 'ANALYSIS SETTINGS CHANGED': quando e per quale prodotto
       parametri,
       prodotti: nomiTutti,
     };
@@ -870,11 +886,36 @@ const SMI = (() => {
     return out;
   }
 
+  /* ---------- storico dei parametri ----------
+     Confronta due fotografie di SMI_ANALYSIS.ini ({prodotto: {camera: {parametro: valore}}}) e restituisce
+     le differenze. Un prodotto che compare o sparisce del tutto non conta come modifica. */
+  function diffParametri(prec, nuovo) {
+    const out = [];
+    for (const prod of Object.keys(nuovo || {})) {
+      const a = (prec || {})[prod], b = nuovo[prod]; if (!a) continue;
+      for (const cam of new Set([...Object.keys(a), ...Object.keys(b)])) {
+        const pa = a[cam] || {}, pb = b[cam] || {};
+        for (const k of new Set([...Object.keys(pa), ...Object.keys(pb)])) {
+          if (pa[k] !== pb[k]) out.push({ prodotto: prod, cam, p: k, da: pa[k] ?? null, a: pb[k] ?? null });
+        }
+      }
+    }
+    return out;
+  }
+  // l'ora della modifica: l'ultimo "ANALYSIS SETTINGS CHANGED" di quel prodotto tra la fotografia precedente e adesso
+  function dataModifiche(modifiche, eventi, tPrec, tOra) {
+    return modifiche.map(m => {
+      let t = null;
+      for (const [ts, prod] of eventi || []) if (prod === m.prodotto && ts > (tPrec || 0) && ts <= tOra + 60e3) t = ts;
+      return { ...m, t: t ?? tOra, stimata: t == null ? 1 : 0 };
+    });
+  }
+
   /* ---------- utilità di presentazione ---------- */
   const pedane = n => Math.floor(n / CASSETTE_PER_PEDANA);
   const perc = (a, b) => b > 0 ? (100 * a / b) : 0;
 
-  return { applicaEsclusioni, periodiSospetti, MAX_PAUSA, calcolaCambi, calcolaFermi, CASSETTE_PER_PEDANA, VELOCITA_STD, TURNI, ms, fmtData, fmtOra, isoGiorno, adesso, turnoDi, parseEventLog, costruisciProduzioni, parseTrace, parseErrorLog, parseIni, parametriPerProdotto, costruisciModello, pedane, perc, traduci };
+  return { diffParametri, dataModifiche, applicaEsclusioni, periodiSospetti, MAX_PAUSA, calcolaCambi, calcolaFermi, CASSETTE_PER_PEDANA, VELOCITA_STD, TURNI, ms, fmtData, fmtOra, isoGiorno, adesso, turnoDi, parseEventLog, costruisciProduzioni, parseTrace, parseErrorLog, parseIni, parametriPerProdotto, costruisciModello, pedane, perc, traduci };
 })();
 if (typeof module !== 'undefined') module.exports = SMI;
 
@@ -887,12 +928,12 @@ const CONFIG = {
   SUPABASE_URL: 'https://sszxyritwrkxaictcaaa.supabase.co',
   SUPABASE_KEY: 'sb_publishable_HkYiyUEqlWXJo_CDyD9Eqw_k8-4cY-3',
   NOME_LINEA: 'Linea NID 1',
-  VERSIONE: 'v18 · 9 nov 13:40',
+  VERSIONE: 'v19 · 9 nov 14:10',
 };
 const S = {
   modo: null,             // 'demo' | 'remoto' | 'file' | 'lettore'
   modello: null, vivo: null, aggiornatoVivo: null,
-  grezzo: null, esclusioni: [], // grezzo = dati come arrivano da SMI; modello = grezzo meno i periodi esclusi
+  grezzo: null, esclusioni: [], storiaPar: [], storiaParDa: null, // grezzo = dati come arrivano da SMI; modello = grezzo meno i periodi esclusi
   periodo: '7', prodotto: '', prove: false, vista: 'produzioni',
   sb: null, utente: null,
 };
@@ -1419,13 +1460,13 @@ function vistaDashboard() {
   <section class="vetro card">
     <h2>Produzioni</h2>
     <div class="barra-filtri">
-      <div class="seg" id="fVista">${[['produzioni', 'Produzioni'], ['turni', 'Per turno'], ['fermi', 'Fermi'], ['cambi', 'Cambi prodotto']].map(([k, l]) => `<button data-v="${k}" class="${S.vista === k ? 'att' : ''}">${l}</button>`).join('')}</div>
+      <div class="seg" id="fVista">${[['produzioni', 'Produzioni'], ['turni', 'Per turno'], ['fermi', 'Fermi'], ['cambi', 'Cambi prodotto'], ['parametri', 'Parametri']].map(([k, l]) => `<button data-v="${k}" class="${S.vista === k ? 'att' : ''}">${l}</button>`).join('')}</div>
       <div class="seg" id="fPeriodo">${[['oggi', 'Oggi'], ['7', '7 giorni'], ['30', '30 giorni'], ['tutto', 'Tutto']].map(([k, l]) => `<button data-p="${k}" class="${S.periodo === k ? 'att' : ''}">${l}</button>`).join('')}</div>
       ${tendinaProdotti(prodotti)}
       <span class="spazio"></span>
       <label class="switch" title="Mostra anche le prove con meno di una pedana (80 cassette)"><input type="checkbox" id="fProve" ${S.prove ? 'checked' : ''}><i></i>Mostra prove</label>
     </div>
-    <div id="elenco">${S.vista === 'turni' ? elencoTurni() : S.vista === 'fermi' ? elencoFermi() : S.vista === 'cambi' ? elencoCambi() : elencoProduzioni()}</div>
+    <div id="elenco">${S.vista === 'turni' ? elencoTurni() : S.vista === 'fermi' ? elencoFermi() : S.vista === 'cambi' ? elencoCambi() : S.vista === 'parametri' ? elencoParametri() : elencoProduzioni()}</div>
   </section>`;
 
   return banner + `<div class="hero">${hero}${turno}</div>` + cardFermiOggi() + graf + lista;
@@ -1512,6 +1553,8 @@ function collegaDashboard() {
   const gO = $('#gOre'); if (gO) montaGrafico(gO, el => graficoBarre(el, orarie(m.produzioni, r - 24 * 3600e3, r)));
   const gV = $('#gVel'); if (gV) montaGrafico(gV, el => graficoLinea(el, puntiVelocita(m, m.produzioni, r - 12 * 3600e3, r), { da: r - 12 * 3600e3, a: r }));
   $('#fPeriodo')?.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.periodo = b.dataset.p; render(); });
+  if (S.vista === 'parametri') disegnaGraficoParametri();
+  document.querySelectorAll('[data-prodpar]').forEach(b => b.onclick = () => { S.prodotto = b.dataset.prodpar; render(); });
   $('#fVista')?.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; S.vista = b.dataset.v; render(); });
   collegaTendina();
   $('#fProve')?.addEventListener('change', e => { S.prove = e.target.checked; render(); });
@@ -1635,6 +1678,85 @@ function perchéNienteParametri(m, prodotto) {
   return `Il PC della linea ha letto ${n0(v.nParametri)} prodotti, ma i parametri non sono arrivati qui. Premi Aggiorna; se resta così, avvisami.`;
 }
 
+/* ---------- storico parametri e scarti ---------- */
+const etichettaParam = k => (PARAM_PRINCIPALI.find(([x]) => x === k) || [])[1] || k;
+// modifiche raggruppate per prodotto e momento (una "sessione" di modifica)
+function gruppiModifiche(prodotto) {
+  const g = new Map();
+  for (const m of S.storiaPar) {
+    if (prodotto && m.prodotto !== prodotto) continue;
+    const k = m.prodotto + '|' + m.t;
+    if (!g.has(k)) g.set(k, { t: m.t, prodotto: m.prodotto, stimata: m.stimata, voci: [] });
+    g.get(k).voci.push(m);
+  }
+  return [...g.values()].sort((a, b) => a.t - b.t);
+}
+// scarti nelle ore di produzione prima e dopo un momento (stesso prodotto, senza learning, max 8 ore per parte)
+function scartiAttorno(prodotto, t, fino) {
+  const ore = [];
+  for (const p of S.modello.produzioni) if (p.prodotto === prodotto) for (const h of p.ore) if (h[2] > 0 && !h[7]) ore.push(h);
+  ore.sort((a, b) => a[0] - b[0]);
+  const somma = l => l.reduce((o, h) => ({ t: o.t + h[2], r: o.r + h[3] }), { t: 0, r: 0 });
+  return { prima: somma(ore.filter(h => h[1] <= t).slice(-8)), dopo: somma(ore.filter(h => h[0] >= t && (!fino || h[1] <= fino)).slice(0, 8)) };
+}
+const vociHtml = voci => voci.map(v => `<div class="mod-voce"><span>${esc(etichettaParam(v.p))}${v.cam !== '-' && v.cam != null ? ` <small>cam. ${esc(v.cam)}</small>` : ''}</span><span class="mod-val">${esc(v.da ?? '—')} → <b>${esc(v.a ?? '—')}</b></span></div>`).join('');
+function confrontoHtml(c) {
+  const pa = c.prima.t ? c.prima.r / c.prima.t : null, pd = c.dopo.t ? c.dopo.r / c.dopo.t : null;
+  const f = (x, n) => x == null ? '<span style="color:var(--text-3)">—</span>' : `<b>${n1(x * 100)}%</b> <small>su ${n0(n)}</small>`;
+  const freccia = pa != null && pd != null ? (pd < pa - .005 ? '<span class="giu">▼</span>' : pd > pa + .005 ? '<span class="su">▲</span>' : '') : '';
+  return `<td>${f(pa, c.prima.t)}</td><td>${f(pd, c.dopo.t)} ${freccia}</td>`;
+}
+function graficoScarti(el, punti, linee) {
+  const W = Math.max(280, el.clientWidth), H = 240, mL = 40, mR = 12, mT = 14, mB = 26;
+  if (!punti.length) { el.innerHTML = '<div class="vuoto">Nessuna produzione di questo prodotto nel periodo scelto</div>'; return; }
+  const t0 = Math.min(...punti.map(p => p.t), ...linee.map(l => l.t)) - 3600e3, t1 = Math.max(...punti.map(p => p.t), ...linee.map(l => l.t)) + 3600e3;
+  const { max, passo } = scalaNice(Math.max(5, ...punti.map(p => p.v)) * 1.1);
+  const iw = W - mL - mR, ih = H - mT - mB;
+  const x = t => mL + (t - t0) / (t1 - t0) * iw, y = v => mT + ih - v / max * ih;
+  let g = '<g class="griglia-l">';
+  for (let v = 0; v <= max + 1e-9; v += passo) g += `<line x1="${mL}" x2="${W - mR}" y1="${y(v)}" y2="${y(v)}"/>`;
+  g += '</g><g class="asse">';
+  for (let v = 0; v <= max + 1e-9; v += passo) g += `<text x="${mL - 8}" y="${y(v) + 4}" text-anchor="end">${n0(v)}%</text>`;
+  const step = [1, 2, 7, 14, 30].map(d => d * 864e5).find(s => (t1 - t0) / s <= Math.max(2, iw / 80)) || 30 * 864e5;
+  for (let t = Math.ceil(t0 / step) * step; t <= t1; t += step) g += `<text x="${x(t)}" y="${H - 6}" text-anchor="middle">${giornoCorto(t)}</text>`;
+  g += '</g>';
+  const lin = linee.map(l => `<g class="mod-linea"><line x1="${x(l.t)}" x2="${x(l.t)}" y1="${mT}" y2="${mT + ih}"/><title>${esc(l.titolo)}</title></g>`).join('');
+  const nMax = Math.max(...punti.map(p => p.n));
+  const dots = punti.map(p => `<circle cx="${x(p.t)}" cy="${y(p.v)}" r="${4 + 6 * Math.sqrt(p.n / nMax)}" class="mod-punto"><title>${esc(p.titolo)}</title></circle>`).join('');
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" height="${H}">${g}${lin}${dots}</svg>`;
+}
+function elencoParametri() {
+  const prod = S.prodotto;
+  const inizio = S.storiaParDa ? `${giornoCorto(S.storiaParDa)} ${SMI.fmtOra(S.storiaParDa)}` : null;
+  const nota = `<div class="nota" style="margin-top:0">Ogni modifica a SMI_ANALYSIS.ini viene registrata dal PC della linea${inizio ? ` (registrazione attiva dal ${inizio})` : ''}. Per ogni modifica: scarti nelle 8 ore di produzione prima e dopo, senza le ore di learning e senza i periodi esclusi.</div>`;
+  if (S.modo !== 'remoto' && !S.storiaPar.length) return '<div class="vuoto">Lo storico dei parametri è disponibile solo con i dati dal PC della linea.</div>';
+  if (!S.storiaParDa && !S.storiaPar.length) return `<div class="vuoto">Lo storico dei parametri non è ancora attivo: il PC della linea deve leggere SMI_ANALYSIS.ini (vedi la scheda Parametri di analisi in una produzione).</div>`;
+  const gruppi = gruppiModifiche(prod);
+  if (!prod) {
+    const per = new Map(); for (const g of gruppiModifiche()) per.set(g.prodotto, (per.get(g.prodotto) || 0) + 1);
+    return `<div class="pannello">${nota}<div class="nota">Scegli un prodotto dalla tendina in alto per vedere il grafico degli scarti con le modifiche.</div>
+      ${per.size ? `<div class="turni-chip" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">${[...per.entries()].sort((a, b) => b[1] - a[1]).map(([p, n]) => `<button class="tchip" data-prodpar="${esc(p)}" style="cursor:pointer;text-transform:capitalize">${esc(p)} <b>${n}</b></button>`).join('')}</div>` : '<div class="nota">Nessuna modifica registrata finora.</div>'}</div>` + tabellaModifiche(gruppi.slice(-30).reverse(), true);
+  }
+  return `<div class="pannello">${nota}<h3 style="text-transform:capitalize">${esc(prod)}: scarti per produzione e modifiche ai parametri</h3>
+      <div class="legenda"><span><i style="background:var(--crit)"></i>Una produzione (più grande = più cassette)</span><span><i class="linea" style="background:var(--warn)"></i>Modifica ai parametri</span></div>
+      <div class="chart" id="gScartiPar"></div></div>` + tabellaModifiche(gruppi.slice().reverse(), false);
+}
+function tabellaModifiche(gruppi, conProdotto) {
+  if (!gruppi.length) return '<div class="vuoto">Nessuna modifica registrata per questo prodotto.</div>';
+  const tutti = gruppiModifiche();
+  return `<div class="sezione pannello"><h3>Modifiche</h3><div class="scroll-x"><table class="tabella mod-tab"><thead><tr><th>Quando</th>${conProdotto ? '<th>Prodotto</th>' : ''}<th>Cosa è cambiato</th><th>Scarti prima</th><th>Scarti dopo</th></tr></thead><tbody>
+    ${gruppi.map(g => { const succ = tutti.find(x => x.prodotto === g.prodotto && x.t > g.t); return `<tr><td>${giornoCorto(g.t)} ${SMI.fmtOra(g.t)}${g.stimata ? ' <small title="Ora stimata: nessun evento in event.log">≈</small>' : ''}</td>${conProdotto ? `<td style="text-transform:capitalize">${esc(g.prodotto)}</td>` : ''}<td>${vociHtml(g.voci)}</td>${confrontoHtml(scartiAttorno(g.prodotto, g.t, succ?.t))}</tr>`; }).join('')}
+  </tbody></table></div></div>`;
+}
+function disegnaGraficoParametri() {
+  const el = $('#gScartiPar'); if (!el) return;
+  const ps = produzioniFiltrate().filter(p => p.t > 0);
+  const punti = ps.map(p => ({ t: (p.inizio + p.fine) / 2, v: 100 * p.r / p.t, n: p.t, titolo: `${giornoCorto(p.inizio)} ${SMI.fmtOra(p.inizio)}–${SMI.fmtOra(p.fine)} · ${n1(100 * p.r / p.t)}% scarti su ${n0(p.t)} cassette` }));
+  const da = ps.length ? ps[0].inizio - 864e5 : 0;
+  const linee = gruppiModifiche(S.prodotto).filter(g => g.t >= da).map(g => ({ t: g.t, titolo: `${giornoCorto(g.t)} ${SMI.fmtOra(g.t)}: ` + g.voci.map(v => `${etichettaParam(v.p)} ${v.da ?? '—'} → ${v.a ?? '—'}`).join(', ') }));
+  montaGrafico(el, e => graficoScarti(e, punti, linee));
+}
+
 function apriProduzione(id) {
   const m = S.modello; const p0 = m.produzioni.find(x => x.id === id); if (!p0) return;
   const ultimaId = m.produzioni.filter(x => x.t >= 1).slice(-1)[0]?.id;
@@ -1694,7 +1816,9 @@ function apriProduzione(id) {
       return `<div class="param"><div class="n">${l}${d != null && d !== v ? '<span class="diverso" title="Valore del default: ' + esc(d) + '">≠ default</span>' : ''}</div><div class="v">${esc(v)}</div><div class="k">${k}</div></div>`;
     }).join('');
     const tutti = [...Object.entries(com).map(([k, v]) => [k, v, '-']), ...Object.entries(cam).map(([k, v]) => [k, v, '0'])].sort((a, b) => a[0].localeCompare(b[0]));
-    parametri = `
+    const gp = gruppiModifiche(p.prodotto).slice(-8).reverse();
+    const storiaH = gp.length ? `<div class="pannello" style="margin-bottom:14px"><h3>Ultime modifiche a questo prodotto</h3><table class="tabella mod-tab"><tbody>${gp.map(g => `<tr class="${g.t >= p.inizio && g.t <= p.fine ? 'dentro' : ''}"><td>${giornoCorto(g.t)} ${SMI.fmtOra(g.t)}${g.t >= p.inizio && g.t <= p.fine ? ' <span class="chip">in questa produzione</span>' : ''}</td><td>${vociHtml(g.voci)}</td></tr>`).join('')}</tbody></table><div class="nota">Il confronto degli scarti prima e dopo ogni modifica è nella vista <b>Parametri</b> della pagina principale.</div></div>` : '';
+    parametri = storiaH + `
       <div class="nota" style="margin-top:0;margin-bottom:12px">Valori <b>attuali</b> letti da SMI_ANALYSIS.ini per <b style="text-transform:capitalize">${esc(p.prodotto)}</b>. Il segno <span class="diverso" style="margin:0">≠ default</span> indica che il valore è diverso da quello del "default product".</div>
       <div class="param-grid">${princ}</div>
       <div class="sezione pannello"><h3 style="display:flex;align-items:center;gap:10px">Tutti i parametri (${tutti.length}) <span class="spazio" style="flex:1"></span><input type="search" id="cercaParam" placeholder="Cerca parametro…" style="max-width:240px"></h3>
@@ -1857,6 +1981,7 @@ async function caricaRemoto() {
 function applicaRighe(righe) {
   const r = Object.fromEntries(righe.map(x => [x.id, x]));
   if (r.esclusioni) S.esclusioni = r.esclusioni.dati?.lista || [];
+  if (r.storia_parametri) { S.storiaPar = r.storia_parametri.dati?.modifiche || []; S.storiaParDa = r.storia_parametri.dati?.inizio || null; }
   const storico = r.storico?.dati || S.grezzo || {};
   S.grezzo = { ...storico, parametri: r.parametri?.dati ?? S.grezzo?.parametri, allarmi: r.allarmi?.dati ?? S.grezzo?.allarmi };
   if (r.pc_linea) S.pcLinea = r.pc_linea.dati;
@@ -2236,6 +2361,28 @@ async function reimpostaDaZero() {
 const conTimeout = (p, ms = 20000, cosa = 'richiesta') => Promise.race([p, new Promise((_, ko) => setTimeout(() => ko(new Error(`${cosa}: nessuna risposta dopo ${ms / 1000} s`)), ms))]);
 function fnv(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36) + ':' + s.length; }
 
+/* Storico dei parametri: a ogni cambiamento di SMI_ANALYSIS.ini salvo le differenze (riga 'storia_parametri').
+   Accetto una nuova fotografia solo se è uguale per due letture di fila: così una copia del file
+   letta a metà non diventa una finta modifica. */
+async function aggiornaStoriaParametri(m) {
+  const par = m.parametri || {};
+  if (!Object.keys(par).some(k => k !== 'default product')) return;
+  const h = fnv(JSON.stringify(par));
+  if (L.hashPar === h) return;
+  if (L.parCandidato !== h) { L.parCandidato = h; return; }
+  const { data, error } = await conTimeout(sb().from('smi_dati').select('dati').eq('id', 'storia_parametri'), 20000, 'storico parametri');
+  if (error) { log('Storico parametri: ' + error.message); return; }
+  const st = data?.[0]?.dati || {};
+  if (st.ultimo?.h === h) { L.hashPar = h; return; }
+  const ora = SMI.adesso();
+  const nuove = st.ultimo?.par ? SMI.dataModifiche(SMI.diffParametri(st.ultimo.par, par), m.eventiParametri, st.ultimo.t, ora) : [];
+  const dati = { ...st, inizio: st.inizio || ora, ultimo: { t: ora, h, par }, modifiche: [...(st.modifiche || []), ...nuove].slice(-5000) };
+  const { error: e2 } = await conTimeout(sb().from('smi_dati').upsert({ id: 'storia_parametri', dati, aggiornato: new Date().toISOString() }), 45000, 'storico parametri');
+  if (e2) { log('Storico parametri: ' + e2.message); return; }
+  L.hashPar = h;
+  log(!st.ultimo ? 'Storico parametri: prima fotografia salvata' : nuove.length ? `Parametri cambiati: ${nuove.length} valori (${[...new Set(nuove.map(x => x.prodotto))].join(', ')})` : 'Storico parametri aggiornato');
+}
+
 async function cicloLettore(comandoId) {
   if (!L.attivo || L.inCorso) return; L.inCorso = true; L.inCorsoDa = Date.now();
   try {
@@ -2307,6 +2454,7 @@ async function cicloLettore(comandoId) {
     const { error } = await conTimeout(sb().from('smi_dati').upsert(daInviare.map(({ id, dati }) => ({ id, dati, aggiornato: new Date().toISOString() }))), 45000, 'invio dati');
     if (error) { log('Errore invio: ' + error.message); L.ultimoErrore = Date.now(); L.testoErrore = error.message; return; }
     L.ultimoOk = Date.now(); L.ultimoErrore = null; L.testoErrore = null;
+    try { await aggiornaStoriaParametri(m); } catch (e) { log('Storico parametri: ' + e.message); }
     for (const d of daInviare) if (d.h) L.ultimoInvio[d.id] = d.h;
     L.ciclo++;
     if (L.ciclo % Math.max(1, Math.round(30 / L.intervallo)) === 0 && !(await sonoIlPcDellaLinea())) return;

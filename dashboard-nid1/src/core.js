@@ -326,6 +326,7 @@ const SMI = (() => {
       allarmi,
       fermi,
       cambi: calcolaCambi(produzioni, ev.storiaProdotti),
+      eventiParametri: ev.cambiImpostazioni.slice(-1000).map(c => [c.ts, c.prodotto]), // 'ANALYSIS SETTINGS CHANGED': quando e per quale prodotto
       parametri,
       prodotti: nomiTutti,
     };
@@ -418,10 +419,35 @@ const SMI = (() => {
     return out;
   }
 
+  /* ---------- storico dei parametri ----------
+     Confronta due fotografie di SMI_ANALYSIS.ini ({prodotto: {camera: {parametro: valore}}}) e restituisce
+     le differenze. Un prodotto che compare o sparisce del tutto non conta come modifica. */
+  function diffParametri(prec, nuovo) {
+    const out = [];
+    for (const prod of Object.keys(nuovo || {})) {
+      const a = (prec || {})[prod], b = nuovo[prod]; if (!a) continue;
+      for (const cam of new Set([...Object.keys(a), ...Object.keys(b)])) {
+        const pa = a[cam] || {}, pb = b[cam] || {};
+        for (const k of new Set([...Object.keys(pa), ...Object.keys(pb)])) {
+          if (pa[k] !== pb[k]) out.push({ prodotto: prod, cam, p: k, da: pa[k] ?? null, a: pb[k] ?? null });
+        }
+      }
+    }
+    return out;
+  }
+  // l'ora della modifica: l'ultimo "ANALYSIS SETTINGS CHANGED" di quel prodotto tra la fotografia precedente e adesso
+  function dataModifiche(modifiche, eventi, tPrec, tOra) {
+    return modifiche.map(m => {
+      let t = null;
+      for (const [ts, prod] of eventi || []) if (prod === m.prodotto && ts > (tPrec || 0) && ts <= tOra + 60e3) t = ts;
+      return { ...m, t: t ?? tOra, stimata: t == null ? 1 : 0 };
+    });
+  }
+
   /* ---------- utilità di presentazione ---------- */
   const pedane = n => Math.floor(n / CASSETTE_PER_PEDANA);
   const perc = (a, b) => b > 0 ? (100 * a / b) : 0;
 
-  return { applicaEsclusioni, periodiSospetti, MAX_PAUSA, calcolaCambi, calcolaFermi, CASSETTE_PER_PEDANA, VELOCITA_STD, TURNI, ms, fmtData, fmtOra, isoGiorno, adesso, turnoDi, parseEventLog, costruisciProduzioni, parseTrace, parseErrorLog, parseIni, parametriPerProdotto, costruisciModello, pedane, perc, traduci };
+  return { diffParametri, dataModifiche, applicaEsclusioni, periodiSospetti, MAX_PAUSA, calcolaCambi, calcolaFermi, CASSETTE_PER_PEDANA, VELOCITA_STD, TURNI, ms, fmtData, fmtOra, isoGiorno, adesso, turnoDi, parseEventLog, costruisciProduzioni, parseTrace, parseErrorLog, parseIni, parametriPerProdotto, costruisciModello, pedane, perc, traduci };
 })();
 if (typeof module !== 'undefined') module.exports = SMI;

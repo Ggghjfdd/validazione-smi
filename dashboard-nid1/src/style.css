@@ -428,3 +428,18 @@ select option{background:#16213f;color:#f3f5fb}
 .escl-campi input,.escl-campi select{width:100%}
 input[type=datetime-local]{appearance:none;font:inherit;font-size:13.5px;color:var(--text-1);background:rgba(255,255,255,.07);border:1px solid var(--line);border-radius:12px;padding:8px 12px;outline:none;color-scheme:dark}
 .escl-piede{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+
+/* storico parametri */
+.mod-voce{display:flex;justify-content:space-between;gap:14px;font-size:12.5px;padding:2px 0}
+.mod-voce small{color:var(--text-3)}
+.mod-val{white-space:nowrap;color:var(--text-2)}
+.mod-val b{color:var(--text-1)}
+.mod-tab td{vertical-align:top}
+.mod-tab small{color:var(--text-3)}
+.mod-tab tr.dentro td{background:rgba(255,190,80,.06)}
+.mod-tab .giu{color:var(--good,#1fc28a)}
+.mod-tab .su{color:var(--crit)}
+.mod-linea line{stroke:var(--warn);stroke-width:2;stroke-dasharray:4 4;opacity:.8}
+.mod-linea:hover line{opacity:1;stroke-width:3}
+.mod-punto{fill:var(--crit);fill-opacity:.55;stroke:var(--crit);stroke-width:1.5}
+.mod-punto:hover{fill-opacity:.9}
