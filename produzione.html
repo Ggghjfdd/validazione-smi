@@ -775,7 +775,7 @@ const CONFIG = {
   SUPABASE_URL: 'https://sszxyritwrkxaictcaaa.supabase.co',
   SUPABASE_KEY: 'sb_publishable_HkYiyUEqlWXJo_CDyD9Eqw_k8-4cY-3',
   NOME_LINEA: 'Linea NID 1',
-  VERSIONE: 'v12 · 6 nov 16:15',
+  VERSIONE: 'v13 · 9 nov 11:55',
 };
 const S = {
   modo: null,             // 'demo' | 'remoto' | 'file' | 'lettore'
@@ -2033,7 +2033,13 @@ async function cicloLettore(comandoId) {
     if (righeAnalisi != null) {
       if (A.righePrec != null && righeAnalisi < A.righePrec) A.offset += A.righePrec; // file ruotato in .bak
       A.righePrec = righeAnalisi;
-      A.campioni.push([ora, (A.offset + righeAnalisi) / 4]);
+      // il campione porta l'ora in cui SMI ha scritto le righe (data di modifica del file), non l'ora della lettura:
+      // con la lettura ogni 2–5 s, usare l'ora di lettura gonfiava la velocità (fino a 27/min con la linea a 24)
+      const n = (A.offset + righeAnalisi) / 4, ultimo = A.campioni[A.campioni.length - 1];
+      let tc = ora;
+      if (modAnalisi && (!ultimo || n !== ultimo[1])) { const d = new Date(modAnalisi); tc = Math.min(ora, SMI.ms(d.getFullYear(), d.getMonth() + 1, d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds())); }
+      if (ultimo) tc = Math.max(tc, ultimo[0]);
+      A.campioni.push(ultimo && n === ultimo[1] ? [tc, n] : [tc, n, 1]); // 1 = qui SMI ha appena scritto
       A.campioni = A.campioni.filter(c => c[0] > ora - 3 * 3600e3);
       try { localStorage.setItem('smi_analisi', JSON.stringify(A)); } catch { } // così il conteggio sopravvive a un riavvio
     }
@@ -2045,12 +2051,22 @@ async function cicloLettore(comandoId) {
       const now = A.campioni[A.campioni.length - 1];
       const snap = m.stato.ultimiContatoriTs || 0;
       const base = valoreInterp(snap) || now;
-      const v1 = valoreA(ora - 60e3), v5 = valoreA(ora - 300e3);
+      // velocità misurata tra due scritture di SMI (conteggi esatti agli istanti esatti): SMI scrive a blocchi,
+      // e misurare da un'ora qualsiasi gonfiava o sgonfiava il valore di un blocco intero
+      const scritture = A.campioni.filter(c => c[2]);
+      const velocitaSu = finestra => {
+        let fine = scritture[scritture.length - 1]; if (!fine) return null;
+        if (ora - fine[0] > 30e3) fine = now; // niente scritture da 30 s: la linea rallenta o è ferma
+        let ini = null; for (const c of scritture) { if (c[0] <= fine[0] - finestra) ini = c; else break; }
+        if (!ini) ini = scritture[0];
+        return fine[0] - ini[0] >= finestra / 2 ? [ini, fine] : null;
+      };
+      const vel = w => { const r = velocitaSu(w); return r ? (r[1][1] - r[0][1]) / ((r[1][0] - r[0][0]) / 60e3) : null; };
       extra = {
         daTs: base[0], cassette: Math.max(0, Math.round(now[1] - base[1])),
         primaDa: (A.campioni.find(c => c[0] >= base[0] && c[1] > base[1]) || [null])[0],
-        velocita1: v1 && now[0] - v1[0] > 0 ? (now[1] - v1[1]) / ((now[0] - v1[0]) / 60e3) : null,
-        velocita5: v5 && now[0] - v5[0] > 0 ? (now[1] - v5[1]) / ((now[0] - v5[0]) / 60e3) : null,
+        velocita1: vel(120e3),
+        velocita5: vel(300e3),
       };
       if (modAnalisi) { const d = new Date(modAnalisi); extra.ultimaCassetta = SMI.ms(d.getFullYear(), d.getMonth() + 1, d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds()); }
     }
