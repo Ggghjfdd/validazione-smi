@@ -443,3 +443,12 @@ input[type=datetime-local]{appearance:none;font:inherit;font-size:13.5px;color:v
 .mod-linea:hover line{opacity:1;stroke-width:3}
 .mod-punto{fill:var(--crit);fill-opacity:.55;stroke:var(--crit);stroke-width:1.5}
 .mod-punto:hover{fill-opacity:.9}
+
+/* foto degli scarti */
+.foto-griglia{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-top:12px}
+.foto{margin:0;cursor:zoom-in;background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.foto-img{aspect-ratio:2.5/1;display:flex;align-items:center;justify-content:center;color:var(--text-3);font-size:12px;background:#000}
+.foto-img img{width:100%;height:100%;object-fit:cover;display:block}
+.foto figcaption{font-size:12px;padding:6px 10px;color:var(--text-2)}
+.foto-grande{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;cursor:zoom-out;padding:16px}
+.foto-grande img{max-width:100%;max-height:88vh;border-radius:8px}

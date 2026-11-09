@@ -5,12 +5,12 @@ const CONFIG = {
   SUPABASE_URL: 'https://sszxyritwrkxaictcaaa.supabase.co',
   SUPABASE_KEY: 'sb_publishable_HkYiyUEqlWXJo_CDyD9Eqw_k8-4cY-3',
   NOME_LINEA: 'Linea NID 1',
-  VERSIONE: 'v20 · 9 nov 15:50',
+  VERSIONE: 'v21 · 9 nov 16:15',
 };
 const S = {
   modo: null,             // 'demo' | 'remoto' | 'file' | 'lettore'
   modello: null, vivo: null, aggiornatoVivo: null,
-  grezzo: null, esclusioni: [], storiaPar: [], storiaParDa: null, // grezzo = dati come arrivano da SMI; modello = grezzo meno i periodi esclusi
+  grezzo: null, esclusioni: [], foto: [], storiaPar: [], storiaParDa: null, // grezzo = dati come arrivano da SMI; modello = grezzo meno i periodi esclusi
   periodo: '7', prodotto: '', prove: false, vista: 'produzioni',
   sb: null, utente: null,
 };
@@ -835,6 +835,27 @@ function disegnaGraficoParametri() {
   montaGrafico(el, e => graficoScarti(e, punti, linee));
 }
 
+function fotoHtml(lista) {
+  if (S.modo !== 'remoto') return '<div class="vuoto">Le foto degli scarti sono disponibili solo con i dati dal PC della linea.</div>';
+  if (!lista.length) return `<div class="vuoto">Nessuna foto di scarti per questa produzione.<br><small>Le foto arrivano solo se il PC della linea legge anche la cartella D:\\images, e solo per gli scarti successivi all'attivazione. Si tengono le ultime ${FOTO_MAX} cassette scartate.</small></div>`;
+  return `<div class="nota" style="margin-top:0">${n0(lista.length)} cassette scartate fotografate (le due metà della telecamera affiancate). Clicca per ingrandire.</div>
+    <div class="foto-griglia">${lista.map(f => `<figure class="foto" data-foto="${esc(f[1])}"><div class="foto-img"></div><figcaption>${giornoCorto(f[0])} ${SMI.fmtOra(f[0])}</figcaption></figure>`).join('')}</div>`;
+}
+const urlFoto = new Map();
+async function caricaMiniature(lista) {
+  const cl = sb(); if (!cl || !lista.length) return;
+  const mancanti = lista.map(f => f[1]).filter(p => !urlFoto.has(p));
+  for (let i = 0; i < mancanti.length; i += 100) {
+    const { data } = await cl.storage.from('smi-foto').createSignedUrls(mancanti.slice(i, i + 100), 3600);
+    for (const d of data || []) if (d.signedUrl) urlFoto.set(d.path, d.signedUrl);
+  }
+  document.querySelectorAll('.foto[data-foto]').forEach(el => {
+    const u = urlFoto.get(el.dataset.foto); if (!u) { el.querySelector('.foto-img').textContent = 'non disponibile'; return; }
+    el.querySelector('.foto-img').innerHTML = `<img loading="lazy" src="${u}" alt="">`;
+    el.onclick = () => { const v = document.createElement('div'); v.className = 'foto-grande'; v.innerHTML = `<img src="${u}" alt=""><div class="nota">${esc(el.querySelector('figcaption').textContent)} · clicca per chiudere</div>`; v.onclick = () => v.remove(); document.body.appendChild(v); };
+  });
+}
+
 function apriProduzione(id) {
   const m = S.modello; const p0 = m.produzioni.find(x => x.id === id); if (!p0) return;
   const ultimaId = m.produzioni.filter(x => x.t >= 1).slice(-1)[0]?.id;
@@ -847,6 +868,7 @@ function apriProduzione(id) {
   const durataTot = (p.fine - p.inizio) / 60e3;
   const FP = fermiDi(p0), fermiP = FP.lista;
   const pr = S.grezzo?.produzioni?.find(x => x.id === id);
+  const fotoP = S.foto.filter(f => f[0] >= p0.inizio && f[0] <= fineProd(p0) + 5 * 60e3).reverse();
 
   const riepilogo = `
     <div class="kpi" style="margin-top:0">
@@ -919,8 +941,8 @@ function apriProduzione(id) {
     <h2 style="font-size:12px;letter-spacing:.6px;text-transform:uppercase;color:var(--text-3);margin:0">Produzione</h2>
     <div class="prodotto-nome">${esc(p.prodotto)}</div>
     <div class="sotto"><span>${giornoLungo(p.inizio)} ${SMI.fmtOra(p.inizio)} → ${SMI.isoGiorno(p.inizio) !== SMI.isoGiorno(p.fine) ? giornoCorto(p.fine) + ' ' : ''}${SMI.fmtOra(p.fine)}</span>${p.turni.map(t => `<span class="chip">${t.nome} ${giornoCorto(t.giorno)}</span>`).join('')}</div>
-    <div class="schede" id="schede">${[['r', 'Riepilogo'], ['a', 'Andamento'], ['p', 'Parametri di analisi'], ['f', `Fermi (${fermiP.length})`], ['e', `Allarmi${allRilev.length ? ' (' + allRilev.length + ')' : ''}`]].map(([k, l], i) => `<button data-s="${k}" class="${i ? '' : 'att'}">${l}</button>`).join('')}</div>
-    <div data-pan="r">${riepilogo}</div><div data-pan="a" class="nascosto">${andamento}</div><div data-pan="p" class="nascosto">${parametri}</div><div data-pan="f" class="nascosto"><div class="pannello"><h3>Linea del tempo</h3>${lineaTempo(p.inizio, fineProd(p0), [p0], fermiP)}</div><div class="sezione">${tabellaFermi(fermiP, { mostraProdotto: false })}</div></div><div data-pan="e" class="nascosto">${allarmiH}</div>
+    <div class="schede" id="schede">${[['r', 'Riepilogo'], ['a', 'Andamento'], ['p', 'Parametri di analisi'], ['f', `Fermi (${fermiP.length})`], ['e', `Allarmi${allRilev.length ? ' (' + allRilev.length + ')' : ''}`], ['s', `Foto scarti${fotoP.length ? ' (' + fotoP.length + ')' : ''}`]].map(([k, l], i) => `<button data-s="${k}" class="${i ? '' : 'att'}">${l}</button>`).join('')}</div>
+    <div data-pan="r">${riepilogo}</div><div data-pan="a" class="nascosto">${andamento}</div><div data-pan="p" class="nascosto">${parametri}</div><div data-pan="f" class="nascosto"><div class="pannello"><h3>Linea del tempo</h3>${lineaTempo(p.inizio, fineProd(p0), [p0], fermiP)}</div><div class="sezione">${tabellaFermi(fermiP, { mostraProdotto: false })}</div></div><div data-pan="e" class="nascosto">${allarmiH}</div><div data-pan="s" class="nascosto">${fotoHtml(fotoP)}</div>
   </div>`;
   velo.classList.add('aperto'); document.body.style.overflow = 'hidden';
   const chiudi = () => { velo.classList.remove('aperto'); velo.innerHTML = ''; document.body.style.overflow = ''; };
@@ -940,6 +962,7 @@ function apriProduzione(id) {
     }
   };
   collegaEsclusioni(p0, pr);
+  caricaMiniature(fotoP);
   $('#cercaParam')?.addEventListener('input', e => { const q = e.target.value.toLowerCase().trim(); velo.querySelectorAll('#tabParam tbody tr').forEach(tr => tr.style.display = !q || tr.dataset.k.includes(q) ? '' : 'none'); });
 }
 
@@ -1059,6 +1082,7 @@ async function caricaRemoto() {
 function applicaRighe(righe) {
   const r = Object.fromEntries(righe.map(x => [x.id, x]));
   if (r.esclusioni) S.esclusioni = r.esclusioni.dati?.lista || [];
+  if (r.foto) S.foto = r.foto.dati?.lista || [];
   if (r.storia_parametri) { S.storiaPar = r.storia_parametri.dati?.modifiche || []; S.storiaParDa = r.storia_parametri.dati?.inizio || null; }
   const storico = r.storico?.dati || S.grezzo || {};
   S.grezzo = { ...storico, parametri: r.parametri?.dati ?? S.grezzo?.parametri, allarmi: r.allarmi?.dati ?? S.grezzo?.allarmi };
@@ -1354,7 +1378,7 @@ async function scansiona() {
         const f = await h.getFile();
         const chiave = tipo === 'trace' ? nome : tipo;
         const prec = trovati.get(chiave);
-        if (!prec || f.lastModified > prec.mod) trovati.set(chiave, { h, tipo, nome, percorso: percorso + '\\' + nome, size: f.size, mod: f.lastModified });
+        if (!prec || f.lastModified > prec.mod) trovati.set(chiave, { h, dir, tipo, nome, percorso: percorso + '\\' + nome, size: f.size, mod: f.lastModified });
         if (L.erroriFile) delete L.erroriFile[nome];
       } catch (e) { (L.erroriFile ||= {})[nome] = e.name + ': ' + e.message; log(`Scansione, ${nome}: ${e.message}`); }
     }
@@ -1473,6 +1497,54 @@ async function leggiProgressivoImmagini(v) {
   return { n, mod: msLocale(f.lastModified) };
 }
 
+/* ---------- foto degli scarti ----------
+   Per ogni cassetta scartata SMI salva due BMP (le due metà della telecamera, ~3,8 MB l'una).
+   Il lettore le unisce in un solo JPEG leggero e lo carica nello spazio "smi-foto" di Supabase;
+   l'elenco sta nella riga 'foto'. Tengo le ultime FOTO_MAX cassette e cancello le più vecchie. */
+const FOTO_MAX = 400;
+function accodaFoto(dir, n) {
+  const F = L.foto ||= { prec: null, coda: [], indice: null, pausaFino: 0 };
+  if (!dir) return;
+  if (F.prec == null || n < F.prec) { F.prec = n; return; } // all'avvio (o se il progressivo riparte) non recupero il pregresso
+  for (let k = F.prec + 1; k <= n; k++) { const c = k - (k % 2); if (!F.coda.some(x => x.k === c)) F.coda.push({ k: c, dir }); }
+  F.prec = n;
+  F.coda = F.coda.slice(-6);
+}
+async function caricaFotoInCoda() {
+  const F = L.foto; if (!F?.coda.length || Date.now() < F.pausaFino) return;
+  const cl = sb(); if (!cl) return;
+  if (!F.indice) {
+    const { data, error } = await cl.from('smi_dati').select('dati').eq('id', 'foto');
+    if (error) return;
+    F.indice = data?.[0]?.dati?.lista || [];
+  }
+  for (let i = 0; i < 2 && F.coda.length; i++) {
+    const { k, dir } = F.coda[0];
+    let h1, h2;
+    try { h1 = await dir.getFileHandle(`image${k}.bmp`); h2 = await dir.getFileHandle(`image${k + 1}.bmp`); }
+    catch { if (F.coda[0].tentativi = (F.coda[0].tentativi || 0) + 1, F.coda[0].tentativi > 5) F.coda.shift(); return; } // la seconda foto non è ancora scritta
+    const f1 = await h1.getFile(), f2 = await h2.getFile();
+    const b1 = await createImageBitmap(f1), b2 = await createImageBitmap(f2);
+    const sc = Math.min(1, 1600 / (b1.width + b2.width));
+    const cv = new OffscreenCanvas(Math.round((b1.width + b2.width) * sc), Math.round(Math.max(b1.height, b2.height) * sc));
+    const cx = cv.getContext('2d'); cx.drawImage(b1, 0, 0, b1.width * sc, b1.height * sc); cx.drawImage(b2, b1.width * sc, 0, b2.width * sc, b2.height * sc);
+    b1.close(); b2.close();
+    const blob = await cv.convertToBlob({ type: 'image/jpeg', quality: 0.72 });
+    const t = msLocale(Math.max(f1.lastModified, f2.lastModified));
+    const percorso = `${new Date(t).toISOString().slice(0, 10)}/${new Date(t).toISOString().slice(11, 19).replace(/:/g, '')}_${k}.jpg`;
+    const { error } = await cl.storage.from('smi-foto').upload(percorso, blob, { contentType: 'image/jpeg', upsert: true });
+    if (error) {
+      log('Foto scarti: ' + error.message + (/bucket|not found/i.test(error.message) ? ' (su Supabase manca lo spazio smi-foto: va eseguito supabase_foto.sql)' : ''));
+      F.pausaFino = Date.now() + 10 * 60e3; return;
+    }
+    F.coda.shift();
+    F.indice.push([t, percorso, L.ultimoModello?.stato?.prodotto || '']);
+    const via = F.indice.length > FOTO_MAX ? F.indice.splice(0, F.indice.length - FOTO_MAX) : [];
+    if (via.length) await cl.storage.from('smi-foto').remove(via.map(x => x[1]));
+    await cl.from('smi_dati').upsert({ id: 'foto', dati: { lista: F.indice }, aggiornato: new Date().toISOString() });
+  }
+}
+
 async function cicloLettore(comandoId) {
   if (!L.attivo || L.inCorso) return; L.inCorso = true; L.inCorsoDa = Date.now();
   try {
@@ -1480,7 +1552,7 @@ async function cicloLettore(comandoId) {
     const testi = { traces: [] }; let cambiato = false, righeAnalisi = null, modAnalisi = null, immagini = null;
     for (const v of L.file.values()) {
       try {
-        if (v.tipo === 'immagini') { immagini = await leggiProgressivoImmagini(v); continue; }
+        if (v.tipo === 'immagini') { immagini = await leggiProgressivoImmagini(v); accodaFoto(v.dir, immagini.n); continue; }
         const { testo, cambiato: c } = await leggiTesto(v);
         if (v.tipo === 'analysisTime') { righeAnalisi = (testo.match(/\n/g) || []).length; modAnalisi = v.mod; continue; }
         if (c) cambiato = true;
@@ -1566,6 +1638,7 @@ async function cicloLettore(comandoId) {
     if (error) { log('Errore invio: ' + error.message); L.ultimoErrore = Date.now(); L.testoErrore = error.message; return; }
     L.ultimoOk = Date.now(); L.ultimoErrore = null; L.testoErrore = null;
     try { await aggiornaStoriaParametri(m); } catch (e) { log('Storico parametri: ' + e.message); }
+    try { await caricaFotoInCoda(); } catch (e) { log('Foto scarti: ' + e.message); }
     for (const d of daInviare) if (d.h) L.ultimoInvio[d.id] = d.h;
     L.ciclo++;
     if (L.ciclo % Math.max(1, Math.round(30 / L.intervallo)) === 0 && !(await sonoIlPcDellaLinea())) return;
