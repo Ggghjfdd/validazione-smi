@@ -5,7 +5,7 @@ const CONFIG = {
   SUPABASE_URL: 'https://sszxyritwrkxaictcaaa.supabase.co',
   SUPABASE_KEY: 'sb_publishable_HkYiyUEqlWXJo_CDyD9Eqw_k8-4cY-3',
   NOME_LINEA: 'Linea NID 1',
-  VERSIONE: 'v15 · 9 nov 12:45',
+  VERSIONE: 'v16 · 9 nov 13:20',
 };
 const S = {
   modo: null,             // 'demo' | 'remoto' | 'file' | 'lettore'
@@ -736,6 +736,20 @@ function collegaEsclusioni(p, pr) {
   box.querySelectorAll('[data-rip]').forEach(b => b.onclick = () => ripristinaPeriodo(p.id, b.dataset.rip));
 }
 
+function perchéNienteParametri(m, prodotto) {
+  const n = Object.keys(m.parametri || {}).length;
+  if (n) return `Nessun parametro per <b>${esc(prodotto)}</b> in SMI_ANALYSIS.ini: il prodotto potrebbe essere stato rinominato o tolto dalla lista. Prodotti con parametri: ${Object.keys(m.parametri).filter(k => k !== 'default product').map(esc).join(', ')}.`;
+  if (S.modo !== 'remoto') return 'Parametri non disponibili: tra i file caricati manca SMI_ANALYSIS.ini.';
+  const v = S.vivo || {}, file = (v.file || []).map(f => f[0]), ini = file.find(f => /smi_analysis\.ini$/i.test(f));
+  const err = ini && v.erroriFile?.[ini];
+  if (!v.file) return 'Parametri non ancora arrivati dal PC della linea.';
+  if (!v.app) return 'Parametri non ancora arrivati: il PC della linea ha una versione vecchia della pagina. Si aggiorna da solo entro pochi minuti; se no, ricarica la scheda del lettore.';
+  if (!ini) return `Il PC della linea <b>non trova SMI_ANALYSIS.ini</b> nella cartella scelta (file trovati: ${file.length}). Controlla che la cartella del lettore sia C:\\SMI.`;
+  if (err) return `Il PC della linea trova SMI_ANALYSIS.ini ma <b>non riesce a leggerlo</b>: ${esc(err)}`;
+  if (!v.nParametri) return 'Il PC della linea legge SMI_ANALYSIS.ini ma non riconosce i prodotti: manca EI_SYSTEM.ini o la lista prodotti è vuota.';
+  return `Il PC della linea ha letto ${n0(v.nParametri)} prodotti, ma i parametri non sono arrivati qui. Premi Aggiorna; se resta così, avvisami.`;
+}
+
 function apriProduzione(id) {
   const m = S.modello; const p0 = m.produzioni.find(x => x.id === id); if (!p0) return;
   const ultimaId = m.produzioni.filter(x => x.t >= 1).slice(-1)[0]?.id;
@@ -785,7 +799,7 @@ function apriProduzione(id) {
     <div class="pannello sezione"><h3>Velocità (cassette al minuto)</h3><div class="legenda"><span><i class="linea" style="background:var(--aqua)"></i>Velocità</span><span><i class="linea" style="background:rgba(255,255,255,.5)"></i>Standard 24/min</span></div><div class="chart" id="mVel"></div>
     <div class="nota">Dove ci sono i file <b>system_event_trace</b> la velocità è minuto per minuto. Altrimenti è la media di ogni intervallo dei contatori orari.</div></div>`;
 
-  let parametri = '<div class="vuoto">Parametri non disponibili: manca il file SMI_ANALYSIS.ini oppure il prodotto non c\'è più nella lista.</div>';
+  let parametri = `<div class="vuoto">${perchéNienteParametri(m, p.prodotto)}</div>`;
   if (par) {
     const cam = par['0'] || {}, com = par['-'] || {};
     const valore = k => cam[k] ?? com[k];
@@ -1335,7 +1349,8 @@ async function cicloLettore(comandoId) {
         if (v.tipo === 'analysisTime') { righeAnalisi = (testo.match(/\n/g) || []).length; modAnalisi = v.mod; continue; }
         if (c) cambiato = true;
         if (v.tipo === 'trace') testi.traces.push({ nome: v.nome, testo }); else testi[v.tipo] = testo;
-      } catch (e) { log(`Non riesco a leggere ${v.nome}: ${e.message}`); L.ultimoScan = 0; }
+        if (L.erroriFile) delete L.erroriFile[v.nome];
+      } catch (e) { log(`Non riesco a leggere ${v.nome}: ${e.message}`); L.ultimoScan = 0; (L.erroriFile ||= {})[v.nome] = e.message; }
     }
     if (!testi.eventLog) { log('⚠ event.log non trovato nella cartella scelta'); return; }
     if (cambiato || !L.ultimoModello) L.ultimoModello = SMI.costruisciModello(testi);
@@ -1382,7 +1397,7 @@ async function cicloLettore(comandoId) {
       };
       if (modAnalisi) { const d = new Date(modAnalisi); extra.ultimaCassetta = SMI.ms(d.getFullYear(), d.getMonth() + 1, d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds()); }
     }
-    const vivo = { battito: ora, intervallo: L.intervallo, stato: m.stato, extra, versione: 1, file: [...L.file.values()].map(v => [v.nome, v.size, v.mod]) };
+    const vivo = { battito: ora, intervallo: L.intervallo, stato: m.stato, extra, versione: 1, file: [...L.file.values()].map(v => [v.nome, v.size, v.mod]), erroriFile: L.erroriFile || {}, nParametri: Object.keys(m.parametri || {}).length, app: CONFIG.VERSIONE.split(' ')[0] };
     const righe = [
       ['storico', { versione: m.versione, generato: m.generato, fineDati: m.fineDati, stato: m.stato, produzioni: m.produzioni, minuti: m.minuti, fermi: m.fermi, prodotti: m.prodotti }],
       ['parametri', m.parametri],
