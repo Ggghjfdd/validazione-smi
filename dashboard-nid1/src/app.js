@@ -5,7 +5,7 @@ const CONFIG = {
   SUPABASE_URL: 'https://sszxyritwrkxaictcaaa.supabase.co',
   SUPABASE_KEY: 'sb_publishable_HkYiyUEqlWXJo_CDyD9Eqw_k8-4cY-3',
   NOME_LINEA: 'Linea NID 1',
-  VERSIONE: 'v21 · 9 nov 16:15',
+  VERSIONE: 'v22 · 10 nov 12:30',
 };
 const S = {
   modo: null,             // 'demo' | 'remoto' | 'file' | 'lettore'
@@ -835,27 +835,6 @@ function disegnaGraficoParametri() {
   montaGrafico(el, e => graficoScarti(e, punti, linee));
 }
 
-function fotoHtml(lista) {
-  if (S.modo !== 'remoto') return '<div class="vuoto">Le foto degli scarti sono disponibili solo con i dati dal PC della linea.</div>';
-  if (!lista.length) return `<div class="vuoto">Nessuna foto di scarti per questa produzione.<br><small>Le foto arrivano solo se il PC della linea legge anche la cartella D:\\images, e solo per gli scarti successivi all'attivazione. Si tengono le ultime ${FOTO_MAX} cassette scartate.</small></div>`;
-  return `<div class="nota" style="margin-top:0">${n0(lista.length)} cassette scartate fotografate (le due metà della telecamera affiancate). Clicca per ingrandire.</div>
-    <div class="foto-griglia">${lista.map(f => `<figure class="foto" data-foto="${esc(f[1])}"><div class="foto-img"></div><figcaption>${giornoCorto(f[0])} ${SMI.fmtOra(f[0])}</figcaption></figure>`).join('')}</div>`;
-}
-const urlFoto = new Map();
-async function caricaMiniature(lista) {
-  const cl = sb(); if (!cl || !lista.length) return;
-  const mancanti = lista.map(f => f[1]).filter(p => !urlFoto.has(p));
-  for (let i = 0; i < mancanti.length; i += 100) {
-    const { data } = await cl.storage.from('smi-foto').createSignedUrls(mancanti.slice(i, i + 100), 3600);
-    for (const d of data || []) if (d.signedUrl) urlFoto.set(d.path, d.signedUrl);
-  }
-  document.querySelectorAll('.foto[data-foto]').forEach(el => {
-    const u = urlFoto.get(el.dataset.foto); if (!u) { el.querySelector('.foto-img').textContent = 'non disponibile'; return; }
-    el.querySelector('.foto-img').innerHTML = `<img loading="lazy" src="${u}" alt="">`;
-    el.onclick = () => { const v = document.createElement('div'); v.className = 'foto-grande'; v.innerHTML = `<img src="${u}" alt=""><div class="nota">${esc(el.querySelector('figcaption').textContent)} · clicca per chiudere</div>`; v.onclick = () => v.remove(); document.body.appendChild(v); };
-  });
-}
-
 function apriProduzione(id) {
   const m = S.modello; const p0 = m.produzioni.find(x => x.id === id); if (!p0) return;
   const ultimaId = m.produzioni.filter(x => x.t >= 1).slice(-1)[0]?.id;
@@ -998,6 +977,8 @@ function header() {
       <div class="lista vetro">
         ${S.utente ? `<div class="mn-utente"><span class="mn-avatar">${esc(S.utente.email[0].toUpperCase())}</span><div><b>${esc(S.utente.email.split('@')[0])}</b><span>${esc(S.utente.email)}</span></div></div>` : ''}
         <button data-a="dash" class="${!location.hash ? 'att' : ''}"><span class="mn-ico">${ICONE.dash}</span><span class="mn-t"><b>Dashboard</b><span>Produzioni, turni, fermi</span></span></button>
+        <button data-a="analisi" class="${location.hash === '#analisi' ? 'att' : ''}"><span class="mn-ico">${ICONE.dash}</span><span class="mn-t"><b>Efficienze e fermi</b><span>OEE, perdite, cause dei fermi</span></span></button>
+        <button data-a="prove" class="${location.hash === '#prove' ? 'att' : ''}"><span class="mn-ico">${ICONE.file}</span><span class="mn-t"><b>Prove</b><span>Archivio foto e parametri</span></span></button>
         <button data-a="file" class="${location.hash === '#file' ? 'att' : ''}"><span class="mn-ico">${ICONE.file}</span><span class="mn-t"><b>Carica file a mano</b><span>Log dalla chiavetta</span></span></button>
         <button data-a="lettore" class="${location.hash === '#lettore' ? 'att' : ''}"><span class="mn-ico">${ICONE.pc}</span><span class="mn-t"><b>Lettore</b><span>Solo sul PC della linea</span></span></button>
         ${S.utente ? `<div class="mn-sep"></div><button data-a="esci" class="mn-esci"><span class="mn-ico">${ICONE.esci}</span><span class="mn-t"><b>Esci</b></span></button>` : ''}
@@ -1028,6 +1009,8 @@ function render() {
   if (S.modo === 'lettore') S.modo = null;
   if (!S.modo) { avvio(); return; }
   if (S.modo === 'login') { app.innerHTML = vistaLogin(); collegaLogin(); return; }
+  if (vista === 'prove') { document.title = 'Prove · ' + CONFIG.NOME_LINEA; app.innerHTML = header() + vistaProve(); collegaHeader(); collegaProve(); return; }
+  if (vista === 'analisi') { document.title = 'Efficienze e fermi · ' + CONFIG.NOME_LINEA; const ya = window.scrollY; app.innerHTML = header() + vistaAnalisi(); collegaHeader(); collegaAnalisi(); window.scrollTo(0, ya); return; }
   const y = window.scrollY;
   app.innerHTML = header() + vistaDashboard();
   collegaHeader(); collegaDashboard();
@@ -1041,6 +1024,8 @@ function collegaHeader() {
     const a = b.dataset.a;
     if (a === 'dash') { location.hash = ''; S.modo = null; render(); }
     if (a === 'file') location.hash = 'file';
+    if (a === 'prove') location.hash = 'prove';
+    if (a === 'analisi') location.hash = 'analisi';
     if (a === 'lettore') location.hash = 'lettore';
     if (a === 'esci') { await S.sb?.auth.signOut(); S.utente = null; S.modo = null; location.hash = ''; render(); }
   };
@@ -1075,7 +1060,7 @@ async function avvio() {
   render();
 }
 async function caricaRemoto() {
-  const { data, error } = await sb().from('smi_dati').select('id,dati,aggiornato');
+  const { data, error } = await sb().from('smi_dati').select('id,dati,aggiornato').not('id', 'like', 'prova_%');
   if (error) { toast('Errore lettura dati: ' + esc(error.message)); return; }
   applicaRighe(data || []);
 }
@@ -1096,12 +1081,13 @@ function iscriviRemoto() {
   if (canaleRemoto) return;
   canaleRemoto = sb().channel('smi-dash').on('postgres_changes', { event: '*', schema: 'public', table: 'smi_dati' }, async ev => {
     const id = ev.new?.id || ev.old?.id;
+    if (id?.startsWith('prova_')) { aggiornaProvaRemota(id); return; }
     const { data } = await sb().from('smi_dati').select('id,dati,aggiornato').eq('id', id);
-    if (data?.length) { applicaRighe(data); if (!$('#velo').classList.contains('aperto')) render(); else { const p = $('#statoPill'); if (p) p.innerHTML = statoLettore(); } }
+    if (data?.length) { applicaRighe(data); if (!$('#velo').classList.contains('aperto') && location.hash !== '#prove' && !document.querySelector('.sovra')) render(); else { const p = $('#statoPill'); if (p) p.innerHTML = statoLettore(); } }
     if (attesaAgg && id === 'vivo') { attesaAgg = false; toast(`${ICONE.ok.replace('<svg', '<svg style="width:14px;height:14px;vertical-align:-2px"')} Dati aggiornati dal PC della linea`); }
   }).subscribe();
   // rete di sicurezza: se il realtime non arriva, rileggo ogni 30 s
-  setInterval(() => { if (S.modo === 'remoto' && !$('#velo').classList.contains('aperto')) caricaRemoto().then(render); }, 30000);
+  setInterval(() => { if (S.modo === 'remoto' && !$('#velo').classList.contains('aperto') && location.hash !== '#prove' && !document.querySelector('.sovra')) caricaRemoto().then(render); }, 30000);
 }
 async function richiediAggiornamento() {
   const b = $('#btnAgg'); if (!b || b.disabled) return;
