@@ -1,7 +1,7 @@
 # Dashboard produzione – Linea NID 1 (Perfetti Van Melle)
 
 > **Prompt per riprendere il lavoro in una nuova conversazione.** Incolla tutto questo testo (o allega il file) come primo messaggio.
-> Stato aggiornato al **10 novembre 2026**. Versione pubblicata: **v21 · 9 nov 16:15**.
+> Stato aggiornato al **10 novembre 2026**. Versione pubblicata: **v22 · 10 nov 12:30**.
 > Lingua di lavoro: **italiano**. L'utente lavora in produzione (non è uno sviluppatore): spiegazioni semplici, passi concreti sul PC della linea, niente gergo.
 
 ---
@@ -139,6 +139,20 @@ Pagina web "in vetro" (tema scuro) che mostra in tempo reale la produzione della
 - **v19**: storico modifiche parametri + vista Parametri.
 - **v20**: scarti in diretta da `D:\images\image_last_number.dat`.
 - **v21**: foto degli scarti (Supabase Storage `smi-foto`).
+- **v22** (10/11): download delle foto (singola o zip, JSZip 3.10.1 da cdnjs caricato al bisogno), **Segna come prova**, pagina **#prove** (archivio prove) e pagina **#analisi** (efficienze e fermi). Codice nuovo in `src/pagine.js` (inserito da build.py al posto di `/*PAGINE*/`).
+
+### Prove (v22)
+- Dalla scheda Foto scarti: clic su una foto → Scarica / Segna come prova; oppure spunta più foto → Scarica selezionate (zip) / Segna N come prova (stesso `gruppo`).
+- Ogni prova è una riga `prova_<id>` di `smi_dati` con: `id, t, foto ('prove/<id>.jpg', copia permanente: non viene cancellata dalla rotazione delle 400), fotoOrig, prodotto, gruppo, operatore, tipo, esito (valutare/corretto/falso), note, parametri ({camera:{PARAMETRO:valore}} al momento t, ricostruiti dai valori attuali tornando indietro con storia_parametri), parametriCerti, produzione {id, inizio, t, r}, chi, creato, modificato, modificatoDa, eliminata`.
+- Le righe `prova_%` sono escluse dal caricamento principale e lette solo dalla pagina Prove. smi_dati non ha policy di DELETE: l'eliminazione è `eliminata: true` + cancellazione della foto.
+- Pagina #prove: filtri (testo, date, prodotto, tipo, operatore, esito), raggruppa per giorno/prodotto/tipo/operatore/esito, vista foto o tabella, dettaglio con modifica dei campi e tabella completa dei parametri (evidenziati quelli diversi da ora), confronto parametri tra prove selezionate, export CSV (tutti i campi + tutti i parametri `camN PARAMETRO`, separatore `;`), zip delle foto con il CSV dentro.
+- Tipi proposti: Prova parametri, Campione difettoso, Cassette neutre, Avviamento / learning, Verifica qualità, Altro (campo libero con suggerimenti). Ultimo operatore ricordato nel browser.
+
+### Efficienze e fermi (v22)
+- Pagina #analisi: filtri date (rapidi Oggi/7/30/Tutto), turno, prodotto; export CSV turni e fermi.
+- KPI: OEE, Disponibilità, Prestazione, Qualità, cassette/pedane, fermi, cambi prodotto, cassette perse (per velocità + scarti); barra del tempo programmato; OEE per giorno; tabelle per turno e per prodotto; fermi per motivo, durata, prodotto, turno, ora del giorno; 15 fermi più lunghi; tabella di tutti i turni.
+- Senza prodotto: dati da `oeeTurno()` per ogni turno. Con un prodotto: dalle produzioni di quel prodotto divise per turno (cambi non contati).
+- Il periodo analizzabile dipende da quanti giorni di minuti/fermi il lettore manda nello storico.
 
 ## 8. Limiti noti
 
