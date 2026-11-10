@@ -857,45 +857,95 @@ function editorVista(vista) {
 }
 
 /* ---------- Excel delle prove (struttura concordata) ----------
-   Una riga per prova (quelle filtrate, o solo le selezionate). Conteggi = produzione (colaggio) della prova. */
-let sheetjsP = null;
-function caricaSheetJS() {
-  return sheetjsP ||= new Promise((ok, ko) => {
+   Una riga per prova (quelle filtrate, o solo le selezionate). Conteggi = produzione (colaggio) della prova.
+   Nelle colonne Difetto stampa SX/CENTRO/DX c'è la foto della prova, nel lato dove si trova il difetto.
+   ExcelJS (cdnjs) perché la versione gratuita di SheetJS non sa inserire immagini né formattare. */
+let exceljsP = null;
+function caricaExcelJS() {
+  return exceljsP ||= new Promise((ok, ko) => {
     const s = document.createElement('script');
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-    s.onload = () => ok(window.XLSX); s.onerror = () => { sheetjsP = null; ko(new Error('libreria Excel non caricata')); };
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js';
+    s.onload = () => ok(window.ExcelJS); s.onerror = () => { exceljsP = null; ko(new Error('libreria Excel non caricata')); };
     document.head.appendChild(s);
   });
 }
-const COLONNE_XLSX = ['', 'Prodotto', 'Data', 'Turno', 'Total', 'Accepted products', 'Rejected products', 'SMI', 'Starch', 'Residual',
-  'Largest defect threshold pixels', 'Largest defect threshold pixels', 'Greylevel threshold',
-  'Erodi / dilata dimensione orrizontale pixel', 'Erodi / dilata dimensione orrizontale pixel',
-  'Difetto stampa \nSX', 'Difetto stampa \nCENTRO', 'Difetto stampa \nDX', 'Umidità amido colaggio'];
+const COLONNE_XLSX = [['N.', 5], ['Prodotto', 18], ['Data', 11], ['Turno', 11], ['Total', 9], ['Accepted products', 11], ['Rejected products', 11], ['SMI', 8], ['Starch', 8], ['Residual', 9],
+  ['Largest defect threshold pixels', 11], ['Largest defect threshold pixels', 11], ['Greylevel threshold', 10],
+  ['Erodi / dilata dimensione orrizontale pixel', 13], ['Erodi / dilata dimensione orrizontale pixel', 13],
+  ['Difetto stampa\nSX', 30], ['Difetto stampa\nCENTRO', 30], ['Difetto stampa\nDX', 30], ['Umidità amido colaggio', 12]];
+const COL_FOTO = { sx: 16, centro: 17, dx: 18 }; // colonne (1 = A) delle foto
 function righeXlsx(ps) {
-  const num = v => v == null || v === '' ? '' : isNaN(+v) ? v : +v;
+  const num = v => v == null || v === '' ? null : isNaN(+v) ? v : +v;
   return ps.slice().sort((a, b) => a.t - b.t).map((p, i) => {
     const pr = (S.modello?.produzioni || []).find(x => x.id === p.produzione?.id) || (p.produzione ? null : produzioneAl(p.t));
     const tot = pr ? pr.t : p.produzione?.t, rej = pr ? pr.r : p.produzione?.r;
     const par = k => p.parametri?.['0']?.[k] ?? p.parametri?.['-']?.[k] ?? Object.values(p.parametri || {}).find(c => c?.[k] != null)?.[k];
     const [y, m, d] = isoG(p.t).split('-').map(Number);
-    const pos = new Set(p.posizioneDifetto || []);
-    return [i + 1, maiusc(p.prodotto), new Date(y, m - 1, d), SMI.turnoDi(p.t).nome,
-      tot ?? '', tot != null && rej != null ? tot - rej : '', rej ?? '', '', pr?.s ?? '', pr?.re ?? '',
+    return { prova: p, valori: [i + 1, maiusc(p.prodotto), new Date(Date.UTC(y, m - 1, d)), SMI.turnoDi(p.t).nome,
+      tot ?? null, tot != null && rej != null ? tot - rej : null, rej ?? null, null, pr?.s ?? null, pr?.re ?? null,
       num(par('MINIMUM_DEFECT_SIZE')), num(par('MINIMUM_SUM_OF_DEFECT_SIZES')), num(par('GREYLEVEL_THRESHOLD')),
-      num(par('ERODE_DILATE_HOR_SIZE')), num(par('ERODE_DILATE_VER_SIZE')),
-      pos.has('sx') ? 'X' : '', pos.has('centro') ? 'X' : '', pos.has('dx') ? 'X' : '', ''];
+      num(par('ERODE_DILATE_HOR_SIZE')), num(par('ERODE_DILATE_VER_SIZE')), null, null, null, null] };
   });
+}
+// foto della prova (scarto o prima foto allegata) come JPEG ridotto, per stare nella cella
+async function fotoPerExcel(p, largh = 400) {
+  const k = miniatura(p); if (!k) return null;
+  const allegato = k.startsWith('A:');
+  const { data } = await sb().storage.from(allegato ? 'smi-allegati' : 'smi-foto').download(allegato ? k.slice(2) : k);
+  if (!data) return null;
+  try {
+    const bmp = await createImageBitmap(data), sc = Math.min(1, largh / bmp.width);
+    const cv = new OffscreenCanvas(Math.round(bmp.width * sc), Math.round(bmp.height * sc));
+    cv.getContext('2d').drawImage(bmp, 0, 0, cv.width, cv.height); bmp.close();
+    const blob = await cv.convertToBlob({ type: 'image/jpeg', quality: 0.8 });
+    return { buffer: await blob.arrayBuffer(), w: cv.width, h: cv.height };
+  } catch { return null; }
 }
 async function esportaProveXlsx(ps) {
   if (!ps.length) return toast('Nessuna prova da esportare');
+  toast(`Preparo l'Excel con ${ps.length} prove…`);
   try {
-    const XLSX = await caricaSheetJS();
-    const ws = XLSX.utils.aoa_to_sheet([COLONNE_XLSX, ...righeXlsx(ps)], { cellDates: true });
-    for (let r = 1; r <= ps.length; r++) { const c = ws[XLSX.utils.encode_cell({ r, c: 2 })]; if (c) c.z = 'dd/mm/yyyy'; }
-    ws['!cols'] = COLONNE_XLSX.map((h, i) => ({ wch: i === 0 ? 4 : Math.max(10, Math.min(24, h.replace('\n', '').length + 2)) }));
-    ws['!rows'] = [{ hpt: 32 }];
-    ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: ps.length, c: COLONNE_XLSX.length - 1 } }) };
-    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Prove');
-    XLSX.writeFile(wb, `prove_NID1_${isoG(SMI.adesso())}.xlsx`, { compression: true });
+    const ExcelJS = await caricaExcelJS(), righe = righeXlsx(ps);
+    const wb = new ExcelJS.Workbook(); wb.creator = 'Dashboard NID 1'; wb.created = new Date();
+    const ws = wb.addWorksheet('Prove', { views: [{ state: 'frozen', xSplit: 2, ySplit: 1 }], pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, paperSize: 9 } });
+    ws.columns = COLONNE_XLSX.map(([h, w]) => ({ header: h, width: w }));
+    const bordo = { style: 'thin', color: { argb: 'FFB8C2D6' } }, bordi = { top: bordo, left: bordo, bottom: bordo, right: bordo };
+    const testa = ws.getRow(1); testa.height = 48;
+    testa.eachCell(c => {
+      c.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10, name: 'Calibri' };
+      c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F3A68' } };
+      c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }; c.border = bordi;
+    });
+    for (const c of [COL_FOTO.sx, COL_FOTO.centro, COL_FOTO.dx]) testa.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFB3261E' } };
+    const LARG_FOTO = 210; // px dentro la cella (colonna larga 30 ≈ 215 px)
+    let conFoto = 0;
+    for (let i = 0; i < righe.length; i++) {
+      const { prova, valori } = righe[i], r = ws.addRow(valori), pos = prova.posizioneDifetto || [];
+      r.height = pos.length ? 112 : 20;
+      for (let n = 1; n <= COLONNE_XLSX.length; n++) {
+        const c = r.getCell(n);
+        c.border = bordi; c.font = { size: 10, name: 'Calibri' };
+        c.alignment = { vertical: 'middle', horizontal: n === 2 ? 'left' : 'center', wrapText: n === 2 };
+        if (i % 2) c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F6FB' } };
+        if ([5, 6, 7, 8, 9, 10].includes(n)) c.numFmt = '#,##0';
+      }
+      r.getCell(3).numFmt = 'dd/mm/yyyy';
+      r.getCell(2).font = { size: 10, name: 'Calibri', bold: true };
+      if (!pos.length) continue;
+      const f = await fotoPerExcel(prova);
+      if (!f) { for (const k of pos) { const c = r.getCell(COL_FOTO[k]); c.value = 'foto non disponibile'; c.font = { size: 9, italic: true, color: { argb: 'FF8090A8' } }; } continue; }
+      const id = wb.addImage({ buffer: f.buffer, extension: 'jpeg' });
+      const h = Math.min(140, Math.round(LARG_FOTO * f.h / f.w)), w = Math.round(h * f.w / f.h);
+      r.height = Math.max(r.height, Math.round(h * 0.75) + 8);
+      for (const k of pos) {
+        const col = COL_FOTO[k] - 1;
+        ws.addImage(id, { tl: { col: col + (215 - w) / 2 / 215, row: r.number - 1 + 0.04 }, ext: { width: w, height: h }, editAs: 'oneCell' });
+      }
+      conFoto++;
+    }
+    ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: COLONNE_XLSX.length } };
+    const buf = await wb.xlsx.writeBuffer();
+    scaricaBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `prove_NID1_${isoG(SMI.adesso())}.xlsx`);
+    toast(`Excel pronto: ${ps.length} prove, ${conFoto} con foto`);
   } catch (e) { toast('Excel non creato: ' + esc(e.message)); }
 }
