@@ -3536,9 +3536,9 @@ function editorVista(vista) {
 }
 
 /* ---------- Excel delle prove (struttura concordata) ----------
-   Una riga per prova (quelle filtrate, o solo le selezionate). Conteggi = produzione (colaggio) della prova.
-   Nelle colonne Difetto stampa SX/CENTRO/DX c'è la foto della prova, nel lato dove si trova il difetto.
-   ExcelJS (cdnjs) perché la versione gratuita di SheetJS non sa inserire immagini né formattare. */
+   Una riga per produzione (colaggio) dello stesso prodotto con gli stessi parametri; nelle colonne
+   Difetto stampa SX / CENTRO / DX va la foto della prova con il difetto in quella posizione (la prima,
+   se ce ne sono più di una). Conteggi = quelli della produzione. ExcelJS (immagini e formattazione). */
 let exceljsP = null;
 function caricaExcelJS() {
   return exceljsP ||= new Promise((ok, ko) => {
@@ -3548,84 +3548,85 @@ function caricaExcelJS() {
     document.head.appendChild(s);
   });
 }
-const COLONNE_XLSX = [['N.', 5], ['Prodotto', 18], ['Data', 11], ['Turno', 11], ['Total', 9], ['Accepted products', 11], ['Rejected products', 11], ['SMI', 8], ['Starch', 8], ['Residual', 9],
-  ['Largest defect threshold pixels', 11], ['Largest defect threshold pixels', 11], ['Greylevel threshold', 10],
+const COLONNE_XLSX = [['', 5], ['Prodotto', 16], ['Data', 11], ['Turno', 12], ['Total', 9], ['Accepted products', 11], ['Rejected products', 11], ['SMI', 8], ['Starch', 9], ['Residual', 9],
+  ['Largest defect threshold pixels', 12], ['Largest defect threshold pixels', 12], ['Greylevel threshold', 11],
   ['Erodi / dilata dimensione orrizontale pixel', 13], ['Erodi / dilata dimensione orrizontale pixel', 13],
-  ['Difetto stampa\nSX', 30], ['Difetto stampa\nCENTRO', 30], ['Difetto stampa\nDX', 30], ['Umidità amido colaggio', 12]];
-const COL_FOTO = { sx: 16, centro: 17, dx: 18 }; // colonne (1 = A) delle foto
-function righeXlsx(ps) {
-  const num = v => v == null || v === '' ? null : isNaN(+v) ? v : +v;
-  return ps.slice().sort((a, b) => a.t - b.t).map((p, i) => {
+  ['Difetto stampa \nSX', 36], ['Difetto stampa \nCENTRO', 36], ['Difetto stampa \nDX', 36], ['Umidità amido colaggio', 12]];
+const PARAM_XLSX = ['MINIMUM_DEFECT_SIZE', 'MINIMUM_SUM_OF_DEFECT_SIZES', 'GREYLEVEL_THRESHOLD', 'ERODE_DILATE_HOR_SIZE', 'ERODE_DILATE_VER_SIZE'];
+function gruppiXlsx(ps) {
+  const val = (p, k) => p.parametri?.['0']?.[k] ?? p.parametri?.['-']?.[k] ?? Object.values(p.parametri || {}).find(c => c?.[k] != null)?.[k] ?? '';
+  const g = new Map();
+  for (const p of ps.slice().sort((a, b) => a.t - b.t)) {
     const pr = (S.modello?.produzioni || []).find(x => x.id === p.produzione?.id) || (p.produzione ? null : produzioneAl(p.t));
-    const tot = pr ? pr.t : p.produzione?.t, rej = pr ? pr.r : p.produzione?.r;
-    const par = k => p.parametri?.['0']?.[k] ?? p.parametri?.['-']?.[k] ?? Object.values(p.parametri || {}).find(c => c?.[k] != null)?.[k];
-    const [y, m, d] = isoG(p.t).split('-').map(Number);
-    return { prova: p, valori: [i + 1, maiusc(p.prodotto), new Date(Date.UTC(y, m - 1, d)), SMI.turnoDi(p.t).nome,
-      tot ?? null, tot != null && rej != null ? tot - rej : null, rej ?? null, null, pr?.s ?? null, pr?.re ?? null,
-      num(par('MINIMUM_DEFECT_SIZE')), num(par('MINIMUM_SUM_OF_DEFECT_SIZES')), num(par('GREYLEVEL_THRESHOLD')),
-      num(par('ERODE_DILATE_HOR_SIZE')), num(par('ERODE_DILATE_VER_SIZE')), null, null, null, null] };
-  });
+    const par = PARAM_XLSX.map(k => val(p, k));
+    const k = [pr?.id || p.produzione?.id || `${p.prodotto}|${isoG(p.t)}`, ...par].join('§');
+    if (!g.has(k)) g.set(k, { prove: [], pr, prodSalvata: p.produzione, prodotto: p.prodotto, par, foto: {} });
+    const o = g.get(k); o.prove.push(p);
+    for (const pos of p.posizioneDifetto || []) if (!o.foto[pos] && miniatura(p)) o.foto[pos] = miniatura(p);
+  }
+  return [...g.values()];
 }
-// foto della prova (scarto o prima foto allegata) come JPEG ridotto, per stare nella cella
-async function fotoPerExcel(p, largh = 400) {
-  const k = miniatura(p); if (!k) return null;
-  const allegato = k.startsWith('A:');
-  const { data } = await sb().storage.from(allegato ? 'smi-allegati' : 'smi-foto').download(allegato ? k.slice(2) : k);
-  if (!data) return null;
+async function immagineJpeg(chiave, maxL = 640) {
+  const [bucket, percorso] = chiave.startsWith('A:') ? ['smi-allegati', chiave.slice(2)] : ['smi-foto', chiave];
+  const { data } = await sb().storage.from(bucket).download(percorso); if (!data) return null;
   try {
-    const bmp = await createImageBitmap(data), sc = Math.min(1, largh / bmp.width);
-    const cv = new OffscreenCanvas(Math.round(bmp.width * sc), Math.round(bmp.height * sc));
+    const bmp = await createImageBitmap(data), sc = Math.min(1, maxL / bmp.width);
+    const cv = document.createElement('canvas'); cv.width = Math.round(bmp.width * sc); cv.height = Math.round(bmp.height * sc);
     cv.getContext('2d').drawImage(bmp, 0, 0, cv.width, cv.height); bmp.close();
-    const blob = await cv.convertToBlob({ type: 'image/jpeg', quality: 0.8 });
-    return { buffer: await blob.arrayBuffer(), w: cv.width, h: cv.height };
+    return { base64: cv.toDataURL('image/jpeg', 0.8), w: cv.width, h: cv.height };
   } catch { return null; }
 }
 async function esportaProveXlsx(ps) {
   if (!ps.length) return toast('Nessuna prova da esportare');
   toast(`Preparo l'Excel con ${ps.length} prove…`);
   try {
-    const ExcelJS = await caricaExcelJS(), righe = righeXlsx(ps);
-    const wb = new ExcelJS.Workbook(); wb.creator = 'Dashboard NID 1'; wb.created = new Date();
-    const ws = wb.addWorksheet('Prove', { views: [{ state: 'frozen', xSplit: 2, ySplit: 1 }], pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, paperSize: 9 } });
-    ws.columns = COLONNE_XLSX.map(([h, w]) => ({ header: h, width: w }));
-    const bordo = { style: 'thin', color: { argb: 'FFB8C2D6' } }, bordi = { top: bordo, left: bordo, bottom: bordo, right: bordo };
-    const testa = ws.getRow(1); testa.height = 48;
-    testa.eachCell(c => {
-      c.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10, name: 'Calibri' };
-      c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F3A68' } };
+    const ExcelJS = await caricaExcelJS(), gruppi = gruppiXlsx(ps);
+    const wb = new ExcelJS.Workbook(); wb.creator = 'Dashboard NID 1';
+    const ws = wb.addWorksheet('Prove', {
+      views: [{ state: 'frozen', ySplit: 1 }],
+      pageSetup: { orientation: 'landscape', paperSize: 9, fitToPage: true, fitToWidth: 1, fitToHeight: 0, margins: { left: .3, right: .3, top: .4, bottom: .4, header: .2, footer: .2 }, printTitlesRow: '1:1' },
+    });
+    ws.columns = COLONNE_XLSX.map(([, w]) => ({ width: w }));
+    const bordo = { style: 'thin', color: { argb: 'FFB7C3D0' } }, bordi = { top: bordo, left: bordo, bottom: bordo, right: bordo };
+    const testa = ws.addRow(COLONNE_XLSX.map(([h]) => h));
+    testa.height = 48;
+    testa.eachCell((c, n) => {
+      c.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10 };
+      c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: n >= 16 && n <= 18 ? 'FF8E3B3B' : n >= 11 && n <= 15 ? 'FF2F5D8A' : 'FF1F3A5F' } };
       c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }; c.border = bordi;
     });
-    for (const c of [COL_FOTO.sx, COL_FOTO.centro, COL_FOTO.dx]) testa.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFB3261E' } };
-    const LARG_FOTO = 210; // px dentro la cella (colonna larga 30 ≈ 215 px)
-    let conFoto = 0;
-    for (let i = 0; i < righe.length; i++) {
-      const { prova, valori } = righe[i], r = ws.addRow(valori), pos = prova.posizioneDifetto || [];
-      r.height = pos.length ? 112 : 20;
-      for (let n = 1; n <= COLONNE_XLSX.length; n++) {
-        const c = r.getCell(n);
-        c.border = bordi; c.font = { size: 10, name: 'Calibri' };
-        c.alignment = { vertical: 'middle', horizontal: n === 2 ? 'left' : 'center', wrapText: n === 2 };
-        if (i % 2) c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F6FB' } };
-        if ([5, 6, 7, 8, 9, 10].includes(n)) c.numFmt = '#,##0';
+    const ALT_FOTO = 112; // pt
+    let r = 1;
+    for (const [i, gr] of gruppi.entries()) {
+      const p0 = gr.prove[0], pr = gr.pr, tot = pr ? pr.t : gr.prodSalvata?.t, rej = pr ? pr.r : gr.prodSalvata?.r;
+      const [y, m, d] = isoG(p0.t).split('-').map(Number);
+      const turni = [...new Set(gr.prove.map(p => SMI.turnoDi(p.t).nome))].join(', ');
+      const num = v => v === '' || v == null ? null : isNaN(+v) ? v : +v;
+      const row = ws.addRow([i + 1, maiusc(gr.prodotto), new Date(Date.UTC(y, m - 1, d)), turni, tot ?? null, tot != null && rej != null ? tot - rej : null, rej ?? null, null, pr?.s ?? null, pr?.re ?? null, ...gr.par.map(num), null, null, null, null]);
+      r++;
+      const conFoto = POSIZIONI.some(([k]) => gr.foto[k]);
+      row.height = conFoto ? ALT_FOTO : 22;
+      for (let n = 1; n <= COLONNE_XLSX.length; n++) { const c = row.getCell(n);
+        c.border = bordi; c.alignment = { horizontal: n === 2 || n === 4 ? 'left' : 'center', vertical: 'middle', wrapText: true }; c.font = { size: 11 };
+        if (i % 2) c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F6FA' } };
       }
-      r.getCell(3).numFmt = 'dd/mm/yyyy';
-      r.getCell(2).font = { size: 10, name: 'Calibri', bold: true };
-      if (!pos.length) continue;
-      const f = await fotoPerExcel(prova);
-      if (!f) { for (const k of pos) { const c = r.getCell(COL_FOTO[k]); c.value = 'foto non disponibile'; c.font = { size: 9, italic: true, color: { argb: 'FF8090A8' } }; } continue; }
-      const id = wb.addImage({ buffer: f.buffer, extension: 'jpeg' });
-      const h = Math.min(140, Math.round(LARG_FOTO * f.h / f.w)), w = Math.round(h * f.w / f.h);
-      r.height = Math.max(r.height, Math.round(h * 0.75) + 8);
-      for (const k of pos) {
-        const col = COL_FOTO[k] - 1;
-        ws.addImage(id, { tl: { col: col + (215 - w) / 2 / 215, row: r.number - 1 + 0.04 }, ext: { width: w, height: h }, editAs: 'oneCell' });
+      row.getCell(2).font = { bold: true, size: 11 };
+      row.getCell(3).numFmt = 'dd/mm/yyyy';
+      [5, 6, 7, 9, 10].forEach(n => row.getCell(n).numFmt = '#,##0');
+      if (rej && tot) row.getCell(7).note = `${n1(100 * rej / tot)}% scarti`;
+      for (const [j, [k]] of POSIZIONI.entries()) {
+        const chiave = gr.foto[k]; if (!chiave) continue;
+        const im = await immagineJpeg(chiave); if (!im) { row.getCell(16 + j).value = '(foto non disponibile)'; continue; }
+        const id = wb.addImage({ base64: im.base64, extension: 'jpeg' });
+        const boxW = COLONNE_XLSX[15 + j][1] * 7 - 10, boxH = ALT_FOTO * 4 / 3 - 10, s = Math.min(boxW / im.w, boxH / im.h);
+        const w = im.w * s, h = im.h * s;
+        ws.addImage(id, { tl: { col: 15 + j + (boxW + 10 - w) / 2 / (boxW + 10), row: r - 1 + (boxH + 10 - h) / 2 / (boxH + 10) }, ext: { width: w, height: h }, editAs: 'oneCell' });
       }
-      conFoto++;
     }
     ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: COLONNE_XLSX.length } };
     const buf = await wb.xlsx.writeBuffer();
     scaricaBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `prove_NID1_${isoG(SMI.adesso())}.xlsx`);
-    toast(`Excel pronto: ${ps.length} prove, ${conFoto} con foto`);
+    toast(`Excel pronto: ${gruppi.length} righe da ${ps.length} prove`);
   } catch (e) { toast('Excel non creato: ' + esc(e.message)); }
 }
 

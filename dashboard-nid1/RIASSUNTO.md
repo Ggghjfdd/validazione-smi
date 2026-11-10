@@ -195,3 +195,9 @@ Pagina web "in vetro" (tema scuro) che mostra in tempo reale la produzione della
   Conteggi = **produzione (colaggio) della prova** (Total = cassette, Accepted = Total − Rejected, Starch/Residual = contatori SMI della produzione). Parametri = quelli salvati nella prova (camera 0).
   **Da completare**: colonna **SMI** (l'utente deve dire cosa contiene) e **Umidità amido colaggio** (da decidere se campo % nella prova o valore per colaggio): per ora vuote.
 - Il vecchio export è diventato "CSV completo" (tutti i campi e tutti i parametri).
+
+## Aggiornamento v25 (10 nov 2026)
+- L'**Excel prove** ora usa **ExcelJS 4.4.0** (cdnjs, caricato al bisogno) al posto di SheetJS: immagini e formattazione.
+- **Una riga per produzione (colaggio) dello stesso prodotto con gli stessi 5 parametri**; se i parametri cambiano dentro la stessa produzione, nuova riga. Nelle colonne Difetto stampa SX / CENTRO / DX c'è **la foto** della prova con il difetto in quella posizione (la prima in ordine di tempo se ce ne sono più di una; foto dello scarto o prima foto allegata, ridotta a 640 px). Data e Turno = della prima prova (turni diversi separati da virgola).
+- Formattazione: intestazione colorata a gruppi (dati, parametri, foto), testo a capo, bordi, righe alternate, righe con foto alte 112 pt, riga 1 bloccata, filtri, data gg/mm/aaaa, migliaia separate, nota con la % scarti su Rejected, stampa orizzontale A4 adattata in larghezza.
+- Non verificato nel container (cdnjs non raggiungibile da qui): da controllare sul primo file esportato dall'utente.
