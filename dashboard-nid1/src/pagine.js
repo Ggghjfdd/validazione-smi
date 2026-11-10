@@ -923,7 +923,7 @@ async function esportaProveXlsx(ps) {
       const [y, m, d] = isoG(p0.t).split('-').map(Number);
       const turni = [...new Set(gr.prove.map(p => SMI.turnoDi(p.t).nome))].join(', ');
       const num = v => v === '' || v == null ? null : isNaN(+v) ? v : +v;
-      const row = ws.addRow([i + 1, maiusc(gr.prodotto), new Date(Date.UTC(y, m - 1, d)), turni, tot ?? null, tot != null && rej != null ? tot - rej : null, rej ?? null, null, pr?.s ?? null, pr?.re ?? null, ...gr.par.map(num), null, null, null, null]);
+      const row = ws.addRow([i + 1, maiusc(gr.prodotto), new Date(Date.UTC(y, m - 1, d)), turni, tot ?? null, tot != null && rej != null ? tot - rej : null, rej ?? null, rej ?? null, pr?.s ?? null, pr?.re ?? null, ...gr.par.map(num), null, null, null, null]);
       r++;
       const conFoto = POSIZIONI.some(([k]) => gr.foto[k]);
       row.height = conFoto ? ALT_FOTO : 22;
@@ -933,7 +933,7 @@ async function esportaProveXlsx(ps) {
       }
       row.getCell(2).font = { bold: true, size: 11 };
       row.getCell(3).numFmt = 'dd/mm/yyyy';
-      [5, 6, 7, 9, 10].forEach(n => row.getCell(n).numFmt = '#,##0');
+      [5, 6, 7, 8, 9, 10].forEach(n => row.getCell(n).numFmt = '#,##0');
       if (rej && tot) row.getCell(7).note = `${n1(100 * rej / tot)}% scarti`;
       for (const [j, [k]] of POSIZIONI.entries()) {
         const chiave = gr.foto[k]; if (!chiave) continue;
