@@ -5,7 +5,7 @@ const CONFIG = {
   SUPABASE_URL: 'https://sszxyritwrkxaictcaaa.supabase.co',
   SUPABASE_KEY: 'sb_publishable_HkYiyUEqlWXJo_CDyD9Eqw_k8-4cY-3',
   NOME_LINEA: 'Linea NID 1',
-  VERSIONE: 'v22 · 10 nov 12:30',
+  VERSIONE: 'v23 · 10 nov 14:00',
 };
 const S = {
   modo: null,             // 'demo' | 'remoto' | 'file' | 'lettore'
@@ -875,6 +875,7 @@ function apriProduzione(id) {
       </div>
     </div>
     ${pannelloEsclusioni(p0, pr)}
+    ${pannelloProveColaggio(p0)}
     <div class="sezione pannello"><h3>Linea del tempo</h3>${lineaTempo(p.inizio, fineProd(p0), [p0], fermiP)}</div>
     <div class="sezione pannello"><h3>Divisione per turno</h3><div class="scroll-x"><table class="tabella"><thead><tr><th>Turno</th><th>Da</th><th>A</th><th>Cassette</th><th>Scarti</th><th>%</th><th>Pedane</th><th>In marcia</th><th>Resa vel.</th></tr></thead><tbody>
       ${p.turni.map(t => `<tr><td><b>${t.nome}</b> ${giornoCorto(t.giorno)}</td><td>${SMI.fmtOra(t.inizio)}</td><td>${SMI.fmtOra(t.fine)}</td><td>${n0(t.t)}</td><td class="r">${n0(t.r)}</td><td>${pc(t.r, t.t)}</td><td>${n0(SMI.pedane(t.t))}</td><td>${durata(t.marciaMin)}</td><td>${t.marciaMin ? Math.round(t.t / (t.marciaMin * 24) * 100) : 0}%</td></tr>`).join('')}
@@ -892,17 +893,17 @@ function apriProduzione(id) {
     const valDef = k => (def?.['0'] || {})[k] ?? (def?.['-'] || {})[k];
     const princ = PARAM_PRINCIPALI.filter(([k]) => valore(k) != null).map(([k, l]) => {
       const v = valore(k), d = valDef(k);
-      return `<div class="param"><div class="n">${l}${d != null && d !== v ? '<span class="diverso" title="Valore del default: ' + esc(d) + '">≠ default</span>' : ''}</div><div class="v">${esc(v)}</div><div class="k">${k}</div></div>`;
+      return `<div class="param" data-pk="${esc(k)}"><div class="n">${l}${d != null && d !== v ? '<span class="diverso" title="Valore del default: ' + esc(d) + '">≠ default</span>' : ''}</div><div class="v">${esc(v)}</div><div class="k">${k}</div></div>`;
     }).join('');
     const tutti = [...Object.entries(com).map(([k, v]) => [k, v, '-']), ...Object.entries(cam).map(([k, v]) => [k, v, '0'])].sort((a, b) => a[0].localeCompare(b[0]));
     const gp = gruppiModifiche(p.prodotto).slice(-8).reverse();
     const storiaH = gp.length ? `<div class="pannello" style="margin-bottom:14px"><h3>Ultime modifiche a questo prodotto</h3><table class="tabella mod-tab"><tbody>${gp.map(g => `<tr class="${g.t >= p.inizio && g.t <= p.fine ? 'dentro' : ''}"><td>${giornoCorto(g.t)} ${SMI.fmtOra(g.t)}${g.t >= p.inizio && g.t <= p.fine ? ' <span class="chip">in questa produzione</span>' : ''}</td><td>${vociHtml(g.voci)}</td></tr>`).join('')}</tbody></table><div class="nota">Il confronto degli scarti prima e dopo ogni modifica è nella vista <b>Parametri</b> della pagina principale.</div></div>` : '';
     parametri = storiaH + `
       <div class="nota" style="margin-top:0;margin-bottom:12px">Valori <b>attuali</b> letti da SMI_ANALYSIS.ini per <b style="text-transform:capitalize">${esc(p.prodotto)}</b>. Il segno <span class="diverso" style="margin:0">≠ default</span> indica che il valore è diverso da quello del "default product".</div>
-      <div class="param-grid">${princ}</div>
+      <div class="sezione" style="margin-top:0">${barraViste()}<div class="param-grid">${princ}</div></div>
       <div class="sezione pannello"><h3 style="display:flex;align-items:center;gap:10px">Tutti i parametri (${tutti.length}) <span class="spazio" style="flex:1"></span><input type="search" id="cercaParam" placeholder="Cerca parametro…" style="max-width:240px"></h3>
       <div class="scroll-x" style="max-height:420px;overflow:auto"><table class="tabella lista-param" id="tabParam"><thead><tr><th>Parametro</th><th>Valore</th><th>Default</th></tr></thead><tbody>
-      ${tutti.map(([k, v]) => { const d = valDef(k); return `<tr data-k="${esc(k.toLowerCase())}"><td>${esc(k)}</td><td>${esc(v)}</td><td style="color:${d != null && d !== v ? '#cfe2ff' : 'var(--text-3)'}">${esc(d ?? '—')}</td></tr>`; }).join('')}
+      ${tutti.map(([k, v]) => { const d = valDef(k); return `<tr data-k="${esc(k.toLowerCase())}" data-pk="${esc(k)}"><td>${esc(k)}</td><td>${esc(v)}</td><td style="color:${d != null && d !== v ? '#cfe2ff' : 'var(--text-3)'}">${esc(d ?? '—')}</td></tr>`; }).join('')}
       </tbody></table></div></div>`;
   }
 
@@ -941,6 +942,8 @@ function apriProduzione(id) {
     }
   };
   collegaEsclusioni(p0, pr);
+  collegaProveColaggio(p0);
+  applicaVista();
   caricaMiniature(fotoP);
   $('#cercaParam')?.addEventListener('input', e => { const q = e.target.value.toLowerCase().trim(); velo.querySelectorAll('#tabParam tbody tr').forEach(tr => tr.style.display = !q || tr.dataset.k.includes(q) ? '' : 'none'); });
 }
@@ -1067,6 +1070,7 @@ async function caricaRemoto() {
 function applicaRighe(righe) {
   const r = Object.fromEntries(righe.map(x => [x.id, x]));
   if (r.esclusioni) S.esclusioni = r.esclusioni.dati?.lista || [];
+  if (r.viste_parametri) { S.viste = r.viste_parametri.dati?.lista || []; if (!S.vistaLinkFatto) { S.vistaLinkFatto = true; vistaDaLink(); } }
   if (r.foto) S.foto = r.foto.dati?.lista || [];
   if (r.storia_parametri) { S.storiaPar = r.storia_parametri.dati?.modifiche || []; S.storiaParDa = r.storia_parametri.dati?.inizio || null; }
   const storico = r.storico?.dati || S.grezzo || {};

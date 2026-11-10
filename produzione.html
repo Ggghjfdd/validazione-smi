@@ -517,6 +517,43 @@ tr.cliccabile{cursor:pointer} tr.cliccabile:hover td{background:rgba(255,255,255
 .ore-col span{font-size:10.5px;color:var(--text-3);text-align:center;height:12px}
 .val-barra{font-size:11px;fill:var(--text-2)}
 
+/* prove: form, allegati */
+.sovra-box.media{width:min(760px,100%)}
+.due-campi{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:600px){.due-campi{grid-template-columns:1fr}}
+input[type=datetime-local]{width:100%}
+.file-zona{position:relative;display:flex;align-items:center;justify-content:center;text-align:center;min-height:64px;padding:12px;border:1.5px dashed var(--line);border-radius:12px;background:rgba(255,255,255,.03);cursor:pointer}
+.file-zona:hover{border-color:var(--glass-hi);background:rgba(255,255,255,.06)}
+.file-zona input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
+.file-lista{display:flex;flex-wrap:wrap;gap:6px}
+.allegati{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.allegato{position:relative;cursor:pointer;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.04);overflow:hidden;margin:0}
+.allegato:hover{border-color:var(--glass-hi)}
+.allegato.img .foto-img{aspect-ratio:4/3}
+.allegato figcaption{display:flex;align-items:center;gap:6px;font-size:12px;padding:6px 8px;color:var(--text-2)}
+.allegato figcaption span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.allegato.doc{display:flex;align-items:center;gap:10px;padding:10px}
+.doc-nome{display:flex;flex-direction:column;min-width:0;flex:1}
+.doc-nome b{font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.doc-nome small{font-size:11px;color:var(--text-3)}
+.ico-doc{flex:none;display:inline-flex;align-items:center;justify-content:center;width:38px;height:44px;border-radius:6px;background:rgba(57,135,229,.18);color:#cfe2ff;font-size:10.5px;font-weight:700;letter-spacing:.4px}
+.ico-doc.grande{width:auto;height:auto;padding:10px 14px;font-size:22px;background:none}
+.allegato .x{flex:none;appearance:none;border:0;background:rgba(0,0,0,.4);color:var(--text-1);width:22px;height:22px;border-radius:6px;cursor:pointer;font-size:15px;line-height:1}
+.allegato .x:hover{background:var(--crit)}
+.btn.piccolo{padding:4px 10px;font-size:12px;margin-left:6px}
+.foto-griglia.piccola{grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}
+
+/* segnalibri parametri */
+.fuori-vista{display:none!important}
+.barra-viste{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 12px;padding:8px 10px;border-radius:12px;background:rgba(57,135,229,.08);border:1px solid rgba(57,135,229,.25)}
+.barra-viste select{padding:6px 30px 6px 10px;font-size:13px}
+.barra-viste .btn.piccolo{margin-left:0}
+.lista-check{max-height:46vh;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:2px 12px;padding:8px;border:1px solid var(--line-soft);border-radius:12px;background:rgba(255,255,255,.03)}
+.lista-check label{display:flex;gap:8px;align-items:flex-start;font-size:13px;padding:5px 4px;border-radius:8px;cursor:pointer}
+.lista-check label:hover{background:rgba(255,255,255,.05)}
+.lista-check input{accent-color:#3987e5;margin-top:2px}
+.lista-check small{color:var(--text-3);font-size:11px}
+
 </style>
 </head>
 <body>
@@ -989,7 +1026,7 @@ const CONFIG = {
   SUPABASE_URL: 'https://sszxyritwrkxaictcaaa.supabase.co',
   SUPABASE_KEY: 'sb_publishable_HkYiyUEqlWXJo_CDyD9Eqw_k8-4cY-3',
   NOME_LINEA: 'Linea NID 1',
-  VERSIONE: 'v22 · 10 nov 12:30',
+  VERSIONE: 'v23 · 10 nov 14:00',
 };
 const S = {
   modo: null,             // 'demo' | 'remoto' | 'file' | 'lettore'
@@ -1859,6 +1896,7 @@ function apriProduzione(id) {
       </div>
     </div>
     ${pannelloEsclusioni(p0, pr)}
+    ${pannelloProveColaggio(p0)}
     <div class="sezione pannello"><h3>Linea del tempo</h3>${lineaTempo(p.inizio, fineProd(p0), [p0], fermiP)}</div>
     <div class="sezione pannello"><h3>Divisione per turno</h3><div class="scroll-x"><table class="tabella"><thead><tr><th>Turno</th><th>Da</th><th>A</th><th>Cassette</th><th>Scarti</th><th>%</th><th>Pedane</th><th>In marcia</th><th>Resa vel.</th></tr></thead><tbody>
       ${p.turni.map(t => `<tr><td><b>${t.nome}</b> ${giornoCorto(t.giorno)}</td><td>${SMI.fmtOra(t.inizio)}</td><td>${SMI.fmtOra(t.fine)}</td><td>${n0(t.t)}</td><td class="r">${n0(t.r)}</td><td>${pc(t.r, t.t)}</td><td>${n0(SMI.pedane(t.t))}</td><td>${durata(t.marciaMin)}</td><td>${t.marciaMin ? Math.round(t.t / (t.marciaMin * 24) * 100) : 0}%</td></tr>`).join('')}
@@ -1876,17 +1914,17 @@ function apriProduzione(id) {
     const valDef = k => (def?.['0'] || {})[k] ?? (def?.['-'] || {})[k];
     const princ = PARAM_PRINCIPALI.filter(([k]) => valore(k) != null).map(([k, l]) => {
       const v = valore(k), d = valDef(k);
-      return `<div class="param"><div class="n">${l}${d != null && d !== v ? '<span class="diverso" title="Valore del default: ' + esc(d) + '">≠ default</span>' : ''}</div><div class="v">${esc(v)}</div><div class="k">${k}</div></div>`;
+      return `<div class="param" data-pk="${esc(k)}"><div class="n">${l}${d != null && d !== v ? '<span class="diverso" title="Valore del default: ' + esc(d) + '">≠ default</span>' : ''}</div><div class="v">${esc(v)}</div><div class="k">${k}</div></div>`;
     }).join('');
     const tutti = [...Object.entries(com).map(([k, v]) => [k, v, '-']), ...Object.entries(cam).map(([k, v]) => [k, v, '0'])].sort((a, b) => a[0].localeCompare(b[0]));
     const gp = gruppiModifiche(p.prodotto).slice(-8).reverse();
     const storiaH = gp.length ? `<div class="pannello" style="margin-bottom:14px"><h3>Ultime modifiche a questo prodotto</h3><table class="tabella mod-tab"><tbody>${gp.map(g => `<tr class="${g.t >= p.inizio && g.t <= p.fine ? 'dentro' : ''}"><td>${giornoCorto(g.t)} ${SMI.fmtOra(g.t)}${g.t >= p.inizio && g.t <= p.fine ? ' <span class="chip">in questa produzione</span>' : ''}</td><td>${vociHtml(g.voci)}</td></tr>`).join('')}</tbody></table><div class="nota">Il confronto degli scarti prima e dopo ogni modifica è nella vista <b>Parametri</b> della pagina principale.</div></div>` : '';
     parametri = storiaH + `
       <div class="nota" style="margin-top:0;margin-bottom:12px">Valori <b>attuali</b> letti da SMI_ANALYSIS.ini per <b style="text-transform:capitalize">${esc(p.prodotto)}</b>. Il segno <span class="diverso" style="margin:0">≠ default</span> indica che il valore è diverso da quello del "default product".</div>
-      <div class="param-grid">${princ}</div>
+      <div class="sezione" style="margin-top:0">${barraViste()}<div class="param-grid">${princ}</div></div>
       <div class="sezione pannello"><h3 style="display:flex;align-items:center;gap:10px">Tutti i parametri (${tutti.length}) <span class="spazio" style="flex:1"></span><input type="search" id="cercaParam" placeholder="Cerca parametro…" style="max-width:240px"></h3>
       <div class="scroll-x" style="max-height:420px;overflow:auto"><table class="tabella lista-param" id="tabParam"><thead><tr><th>Parametro</th><th>Valore</th><th>Default</th></tr></thead><tbody>
-      ${tutti.map(([k, v]) => { const d = valDef(k); return `<tr data-k="${esc(k.toLowerCase())}"><td>${esc(k)}</td><td>${esc(v)}</td><td style="color:${d != null && d !== v ? '#cfe2ff' : 'var(--text-3)'}">${esc(d ?? '—')}</td></tr>`; }).join('')}
+      ${tutti.map(([k, v]) => { const d = valDef(k); return `<tr data-k="${esc(k.toLowerCase())}" data-pk="${esc(k)}"><td>${esc(k)}</td><td>${esc(v)}</td><td style="color:${d != null && d !== v ? '#cfe2ff' : 'var(--text-3)'}">${esc(d ?? '—')}</td></tr>`; }).join('')}
       </tbody></table></div></div>`;
   }
 
@@ -1925,6 +1963,8 @@ function apriProduzione(id) {
     }
   };
   collegaEsclusioni(p0, pr);
+  collegaProveColaggio(p0);
+  applicaVista();
   caricaMiniature(fotoP);
   $('#cercaParam')?.addEventListener('input', e => { const q = e.target.value.toLowerCase().trim(); velo.querySelectorAll('#tabParam tbody tr').forEach(tr => tr.style.display = !q || tr.dataset.k.includes(q) ? '' : 'none'); });
 }
@@ -2051,6 +2091,7 @@ async function caricaRemoto() {
 function applicaRighe(righe) {
   const r = Object.fromEntries(righe.map(x => [x.id, x]));
   if (r.esclusioni) S.esclusioni = r.esclusioni.dati?.lista || [];
+  if (r.viste_parametri) { S.viste = r.viste_parametri.dati?.lista || []; if (!S.vistaLinkFatto) { S.vistaLinkFatto = true; vistaDaLink(); } }
   if (r.foto) S.foto = r.foto.dati?.lista || [];
   if (r.storia_parametri) { S.storiaPar = r.storia_parametri.dati?.modifiche || []; S.storiaParDa = r.storia_parametri.dati?.inizio || null; }
   const storico = r.storico?.dati || S.grezzo || {};
@@ -2683,14 +2724,76 @@ async function scaricaFotoMolte(voci, nomeZip, extra = {}) {
   } catch (e) { toast('Download non riuscito: ' + esc(e.message)); }
 }
 const nomeFotoScarto = f => `scarto_${nomeSicuro(f[2])}_${f[1].split('/')[0]}_${f[1].split('/').pop()}`;
-async function urlFirmati(percorsi) {
+async function urlFirmati(chiavi) {
   const cl = sb(); if (!cl) return;
-  const mancanti = [...new Set(percorsi)].filter(p => p && !urlFoto.has(p));
-  for (let i = 0; i < mancanti.length; i += 100) {
-    const { data } = await cl.storage.from('smi-foto').createSignedUrls(mancanti.slice(i, i + 100), 3600);
-    for (const d of data || []) if (d.signedUrl) urlFoto.set(d.path, d.signedUrl);
+  const mancanti = [...new Set(chiavi)].filter(k => k && !urlFoto.has(k));
+  for (const [bucket, pref] of [['smi-foto', ''], ['smi-allegati', 'A:']]) {
+    const ps = mancanti.filter(k => pref ? k.startsWith(pref) : !k.startsWith('A:')).map(k => k.slice(pref.length));
+    for (let i = 0; i < ps.length; i += 100) {
+      const { data } = await cl.storage.from(bucket).createSignedUrls(ps.slice(i, i + 100), 3600);
+      for (const d of data || []) if (d.signedUrl) urlFoto.set(pref + d.path, d.signedUrl);
+    }
   }
 }
+const eImmagine = a => /^image\//.test(a.tipo || '') || /\.(jpe?g|png|gif|bmp|webp|heic)$/i.test(a.nome || '');
+// immagine da mostrare per una prova: la foto dello scarto, oppure la prima foto allegata
+const miniatura = p => p.foto || ((p.allegati || []).find(eImmagine) ? 'A:' + p.allegati.find(eImmagine).percorso : null);
+const dimensione = b => b > 1048576 ? n1(b / 1048576) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB';
+const iconaFile = n => /\.pdf$/i.test(n) ? 'PDF' : /\.docx?$/i.test(n) ? 'DOC' : /\.(xlsx?|csv)$/i.test(n) ? 'XLS' : /\.(pptx?)$/i.test(n) ? 'PPT' : /\.(zip|7z|rar)$/i.test(n) ? 'ZIP' : 'FILE';
+const LIMITE_FILE = 50 * 1048576;
+async function caricaAllegati(cartella, files) {
+  const out = [], errori = [];
+  for (const f of files) {
+    if (f.size > LIMITE_FILE) { errori.push(`${f.name}: più di 50 MB`); continue; }
+    const est = (/\.[^.]+$/.exec(f.name) || [''])[0].toLowerCase();
+    const percorso = `${cartella}/${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}_${nomeSicuro(f.name.replace(/\.[^.]+$/, ''))}${est}`;
+    const { error } = await sb().storage.from('smi-allegati').upload(percorso, f, { contentType: f.type || 'application/octet-stream', upsert: false });
+    if (error) { errori.push(`${f.name}: ${/bucket|not found/i.test(error.message) ? 'su Supabase manca lo spazio smi-allegati (va eseguito supabase_allegati.sql)' : error.message}`); continue; }
+    out.push({ percorso, nome: f.name, tipo: f.type || '', dimensione: f.size, caricato: SMI.adesso(), chi: S.utente?.email || '' });
+  }
+  return { allegati: out, errori };
+}
+async function scaricaAllegato(a) {
+  const { data, error } = await sb().storage.from('smi-allegati').download(a.percorso);
+  if (error) { toast('Non riesco a scaricare il file: ' + esc(error.message)); return; }
+  scaricaBlob(data, a.nome);
+}
+function allegatiHtml(allegati, modificabile) {
+  if (!allegati?.length) return '<div class="nota" style="margin-top:0">Nessun allegato.</div>';
+  return `<div class="allegati">${allegati.map((a, i) => eImmagine(a)
+    ? `<figure class="allegato img" data-all="${i}"><div class="foto-img" data-img="${esc('A:' + a.percorso)}"></div><figcaption><span title="${esc(a.nome)}">${esc(a.nome)}</span>${modificabile ? `<button type="button" class="x" data-rimuovi="${i}" title="Rimuovi">×</button>` : ''}</figcaption></figure>`
+    : `<div class="allegato doc" data-all="${i}"><span class="ico-doc">${iconaFile(a.nome)}</span><span class="doc-nome"><b title="${esc(a.nome)}">${esc(a.nome)}</b><small>${dimensione(a.dimensione || 0)} · ${giornoCorto(a.caricato)}</small></span>${modificabile ? `<button type="button" class="x" data-rimuovi="${i}" title="Rimuovi">×</button>` : ''}</div>`).join('')}</div>`;
+}
+async function collegaAllegati(box, allegati, onRimuovi) {
+  if (!box) return;
+  box.querySelectorAll('[data-rimuovi]').forEach(b => b.onclick = e => { e.stopPropagation(); onRimuovi?.(+b.dataset.rimuovi); });
+  box.querySelectorAll('[data-all]').forEach(el => el.onclick = e => {
+    if (e.target.closest('[data-rimuovi]')) return;
+    const a = allegati[+el.dataset.all], u = urlFoto.get('A:' + a.percorso);
+    if (eImmagine(a) && u) {
+      const v = sovra(`<img class="foto-big" src="${u}" alt=""><div class="barra-filtri" style="margin:12px 0 0"><b>${esc(a.nome)}</b><span class="spazio"></span><button class="btn" id="aScarica">⬇ Scarica</button><button class="btn" id="aChiudi">Chiudi</button></div>`, 'larga');
+      v.querySelector('#aChiudi').onclick = () => v.remove(); v.querySelector('#aScarica').onclick = () => scaricaAllegato(a);
+    } else scaricaAllegato(a);
+  });
+  const imgs = [...box.querySelectorAll('[data-img]')];
+  await urlFirmati(imgs.map(i => i.dataset.img));
+  imgs.forEach(i => { const u = urlFoto.get(i.dataset.img); i.innerHTML = u ? `<img loading="lazy" src="${u}" alt="">` : 'non disponibile'; });
+}
+function campoFile(id) {
+  return `<label class="campo">Foto e documenti<span class="file-zona"><input type="file" id="${id}" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.ppt,.pptx,.zip"><span class="nota" style="margin:0">Clicca per scegliere i file (dal telefono anche la fotocamera). Max 50 MB l'uno.</span></span><span class="file-lista" id="${id}L"></span></label>`;
+}
+function collegaCampoFile(v, id) {
+  const inp = v.querySelector('#' + id), lista = v.querySelector('#' + id + 'L');
+  inp.onchange = () => { lista.innerHTML = [...inp.files].map(f => `<span class="chip">${esc(f.name)} · ${dimensione(f.size)}</span>`).join(''); };
+}
+// colaggi (= produzioni) da scegliere, dal più recente
+const maiusc = x => String(x || '').replace(/^./, c => c.toUpperCase());
+function opzioniColaggio(sel) {
+  const ps = (S.modello?.produzioni || []).slice().sort((a, b) => b.inizio - a.inizio).slice(0, 300);
+  return `<option value="">Nessun colaggio</option>` + ps.map(p => `<option value="${esc(p.id)}" ${p.id === sel ? 'selected' : ''}>${esc(maiusc(p.prodotto))} · ${giornoCorto(p.inizio)} ${SMI.fmtOra(p.inizio)}–${SMI.isoGiorno(p.inizio) !== SMI.isoGiorno(p.fine) ? giornoCorto(p.fine) + ' ' : ''}${SMI.fmtOra(p.fine)} · ${n0(p.t)} cass.</option>`).join('');
+}
+const datiColaggio = id => { const p = (S.modello?.produzioni || []).find(x => x.id === id); return p ? { id: p.id, inizio: p.inizio, fine: p.fine, prodotto: p.prodotto, t: p.t, r: p.r } : null; };
+const testoColaggio = c => c ? `${c.prodotto ? maiusc(c.prodotto) + ' · ' : ''}${giornoCorto(c.inizio)} ${SMI.fmtOra(c.inizio)}${c.fine ? '–' + SMI.fmtOra(c.fine) : ''}` : '';
 
 /* ---------- archivio prove (righe 'prova_<id>' di smi_dati) ---------- */
 async function caricaProve() {
@@ -2717,22 +2820,26 @@ function parametriAl(prodotto, t) {
 function produzioneAl(t) {
   return (S.modello?.produzioni || []).find(p => t >= p.inizio - 5 * 60e3 && t <= fineProd(p) + 5 * 60e3);
 }
-async function salvaProva(f, campi, gruppo) {
+// base: { t, fotoSrc (foto dello scarto da copiare, facoltativa), prodotto }
+async function salvaProva(base, campi, gruppo, allegati = []) {
   const id = 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-  const foto = `prove/${id}.jpg`;
-  const { error: e1 } = await sb().storage.from('smi-foto').copy(f[1], foto);
-  if (e1) throw new Error('la foto non è più disponibile (' + e1.message + ')');
-  const pr = produzioneAl(f[0]), prodotto = f[2] || pr?.prodotto || '';
+  let foto = null;
+  if (base.fotoSrc) {
+    foto = `prove/${id}.jpg`;
+    const { error: e1 } = await sb().storage.from('smi-foto').copy(base.fotoSrc, foto);
+    if (e1) throw new Error('la foto non è più disponibile (' + e1.message + ')');
+  }
+  const prodotto = base.prodotto || datiColaggio(campi.colaggio)?.prodotto || produzioneAl(base.t)?.prodotto || '';
   const rec = {
-    id, t: f[0], foto, fotoOrig: f[1], prodotto, gruppo,
-    operatore: campi.operatore.trim(), tipo: campi.tipo.trim(), esito: campi.esito, note: campi.note.trim(),
-    parametri: parametriAl(prodotto, f[0]),
-    parametriCerti: !!(S.storiaParDa && f[0] >= S.storiaParDa),
-    produzione: pr ? { id: pr.id, inizio: pr.inizio, t: pr.t, r: pr.r } : null,
+    id, t: base.t, foto, fotoOrig: base.fotoSrc || null, prodotto, gruppo,
+    operatore: campi.operatore.trim(), tipo: campi.tipo.trim(), esito: campi.esito, note: (campi.note || '').trim(),
+    produzione: datiColaggio(campi.colaggio), codiceColaggio: (campi.codice || '').trim(), allegati,
+    parametri: parametriAl(prodotto, base.t),
+    parametriCerti: !!(S.storiaParDa && base.t >= S.storiaParDa),
     chi: S.utente?.email || '', creato: SMI.adesso(),
   };
   const { error } = await sb().from('smi_dati').upsert({ id: 'prova_' + id, dati: rec, aggiornato: new Date().toISOString() });
-  if (error) { await sb().storage.from('smi-foto').remove([foto]); throw new Error(error.message); }
+  if (error) { if (foto) await sb().storage.from('smi-foto').remove([foto]); throw new Error(error.message); }
   (S.archivioProve ||= new Map()).set(id, rec);
   return rec;
 }
@@ -2752,34 +2859,59 @@ function sovra(html, classe = '') {
   document.body.appendChild(v);
   return v;
 }
-function apriFormProva(fs, dopo) {
-  const prove = tutteLeProve();
+function apriFormProva(fs, dopo, opz = {}) {
+  const prove = tutteLeProve(), nuova = !fs.length;
   const ops = [...new Set(prove.map(p => p.operatore).filter(Boolean))].sort();
   const tipi = [...new Set([...TIPI_PROVA, ...prove.map(p => p.tipo)].filter(Boolean))];
+  const prodotti = [...new Set([...(S.modello?.produzioni || []).map(p => p.prodotto), ...Object.keys(S.modello?.parametri || {})].filter(x => x && x !== 'default product'))].sort();
   let ultimoOp = ''; try { ultimoOp = localStorage.getItem('smi_operatore') || ''; } catch { }
-  const prod = [...new Set(fs.map(f => f[2] || produzioneAl(f[0])?.prodotto || '—'))].join(', ');
-  const v = sovra(`<h2>Segna come prova</h2>
-    <div class="nota" style="margin-top:4px">${fs.length === 1 ? `Foto del ${giornoCorto(fs[0][0])} alle ${oraSec(fs[0][0])}` : `${fs.length} foto (dal ${giornoCorto(fs[fs.length - 1][0])} ${oraSec(fs[fs.length - 1][0])} al ${giornoCorto(fs[0][0])} ${oraSec(fs[0][0])})`} · <span style="text-transform:capitalize">${esc(prod)}</span>.<br>Vengono salvati per sempre la foto, l'ora, il prodotto e <b>tutti i parametri di analisi di quel momento</b>.</div>
+  const t0 = nuova ? (opz.t ?? Math.floor(SMI.adesso() / 60e3) * 60e3) : fs[0][0];
+  const col0 = opz.colaggio || produzioneAl(t0)?.id || '';
+  const prod0 = nuova ? (datiColaggio(col0)?.prodotto || S.modello?.stato?.prodotto || '') : '';
+  const prodFoto = nuova ? '' : [...new Set(fs.map(f => f[2] || produzioneAl(f[0])?.prodotto || '—'))].join(', ');
+  const v = sovra(`<h2>${nuova ? 'Nuova prova' : 'Segna come prova'}</h2>
+    <div class="nota" style="margin-top:4px">${nuova ? 'Prova registrata a mano: associala a un colaggio e allega foto e documenti.' : `${fs.length === 1 ? `Foto del ${giornoCorto(fs[0][0])} alle ${oraSec(fs[0][0])}` : `${fs.length} foto (dal ${giornoCorto(fs[fs.length - 1][0])} ${oraSec(fs[fs.length - 1][0])} al ${giornoCorto(fs[0][0])} ${oraSec(fs[0][0])})`} · <span style="text-transform:capitalize">${esc(prodFoto)}</span>.`}<br>Vengono salvati per sempre ${nuova ? '' : 'la foto, '}l'ora, il prodotto e <b>tutti i parametri di analisi di quel momento</b>.</div>
     <form id="fProva" class="form-prova">
-      <label class="campo">Operatore che ha fatto la prova<input type="text" name="operatore" list="dlOp" required value="${esc(ultimoOp)}" autocomplete="off"></label>
+      ${nuova ? `<div class="due-campi"><label class="campo">Data e ora della prova<input type="datetime-local" name="quando" step="60" required value="${dtIn(t0)}"></label>
+        <label class="campo">Prodotto<input type="text" name="prodotto" list="dlProd" required value="${esc(prod0)}" autocomplete="off"></label></div>
+        <datalist id="dlProd">${prodotti.map(o => `<option value="${esc(o)}">`).join('')}</datalist>` : ''}
+      <div class="due-campi"><label class="campo">Colaggio<select name="colaggio">${opzioniColaggio(col0)}</select></label>
+        <label class="campo">Codice colaggio / lotto (facoltativo)<input type="text" name="codice" autocomplete="off" placeholder="es. numero di lotto"></label></div>
+      <div class="due-campi"><label class="campo">Operatore che ha fatto la prova<input type="text" name="operatore" list="dlOp" required value="${esc(ultimoOp)}" autocomplete="off"></label>
+        <label class="campo">Tipo di prova<input type="text" name="tipo" list="dlTipo" required autocomplete="off" placeholder="Scegli o scrivi"></label></div>
       <datalist id="dlOp">${ops.map(o => `<option value="${esc(o)}">`).join('')}</datalist>
-      <label class="campo">Tipo di prova<input type="text" name="tipo" list="dlTipo" required autocomplete="off" placeholder="Scegli o scrivi"></label>
       <datalist id="dlTipo">${tipi.map(o => `<option value="${esc(o)}">`).join('')}</datalist>
       <label class="campo">Esito<select name="esito">${Object.entries(ESITI).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
       <label class="campo">Note<textarea name="note" rows="3" placeholder="Cosa si stava provando, cosa si è visto…"></textarea></label>
+      ${campoFile('fpFile')}
       <div class="escl-piede"><span id="fpErr" class="nota" style="margin:0;color:#ffb4ae"></span><span class="spazio"></span><button type="button" class="btn" id="fpAnn">Annulla</button><button class="btn primario" id="fpOk">Salva ${fs.length > 1 ? fs.length + ' prove' : 'prova'}</button></div>
-    </form>`, 'stretta');
+    </form>`, 'media');
+  collegaCampoFile(v, 'fpFile');
   v.querySelector('#fpAnn').onclick = () => v.remove();
+  if (nuova) {
+    // cambiando l'ora propongo il colaggio di quel momento, finché non lo si sceglie a mano
+    let toccato = !!opz.colaggio;
+    v.querySelector('select[name=colaggio]').onchange = e => { toccato = true; const c = datiColaggio(e.target.value); if (c) v.querySelector('input[name=prodotto]').value = c.prodotto; };
+    v.querySelector('input[name=quando]').onchange = e => { if (toccato) return; const p = produzioneAl(dtDa(e.target.value)); v.querySelector('select[name=colaggio]').value = p?.id || ''; if (p) v.querySelector('input[name=prodotto]').value = p.prodotto; };
+  }
   v.querySelector('#fProva').onsubmit = async e => {
     e.preventDefault();
     const d = Object.fromEntries(new FormData(e.target));
     try { localStorage.setItem('smi_operatore', d.operatore.trim()); } catch { }
     const b = v.querySelector('#fpOk'); b.disabled = true;
     const gruppo = fs.length > 1 ? 'g' + Date.now().toString(36) : null;
+    let allegati = [], errFile = [];
+    const files = [...v.querySelector('#fpFile').files];
+    if (files.length) {
+      b.textContent = `Carico ${files.length} file…`;
+      ({ allegati, errori: errFile } = await caricaAllegati(gruppo ? `gruppi/${gruppo}` : `prove/${Date.now().toString(36)}`, files));
+      if (errFile.length && !confirm(`Alcuni file non sono stati caricati:\n${errFile.join('\n')}\n\nSalvare comunque la prova senza questi file?`)) { b.disabled = false; b.textContent = 'Salva'; return; }
+    }
+    const basi = nuova ? [{ t: dtDa(d.quando), prodotto: d.prodotto.trim() }] : fs.map(f => ({ t: f[0], fotoSrc: f[1], prodotto: f[2] }));
     let ok = 0, err = '';
-    for (const f of fs) { b.textContent = `Salvo ${ok + 1} di ${fs.length}…`; try { await salvaProva(f, d, gruppo); ok++; } catch (x) { err = x.message; } }
+    for (const base of basi) { b.textContent = `Salvo ${ok + 1} di ${basi.length}…`; try { await salvaProva(base, d, gruppo, allegati); ok++; } catch (x) { err = x.message; } }
     if (ok) toast(`${ok} ${ok === 1 ? 'prova salvata' : 'prove salvate'} nell'archivio Prove`);
-    if (ok < fs.length) { v.querySelector('#fpErr').textContent = `${fs.length - ok} non salvate: ${err}`; b.disabled = false; b.textContent = 'Riprova'; fs = fs.slice(ok); }
+    if (ok < basi.length) { v.querySelector('#fpErr').textContent = `${basi.length - ok} non salvate: ${err}`; b.disabled = false; b.textContent = 'Riprova'; if (!nuova) fs = fs.slice(ok); }
     else v.remove();
     dopo?.();
   };
@@ -2864,7 +2996,7 @@ function filtraProve() {
   return tutteLeProve().filter(p => p.t >= da && p.t < a
     && (!f.prodotto || p.prodotto === f.prodotto) && (!f.tipo || p.tipo === f.tipo)
     && (!f.operatore || p.operatore === f.operatore) && (!f.esito || p.esito === f.esito)
-    && (!q || [p.prodotto, p.tipo, p.operatore, p.note, ESITI[p.esito], p.chi].join(' ').toLowerCase().includes(q))
+    && (!q || [p.prodotto, p.tipo, p.operatore, p.note, ESITI[p.esito], p.chi, p.codiceColaggio, ...(p.allegati || []).map(a => a.nome)].join(' ').toLowerCase().includes(q))
   ).sort((x, y) => y.t - x.t);
 }
 const opzioni = (valori, sel, tutti) => `<option value="">${tutti}</option>` + valori.map(v => `<option value="${esc(v)}" ${v === sel ? 'selected' : ''}>${esc(v)}</option>`).join('');
@@ -2874,7 +3006,7 @@ function vistaProve() {
   const tutte = tutteLeProve(), f = S.pv, uniq = k => [...new Set(tutte.map(p => p[k]).filter(Boolean))].sort((a, b) => a.localeCompare(b));
   return `<section class="vetro card">
     <h2>Archivio prove</h2>
-    <div class="nota" style="margin-top:0">Ogni prova contiene la foto della cassetta, l'ora, il prodotto, l'operatore, il tipo di prova, l'esito e tutti i parametri di analisi di quel momento. Le prove si segnano dalla scheda <b>Foto scarti</b> di una produzione.</div>
+    <div class="nota" style="margin-top:0">Ogni prova contiene la foto della cassetta, l'ora, il prodotto, l'operatore, il tipo di prova, l'esito e tutti i parametri di analisi di quel momento. Si creano con <b>+ Nuova prova</b> (anche con foto e documenti caricati a mano) oppure dalla scheda <b>Foto scarti</b> di una produzione.</div>
     <div class="barra-filtri" style="margin-top:14px">
       <input type="search" id="pvQ" placeholder="Cerca (note, operatore…)" value="${esc(f.q)}" style="min-width:200px">
       <label class="campo-in">Dal <input type="date" id="pvDa" value="${f.da}"></label>
@@ -2886,12 +3018,13 @@ function vistaProve() {
     </div>
     <div class="barra-filtri">
       <span class="nota" style="margin:0">Raggruppa per</span>
-      <div class="seg" id="pvGruppo">${[['tempo', 'Giorno'], ['prodotto', 'Prodotto'], ['tipo', 'Tipo di prova'], ['operatore', 'Operatore'], ['esito', 'Esito']].map(([k, l]) => `<button data-g="${k}" class="${f.gruppo === k ? 'att' : ''}">${l}</button>`).join('')}</div>
+      <div class="seg" id="pvGruppo">${[['tempo', 'Giorno'], ['prodotto', 'Prodotto'], ['tipo', 'Tipo di prova'], ['operatore', 'Operatore'], ['colaggio', 'Colaggio'], ['esito', 'Esito']].map(([k, l]) => `<button data-g="${k}" class="${f.gruppo === k ? 'att' : ''}">${l}</button>`).join('')}</div>
       <div class="seg" id="pvVista">${[['schede', 'Foto'], ['tabella', 'Tabella']].map(([k, l]) => `<button data-v="${k}" class="${f.vista === k ? 'att' : ''}">${l}</button>`).join('')}</div>
       <span class="spazio"></span>
+      <button class="btn primario" id="pvNuova">+ Nuova prova</button>
       <button class="btn" id="pvConfronta" disabled>Confronta parametri</button>
       <button class="btn" id="pvCsv">Esporta Excel (CSV)</button>
-      <button class="btn" id="pvZip">⬇ Scarica foto</button>
+      <button class="btn" id="pvZip">⬇ Scarica foto e documenti</button>
     </div>
     <div id="pvRisultati"></div>
   </section>`;
@@ -2903,51 +3036,54 @@ function riassuntoProve(lista) {
     <div class="tile"><div class="lab">Prove</div><div class="val">${n0(lista.length)}</div><div class="det">${n0(new Set(lista.map(p => p.prodotto)).size)} prodotti · ${n0(new Set(lista.map(p => p.operatore)).size)} operatori</div></div>
     ${blocco('Per tipo', conta('tipo'))}${blocco('Per esito', conta('esito'))}${blocco('Per operatore', conta('operatore'))}</div>`;
 }
-const chiaveGruppo = (p, g) => g === 'tempo' ? isoG(p.t) : g === 'esito' ? (ESITI[p.esito] || '—') : (p[g] || '—');
-const etichettaGruppo = (k, g) => g === 'tempo' ? giornoLungo(Date.parse(k + 'T00:00:00Z')) : k;
+const chiaveGruppo = (p, g) => g === 'tempo' ? isoG(p.t) : g === 'esito' ? (ESITI[p.esito] || '—') : g === 'colaggio' ? (p.produzione ? `c:${String(p.produzione.inizio).padStart(15, '0')}#${p.produzione.id}` : p.codiceColaggio ? 'codice#' + p.codiceColaggio : '—') : (p[g] || '—');
+const etichettaGruppo = (k, g) => g === 'tempo' ? giornoLungo(Date.parse(k + 'T00:00:00Z')) : g === 'colaggio' ? (k === '—' ? 'Senza colaggio' : k.startsWith('codice#') ? 'Codice ' + k.slice(7) : 'Colaggio ' + testoColaggio(tutteLeProve().find(p => p.produzione?.id === k.slice(k.indexOf('#') + 1))?.produzione)) : k;
 function principali(par, n = 4) {
   if (!par) return '<span class="nota" style="margin:0">parametri non disponibili</span>';
   const cams = Object.keys(par).sort();
-  return PARAM_PRINCIPALI.slice(0, n).map(([k, l]) => `<div class="mod-voce"><span>${esc(l)}</span><span class="mod-val">${cams.map(c => esc(par[c]?.[k] ?? '—')).join(' / ')}</span></div>`).join('');
+  const va = vistaAttiva();
+  return (va ? va.parametri.slice(0, n).map(k => [k, etichettaParam(k)]) : PARAM_PRINCIPALI.slice(0, n)).map(([k, l]) => `<div class="mod-voce"><span>${esc(l)}</span><span class="mod-val">${cams.map(c => esc(par[c]?.[k] ?? '—')).join(' / ')}</span></div>`).join('');
 }
 function aggiornaRisultatiProve() {
   const box = $('#pvRisultati'); if (!box) return;
   const lista = filtraProve(), f = S.pv;
   for (const id of [...f.sel]) if (!lista.some(p => p.id === id)) f.sel.delete(id);
-  if (!tutteLeProve().length) { box.innerHTML = '<div class="vuoto">Nessuna prova salvata finora.<br><small>Apri una produzione → scheda <b>Foto scarti</b> → clicca una foto → <b>Segna come prova</b>.</small></div>'; collegaRisultatiProve(lista); return; }
+  if (!tutteLeProve().length) { box.innerHTML = '<div class="vuoto">Nessuna prova salvata finora.<br><small>Premi <b>+ Nuova prova</b>, oppure apri una produzione → scheda <b>Foto scarti</b> → clicca una foto → <b>Segna come prova</b>.</small></div>'; collegaRisultatiProve(lista); return; }
   if (!lista.length) { box.innerHTML = riassuntoProve(lista) + '<div class="vuoto">Nessuna prova con questi filtri.</div>'; collegaRisultatiProve(lista); return; }
   const gruppi = new Map();
   for (const p of lista) { const k = chiaveGruppo(p, f.gruppo); if (!gruppi.has(k)) gruppi.set(k, []); gruppi.get(k).push(p); }
-  const ordine = [...gruppi.keys()].sort((a, b) => f.gruppo === 'tempo' ? b.localeCompare(a) : gruppi.get(b).length - gruppi.get(a).length);
-  const scheda = p => `<figure class="foto prova-card ${f.sel.has(p.id) ? 'sel' : ''}" data-prova="${p.id}"><div class="foto-img" data-img="${esc(p.foto)}"></div>
+  const ordine = [...gruppi.keys()].sort((a, b) => f.gruppo === 'tempo' || f.gruppo === 'colaggio' ? b.localeCompare(a) : gruppi.get(b).length - gruppi.get(a).length);
+  const scheda = p => `<figure class="foto prova-card ${f.sel.has(p.id) ? 'sel' : ''}" data-prova="${p.id}"><div class="foto-img" data-img="${esc(miniatura(p) || '')}"></div>
       <label class="foto-sel" title="Seleziona per confrontare o scaricare"><input type="checkbox" data-psel="${p.id}" ${f.sel.has(p.id) ? 'checked' : ''}></label>
       <figcaption class="prova-cap"><div class="prova-tit"><b>${esc(p.tipo)}</b><span class="esito" style="color:${COL_ESITO[p.esito]}">● ${ESITI[p.esito] || ''}</span></div>
-        <div><span style="text-transform:capitalize">${esc(p.prodotto)}</span> · ${esc(p.operatore)}</div>
+        <div><span style="text-transform:capitalize">${esc(p.prodotto)}</span> · ${esc(p.operatore)}${p.allegati?.length ? ` · <span title="Allegati">📎 ${p.allegati.length}</span>` : ''}</div>
+        ${p.produzione || p.codiceColaggio ? `<div class="nota" style="margin:2px 0 0">Colaggio ${esc(testoColaggio(p.produzione))}${p.codiceColaggio ? ' · ' + esc(p.codiceColaggio) : ''}</div>` : ''}
         <div class="nota" style="margin:2px 0 0">${giornoCorto(p.t)} ${oraSec(p.t)}${p.note ? ' · ' + esc(p.note.slice(0, 60)) + (p.note.length > 60 ? '…' : '') : ''}</div></figcaption></figure>`;
-  const riga = p => `<tr data-prova="${p.id}" class="cliccabile"><td><input type="checkbox" data-psel="${p.id}" ${f.sel.has(p.id) ? 'checked' : ''}></td><td>${giornoCorto(p.t)} ${oraSec(p.t)}</td><td class="sx" style="text-transform:capitalize">${esc(p.prodotto)}</td><td class="sx">${esc(p.tipo)}</td><td class="sx">${esc(p.operatore)}</td><td class="sx" style="color:${COL_ESITO[p.esito]}">${ESITI[p.esito] || ''}</td><td class="sx note-cella">${esc(p.note)}</td><td class="sx">${principali(p.parametri, 3)}</td></tr>`;
+  const riga = p => `<tr data-prova="${p.id}" class="cliccabile"><td><input type="checkbox" data-psel="${p.id}" ${f.sel.has(p.id) ? 'checked' : ''}></td><td>${giornoCorto(p.t)} ${oraSec(p.t)}</td><td class="sx" style="text-transform:capitalize">${esc(p.prodotto)}</td><td class="sx">${esc(p.tipo)}</td><td class="sx">${esc(p.operatore)}</td><td class="sx" style="color:${COL_ESITO[p.esito]}">${ESITI[p.esito] || ''}</td><td class="sx">${esc(testoColaggio(p.produzione))}${p.codiceColaggio ? '<br><small>' + esc(p.codiceColaggio) + '</small>' : ''}</td><td class="sx note-cella">${p.allegati?.length ? `📎${p.allegati.length} ` : ''}${esc(p.note)}</td><td class="sx">${principali(p.parametri, 3)}</td></tr>`;
   box.innerHTML = riassuntoProve(lista) + ordine.map(k => {
     const ps = gruppi.get(k);
     return `<div class="sezione"><h3 class="gruppo-tit"><span style="text-transform:${f.gruppo === 'tempo' ? 'none' : 'capitalize'}">${esc(etichettaGruppo(k, f.gruppo))}</span><span class="chip">${ps.length}</span></h3>
       ${f.vista === 'schede' ? `<div class="foto-griglia">${ps.map(scheda).join('')}</div>`
-        : `<div class="scroll-x"><table class="tabella tab-prove"><thead><tr><th></th><th>Quando</th><th class="sx">Prodotto</th><th class="sx">Tipo</th><th class="sx">Operatore</th><th class="sx">Esito</th><th class="sx">Note</th><th class="sx">Parametri principali (cam. 0 / 1)</th></tr></thead><tbody>${ps.map(riga).join('')}</tbody></table></div>`}</div>`;
+        : `<div class="scroll-x"><table class="tabella tab-prove"><thead><tr><th></th><th>Quando</th><th class="sx">Prodotto</th><th class="sx">Tipo</th><th class="sx">Operatore</th><th class="sx">Esito</th><th class="sx">Colaggio</th><th class="sx">Note</th><th class="sx">Parametri principali (cam. 0 / 1)</th></tr></thead><tbody>${ps.map(riga).join('')}</tbody></table></div>`}</div>`;
   }).join('');
   collegaRisultatiProve(lista);
 }
 function collegaRisultatiProve(lista) {
   const f = S.pv, box = $('#pvRisultati');
-  const barra = () => { const n = f.sel.size; $('#pvConfronta').disabled = n < 2; $('#pvConfronta').textContent = n >= 2 ? `Confronta ${n} prove` : 'Confronta parametri'; $('#pvZip').textContent = n ? `⬇ Scarica ${n} foto` : '⬇ Scarica foto'; };
+  const barra = () => { const n = f.sel.size; $('#pvConfronta').disabled = n < 2; $('#pvConfronta').textContent = n >= 2 ? `Confronta ${n} prove` : 'Confronta parametri'; $('#pvZip').textContent = n ? `⬇ Scarica ${n} prove` : '⬇ Scarica foto e documenti'; };
   box.querySelectorAll('[data-psel]').forEach(c => { c.onclick = e => e.stopPropagation(); c.onchange = () => { c.checked ? f.sel.add(c.dataset.psel) : f.sel.delete(c.dataset.psel); c.closest('[data-prova]').classList.toggle('sel', c.checked); barra(); }; });
   box.querySelectorAll('.foto-sel').forEach(l => l.onclick = e => e.stopPropagation());
   box.querySelectorAll('[data-prova]').forEach(el => el.onclick = () => apriDettaglioProva(el.dataset.prova));
   barra();
   const imgs = [...box.querySelectorAll('[data-img]')];
-  urlFirmati(imgs.map(i => i.dataset.img)).then(() => imgs.forEach(i => { const u = urlFoto.get(i.dataset.img); i.innerHTML = u ? `<img loading="lazy" src="${u}" alt="">` : 'foto non disponibile'; }));
+  urlFirmati(imgs.map(i => i.dataset.img)).then(() => imgs.forEach(i => { const u = urlFoto.get(i.dataset.img); i.innerHTML = u ? `<img loading="lazy" src="${u}" alt="">` : `<span class="ico-doc grande">${i.dataset.img ? '—' : '📎'}</span>`; }));
   $('#pvCsv').onclick = () => esportaProveCsv(lista);
   $('#pvZip').onclick = () => {
     const ps = f.sel.size ? lista.filter(p => f.sel.has(p.id)) : lista;
     if (!ps.length) return;
-    scaricaFotoMolte(ps.map(p => ({ percorso: p.foto, nome: `${isoG(p.t)}_${oraSec(p.t).replace(/:/g, '')}_${nomeSicuro(p.prodotto)}_${nomeSicuro(p.tipo)}_${p.id}.jpg` })), `prove_${isoG(SMI.adesso())}.zip`, { 'prove.csv': csvProve(ps) });
+    scaricaZipProve(ps);
   };
+  $('#pvNuova').onclick = () => apriFormProva([], () => aggiornaRisultatiProve());
   $('#pvConfronta').onclick = () => confrontaProve(lista.filter(p => f.sel.has(p.id)));
 }
 function collegaProve() {
@@ -2965,44 +3101,95 @@ function tabellaParametri(par, confronto) {
   const chiavi = [...new Set(cams.flatMap(c => [...Object.keys(par[c] || {}), ...Object.keys(confronto?.[c] || {})]))];
   const ord = PARAM_PRINCIPALI.map(([k]) => k).filter(k => chiavi.includes(k)).concat(chiavi.filter(k => !PARAM_PRINCIPALI.some(([x]) => x === k)).sort());
   return `<div class="scroll-x"><table class="tabella mod-tab"><thead><tr><th>Parametro</th>${cams.map(c => `<th>Camera ${esc(c)}</th>`).join('')}</tr></thead><tbody>
-    ${ord.map(k => `<tr><td>${esc(etichettaParam(k))}${etichettaParam(k) !== k ? ` <small>${esc(k)}</small>` : ''}</td>${cams.map(c => { const v = par[c]?.[k], o = confronto?.[c]?.[k]; const diff = confronto && String(o ?? '') !== String(v ?? ''); return `<td class="${diff ? 'diverso' : ''}">${esc(v ?? '—')}${diff ? ` <small title="Valore attuale">ora ${esc(o ?? '—')}</small>` : ''}</td>`; }).join('')}</tr>`).join('')}
+    ${ord.map(k => `<tr data-pk="${esc(k)}"><td>${esc(etichettaParam(k))}${etichettaParam(k) !== k ? ` <small>${esc(k)}</small>` : ''}</td>${cams.map(c => { const v = par[c]?.[k], o = confronto?.[c]?.[k]; const diff = confronto && String(o ?? '') !== String(v ?? ''); return `<td class="${diff ? 'diverso' : ''}">${esc(v ?? '—')}${diff ? ` <small title="Valore attuale">ora ${esc(o ?? '—')}</small>` : ''}</td>`; }).join('')}</tr>`).join('')}
   </tbody></table></div>`;
 }
 async function apriDettaglioProva(id) {
   const p = S.archivioProve.get(id); if (!p) return;
-  await urlFirmati([p.foto]);
-  const u = urlFoto.get(p.foto), att = S.modello?.parametri?.[p.prodotto];
-  const nDiff = att && p.parametri ? Object.keys({ ...att, ...p.parametri }).reduce((s, c) => s + new Set([...Object.keys(att[c] || {}), ...Object.keys(p.parametri[c] || {})]).size - [...new Set([...Object.keys(att[c] || {}), ...Object.keys(p.parametri[c] || {})])].filter(k => String(att[c]?.[k] ?? '') === String(p.parametri[c]?.[k] ?? '')).length, 0) : 0;
+  if (p.foto) await urlFirmati([p.foto]);
+  const u = p.foto && urlFoto.get(p.foto), att = S.modello?.parametri?.[p.prodotto];
+  let nDiff = 0;
+  if (att && p.parametri) for (const c of new Set([...Object.keys(att), ...Object.keys(p.parametri)])) for (const k of new Set([...Object.keys(att[c] || {}), ...Object.keys(p.parametri[c] || {})])) if (String(att[c]?.[k] ?? '') !== String(p.parametri[c]?.[k] ?? '')) nDiff++;
   const tutte = tutteLeProve(), ops = [...new Set(tutte.map(x => x.operatore))], tipi = [...new Set([...TIPI_PROVA, ...tutte.map(x => x.tipo)])];
+  const col = p.produzione, colEsiste = col && (S.modello?.produzioni || []).some(x => x.id === col.id);
   const v = sovra(`<div class="dett-prova">
-      <div>${u ? `<img class="foto-big" src="${u}" alt="">` : '<div class="vuoto">Foto non disponibile</div>'}
-        <div class="nota">${giornoLungo(p.t)} alle <b>${oraSec(p.t)}</b> · <span style="text-transform:capitalize">${esc(p.prodotto)}</span>${p.produzione ? ` · produzione dalle ${SMI.fmtOra(p.produzione.inizio)} (${n0(p.produzione.t)} cassette, ${pc(p.produzione.r, p.produzione.t)} scarti)` : ''}</div>
+      <div>${u ? `<img class="foto-big" src="${u}" alt="">` : ''}
+        <div class="nota" ${u ? '' : 'style="margin-top:0"'}>${giornoLungo(p.t)} alle <b>${oraSec(p.t)}</b> · <span style="text-transform:capitalize">${esc(p.prodotto)}</span>${p.foto ? ' · foto dello scarto' : ' · prova registrata a mano'}</div>
+        ${col ? `<div class="nota">Colaggio <b>${esc(testoColaggio(col))}</b> · ${n0(col.t)} cassette, ${pc(col.r, col.t)} scarti ${colEsiste ? '<button type="button" class="btn piccolo" id="dApriCol">Apri colaggio</button>' : ''}</div>` : ''}
+        <h3 style="margin-top:16px">Foto e documenti allegati</h3>
+        <div id="dAll">${allegatiHtml(p.allegati, true)}</div>
+        <div class="barra-filtri" style="margin-top:8px"><input type="file" id="dFile" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.ppt,.pptx,.zip" class="nascosto"><button type="button" class="btn" id="dAggiungi">+ Aggiungi foto o documenti</button></div>
         <div class="nota">Salvata da ${esc(p.chi || '—')} il ${giornoCorto(p.creato)} ${SMI.fmtOra(p.creato)}${p.modificato ? ` · modificata da ${esc(p.modificatoDa || '—')} il ${giornoCorto(p.modificato)} ${SMI.fmtOra(p.modificato)}` : ''}${p.gruppo ? ' · fa parte di un gruppo di prove salvate insieme' : ''}</div></div>
       <form id="fDett" class="form-prova">
+        <label class="campo">Colaggio<select name="colaggio">${opzioniColaggio(col?.id || '')}${col && !colEsiste ? `<option value="${esc(col.id)}" selected>${esc(testoColaggio(col))} (non più nei dati)</option>` : ''}</select></label>
+        <label class="campo">Codice colaggio / lotto<input type="text" name="codice" value="${esc(p.codiceColaggio || '')}"></label>
         <label class="campo">Operatore<input type="text" name="operatore" list="dlOp2" required value="${esc(p.operatore)}"></label><datalist id="dlOp2">${ops.map(o => `<option value="${esc(o)}">`).join('')}</datalist>
         <label class="campo">Tipo di prova<input type="text" name="tipo" list="dlTipo2" required value="${esc(p.tipo)}"></label><datalist id="dlTipo2">${tipi.map(o => `<option value="${esc(o)}">`).join('')}</datalist>
         <label class="campo">Esito<select name="esito">${Object.entries(ESITI).map(([k, l]) => `<option value="${k}" ${p.esito === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
         <label class="campo">Note<textarea name="note" rows="4">${esc(p.note)}</textarea></label>
-        <div class="escl-piede"><button type="button" class="btn" id="dElimina" style="color:#ffb4ae">Elimina</button><span class="spazio"></span><button type="button" class="btn" id="dScarica">⬇ Foto</button><button class="btn primario">Salva modifiche</button></div>
+        <div class="escl-piede"><button type="button" class="btn" id="dElimina" style="color:#ffb4ae">Elimina</button><span class="spazio"></span>${p.foto ? '<button type="button" class="btn" id="dScarica">⬇ Foto</button>' : ''}<button class="btn primario">Salva modifiche</button></div>
       </form></div>
     <h3 style="margin-top:18px">Parametri di analisi al momento della prova</h3>
-    <div class="nota" style="margin-top:0">${p.parametriCerti ? 'Valori esatti di quel momento.' : 'Ricostruiti dai valori attuali e dallo storico delle modifiche: la registrazione delle modifiche non copriva ancora quel momento, quindi potrebbero non essere esatti.'}${att ? ` ${nDiff ? `<b>${nDiff}</b> valori diversi da quelli attuali (evidenziati).` : 'Tutti uguali ai valori attuali.'}` : ''}</div>
-    ${tabellaParametri(p.parametri, att)}
+    <div class="nota" style="margin-top:0">${!p.parametri ? '' : p.parametriCerti ? 'Valori esatti di quel momento.' : 'Ricostruiti dai valori attuali e dallo storico delle modifiche: la registrazione delle modifiche non copriva ancora quel momento, quindi potrebbero non essere esatti.'}${att && p.parametri ? ` ${nDiff ? `<b>${nDiff}</b> valori diversi da quelli attuali (evidenziati).` : 'Tutti uguali ai valori attuali.'}` : ''}</div>
+    <div class="sezione" style="margin-top:8px">${barraViste()}${tabellaParametri(p.parametri, att)}</div>
     <div class="escl-piede" style="margin-top:12px"><span class="spazio"></span><button class="btn" id="dChiudi">Chiudi</button></div>`, 'larga');
+  const riapri = () => { v.remove(); apriDettaglioProva(id); if (location.hash === '#prove') aggiornaRisultatiProve(); };
+  const rimuovi = async i => {
+    const a = p.allegati[i]; if (!confirm(`Togliere "${a.nome}" da questa prova?`)) return;
+    if (await modificaProva(id, { allegati: p.allegati.filter((_, j) => j !== i) })) {
+      if (!tutteLeProve().some(x => x.id !== id && (x.allegati || []).some(y => y.percorso === a.percorso))) await sb().storage.from('smi-allegati').remove([a.percorso]);
+      toast('Allegato tolto'); riapri();
+    }
+  };
+  applicaVista();
+  collegaAllegati(v.querySelector('#dAll'), p.allegati || [], rimuovi);
+  v.querySelector('#dAggiungi').onclick = () => v.querySelector('#dFile').click();
+  v.querySelector('#dFile').onchange = async e => {
+    const files = [...e.target.files]; if (!files.length) return;
+    const b = v.querySelector('#dAggiungi'); b.disabled = true; b.textContent = `Carico ${files.length} file…`;
+    const { allegati, errori } = await caricaAllegati(`prove/${id}`, files);
+    if (errori.length) toast('Non caricati: ' + esc(errori.join(' · ')));
+    if (allegati.length && await modificaProva(id, { allegati: [...(S.archivioProve.get(id).allegati || []), ...allegati] })) { toast(`${allegati.length} file aggiunti`); riapri(); }
+    else { b.disabled = false; b.textContent = '+ Aggiungi foto o documenti'; }
+  };
+  v.querySelector('#dApriCol')?.addEventListener('click', () => { v.remove(); if (location.hash) { location.hash = ''; setTimeout(() => apriProduzione(col.id), 600); } else apriProduzione(col.id); });
   v.querySelector('#dChiudi').onclick = () => v.remove();
-  v.querySelector('#dScarica').onclick = () => scaricaFoto(p.foto, `${isoG(p.t)}_${oraSec(p.t).replace(/:/g, '')}_${nomeSicuro(p.prodotto)}_${nomeSicuro(p.tipo)}.jpg`);
+  v.querySelector('#dScarica')?.addEventListener('click', () => scaricaFoto(p.foto, `${isoG(p.t)}_${oraSec(p.t).replace(/:/g, '')}_${nomeSicuro(p.prodotto)}_${nomeSicuro(p.tipo)}.jpg`));
   v.querySelector('#fDett').onsubmit = async e => {
     e.preventDefault(); const d = Object.fromEntries(new FormData(e.target));
-    if (await modificaProva(id, { operatore: d.operatore.trim(), tipo: d.tipo.trim(), esito: d.esito, note: d.note.trim() })) { toast('Prova aggiornata'); v.remove(); render(); }
+    const nuovoCol = d.colaggio === col?.id ? col : datiColaggio(d.colaggio);
+    if (await modificaProva(id, { operatore: d.operatore.trim(), tipo: d.tipo.trim(), esito: d.esito, note: d.note.trim(), produzione: nuovoCol, codiceColaggio: d.codice.trim() })) { toast('Prova aggiornata'); v.remove(); if (location.hash === '#prove') aggiornaRisultatiProve(); }
   };
   v.querySelector('#dElimina').onclick = async () => {
-    if (!confirm('Eliminare questa prova dall\'archivio? La foto verrà cancellata.')) return;
-    if (await modificaProva(id, { eliminata: true })) { await sb().storage.from('smi-foto').remove([p.foto]); S.pv.sel.delete(id); toast('Prova eliminata'); v.remove(); render(); }
+    if (!confirm('Eliminare questa prova dall\'archivio? La foto e gli allegati verranno cancellati.')) return;
+    if (await modificaProva(id, { eliminata: true })) {
+      if (p.foto) await sb().storage.from('smi-foto').remove([p.foto]);
+      const soli = (p.allegati || []).filter(a => !tutteLeProve().some(x => (x.allegati || []).some(y => y.percorso === a.percorso))).map(a => a.percorso);
+      if (soli.length) await sb().storage.from('smi-allegati').remove(soli);
+      S.pv.sel.delete(id); toast('Prova eliminata'); v.remove(); if (location.hash === '#prove') aggiornaRisultatiProve();
+    }
   };
+}
+// zip: una cartella per prova con foto e allegati, più il CSV con tutti i dati
+async function scaricaZipProve(ps) {
+  if (!ps.length) return;
+  toast(`Preparo ${ps.length} prove…`);
+  try {
+    const JSZip = await caricaJSZip(), zip = new JSZip();
+    zip.file('prove.csv', csvProve(ps));
+    let manca = 0;
+    const voci = ps.flatMap(p => {
+      const cart = `${isoG(p.t)}_${oraSec(p.t).replace(/:/g, '')}_${nomeSicuro(p.prodotto)}_${nomeSicuro(p.tipo)}_${p.id}`;
+      return [...(p.foto ? [{ b: 'smi-foto', percorso: p.foto, nome: `${cart}/foto_scarto.jpg` }] : []), ...(p.allegati || []).map((a, i) => ({ b: 'smi-allegati', percorso: a.percorso, nome: `${cart}/${i + 1}_${a.nome}` }))];
+    });
+    for (let i = 0; i < voci.length; i += 6) await Promise.all(voci.slice(i, i + 6).map(async x => { const { data } = await sb().storage.from(x.b).download(x.percorso); if (data) zip.file(x.nome, data); else manca++; }));
+    scaricaBlob(await zip.generateAsync({ type: 'blob' }), `prove_${isoG(SMI.adesso())}.zip`);
+    if (manca) toast(`${manca} file non più disponibili`);
+  } catch (e) { toast('Download non riuscito: ' + esc(e.message)); }
 }
 async function confrontaProve(ps) {
   ps = ps.slice().sort((a, b) => a.t - b.t);
-  await urlFirmati(ps.map(p => p.foto));
+  await urlFirmati(ps.map(miniatura).filter(Boolean));
   const cams = [...new Set(ps.flatMap(p => Object.keys(p.parametri || {})))].sort();
   const chiavi = [...new Set(ps.flatMap(p => cams.flatMap(c => Object.keys(p.parametri?.[c] || {}))))];
   const righe = [];
@@ -3011,20 +3198,22 @@ async function confrontaProve(ps) {
     righe.push({ c, k, vals, diverso: new Set(vals.map(x => String(x ?? ''))).size > 1 });
   }
   const ord = (a, b) => { const ia = PARAM_PRINCIPALI.findIndex(([x]) => x === a.k), ib = PARAM_PRINCIPALI.findIndex(([x]) => x === b.k); return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib) || a.k.localeCompare(b.k) || a.c.localeCompare(b.c); };
-  const corpo = soloDiv => righe.filter(r => !soloDiv || r.diverso).sort(ord).map(r => `<tr class="${r.diverso ? 'diverso-r' : ''}"><td>${esc(etichettaParam(r.k))} <small>cam. ${esc(r.c)}</small></td>${r.vals.map(x => `<td>${esc(x ?? '—')}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${ps.length + 1}" class="vuoto">Nessuna differenza: tutte le prove avevano gli stessi parametri.</td></tr>`;
+  const corpo = soloDiv => righe.filter(r => !soloDiv || r.diverso).sort(ord).map(r => `<tr class="${r.diverso ? 'diverso-r' : ''}" data-pk="${esc(r.k)}"><td>${esc(etichettaParam(r.k))} <small>cam. ${esc(r.c)}</small></td>${r.vals.map(x => `<td>${esc(x ?? '—')}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${ps.length + 1}" class="vuoto">Nessuna differenza: tutte le prove avevano gli stessi parametri.</td></tr>`;
   const v = sovra(`<h2>Confronto di ${ps.length} prove</h2>
     <div class="barra-filtri" style="margin-top:8px"><label class="switch"><input type="checkbox" id="cTutti"><i></i>Mostra anche i parametri uguali</label><span class="spazio"></span><button class="btn" id="cChiudi">Chiudi</button></div>
-    <div class="scroll-x"><table class="tabella mod-tab confronto"><thead><tr><th></th>${ps.map(p => `<th><div class="conf-th">${urlFoto.get(p.foto) ? `<img src="${urlFoto.get(p.foto)}" alt="">` : ''}<b>${esc(p.tipo)}</b><span>${giornoCorto(p.t)} ${oraSec(p.t)}</span><span style="text-transform:capitalize">${esc(p.prodotto)} · ${esc(p.operatore)}</span><span style="color:${COL_ESITO[p.esito]}">${ESITI[p.esito] || ''}</span></div></th>`).join('')}</tr></thead><tbody id="cCorpo">${corpo(true)}</tbody></table></div>`, 'larga');
+    <div class="sezione" style="margin-top:0">${barraViste()}
+    <div class="scroll-x"><table class="tabella mod-tab confronto"><thead><tr><th></th>${ps.map(p => `<th><div class="conf-th">${urlFoto.get(miniatura(p)) ? `<img src="${urlFoto.get(miniatura(p))}" alt="">` : ''}<b>${esc(p.tipo)}</b><span>${giornoCorto(p.t)} ${oraSec(p.t)}</span><span style="text-transform:capitalize">${esc(p.prodotto)} · ${esc(p.operatore)}</span><span style="color:${COL_ESITO[p.esito]}">${ESITI[p.esito] || ''}</span></div></th>`).join('')}</tr></thead><tbody id="cCorpo">${corpo(true)}</tbody></table></div></div>`, 'larga');
   v.querySelector('#cChiudi').onclick = () => v.remove();
-  v.querySelector('#cTutti').onchange = e => { v.querySelector('#cCorpo').innerHTML = corpo(!e.target.checked); };
+  v.querySelector('#cTutti').onchange = e => { v.querySelector('#cCorpo').innerHTML = corpo(!e.target.checked); applicaVista(); };
+  applicaVista();
 }
 function csvCella(x) { const s = String(x ?? ''); return /[;"\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; }
 function csvProve(ps) {
   const cams = [...new Set(ps.flatMap(p => Object.keys(p.parametri || {})))].sort();
   const chiavi = [...new Set(ps.flatMap(p => cams.flatMap(c => Object.keys(p.parametri?.[c] || {}))))].sort();
   const colPar = cams.flatMap(c => chiavi.map(k => [c, k]));
-  const testa = ['Data', 'Ora', 'Prodotto', 'Tipo di prova', 'Operatore', 'Esito', 'Note', 'Cassette produzione', '% scarti produzione', 'Parametri esatti', 'Salvata da', 'Foto', ...colPar.map(([c, k]) => `cam${c} ${k}`)];
-  const righe = ps.map(p => [isoG(p.t), oraSec(p.t), p.prodotto, p.tipo, p.operatore, ESITI[p.esito] || '', p.note, p.produzione?.t ?? '', p.produzione?.t ? n1(100 * p.produzione.r / p.produzione.t) : '', p.parametriCerti ? 'sì' : 'ricostruiti', p.chi, p.foto, ...colPar.map(([c, k]) => p.parametri?.[c]?.[k] ?? '')]);
+  const testa = ['Data', 'Ora', 'Prodotto', 'Tipo di prova', 'Operatore', 'Esito', 'Note', 'Colaggio (inizio)', 'Codice colaggio / lotto', 'Cassette colaggio', '% scarti colaggio', 'Allegati', 'Parametri esatti', 'Salvata da', 'Foto', ...colPar.map(([c, k]) => `cam${c} ${k}`)];
+  const righe = ps.map(p => [isoG(p.t), oraSec(p.t), p.prodotto, p.tipo, p.operatore, ESITI[p.esito] || '', p.note, p.produzione ? `${isoG(p.produzione.inizio)} ${SMI.fmtOra(p.produzione.inizio)}` : '', p.codiceColaggio || '', p.produzione?.t ?? '', p.produzione?.t ? n1(100 * p.produzione.r / p.produzione.t) : '', (p.allegati || []).map(a => a.nome).join(', '), p.parametriCerti ? 'sì' : 'ricostruiti', p.chi, p.foto || '', ...colPar.map(([c, k]) => p.parametri?.[c]?.[k] ?? '')]);
   return '\ufeff' + [testa, ...righe].map(r => r.map(csvCella).join(';')).join('\r\n');
 }
 function esportaProveCsv(ps) { if (!ps.length) return toast('Nessuna prova da esportare'); scaricaBlob(new Blob([csvProve(ps)], { type: 'text/csv;charset=utf-8' }), `prove_${isoG(SMI.adesso())}.csv`); }
@@ -3202,6 +3391,134 @@ function collegaAnalisi() {
     const rr = [...fermiAnalisi().map(f => [isoG(f.da), SMI.fmtOra(f.da), f.a ? SMI.fmtOra(f.a) : 'in corso', Math.round((fineF(f) - f.da) / 60e3), TIPO_FERMO[f.tipo], f.prodotto || '', SMI.turnoDi(f.da).nome]),
       ...cambiAnalisi().map(c => [isoG(c.da), SMI.fmtOra(c.da), c.a ? SMI.fmtOra(c.a) : 'in corso', Math.round((fineC(c) - c.da) / 60e3), 'Cambio prodotto', `${c.dal} → ${c.al}`, SMI.turnoDi(c.da).nome])].sort((x, y) => (x[0] + x[1]).localeCompare(y[0] + y[1]));
     scaricaBlob(new Blob(['\ufeff' + [testa, ...rr].map(r => r.map(csvCella).join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8' }), `fermi_${S.an.da}_${S.an.a}.csv`);
+  };
+}
+
+/* prove di un colaggio, nel riepilogo della produzione */
+function pannelloProveColaggio(p) {
+  if (S.modo !== 'remoto') return '';
+  return `<div class="sezione pannello" id="pProveCol"><h3>Prove su questo colaggio</h3><div id="pProveColL" class="nota" style="margin-top:0">Carico…</div>
+    <div class="barra-filtri" style="margin:10px 0 0"><button class="btn primario" id="pNuovaProva">+ Nuova prova su questo colaggio</button></div></div>`;
+}
+async function collegaProveColaggio(p) {
+  const box = $('#pProveCol'); if (!box) return;
+  const disegna = async () => {
+    if (!S.archivioProve) await caricaProve();
+    const ps = tutteLeProve().filter(x => x.produzione?.id === p.id).sort((a, b) => a.t - b.t);
+    const l = $('#pProveColL'); if (!l) return;
+    l.innerHTML = ps.length ? `<div class="foto-griglia piccola">${ps.map(x => `<figure class="foto prova-card" data-prova="${x.id}"><div class="foto-img" data-img="${esc(miniatura(x) || '')}"></div><figcaption class="prova-cap"><div class="prova-tit"><b>${esc(x.tipo)}</b><span class="esito" style="color:${COL_ESITO[x.esito]}">● ${ESITI[x.esito] || ''}</span></div><div>${oraSec(x.t)} · ${esc(x.operatore)}${x.allegati?.length ? ` · 📎 ${x.allegati.length}` : ''}</div></figcaption></figure>`).join('')}</div>` : 'Nessuna prova associata a questo colaggio.';
+    l.querySelectorAll('[data-prova]').forEach(el => el.onclick = () => apriDettaglioProva(el.dataset.prova));
+    const imgs = [...l.querySelectorAll('[data-img]')];
+    await urlFirmati(imgs.map(i => i.dataset.img).filter(Boolean));
+    imgs.forEach(i => { const u = urlFoto.get(i.dataset.img); i.innerHTML = u ? `<img loading="lazy" src="${u}" alt="">` : '<span class="ico-doc grande">📎</span>'; });
+  };
+  $('#pNuovaProva').onclick = () => apriFormProva([], disegna, { colaggio: p.id, t: Math.min(SMI.adesso(), fineProd(p)) - (SMI.adesso() > fineProd(p) ? 60e3 : 0) });
+  disegna();
+}
+
+/* ==========================================================================
+   SEGNALIBRI DEI PARAMETRI
+   Un segnalibro è un elenco di parametri da mostrare (gli altri si nascondono) nella scheda
+   Parametri di una produzione, nel dettaglio e nel confronto delle prove.
+   Sono condivisi (riga 'viste_parametri' di smi_dati); quello scelto si ricorda nel browser e si può
+   aprire da un link (?parametri=<nome>) da salvare tra i preferiti del browser.
+   ========================================================================== */
+S.viste ||= [];
+const PRINCIPALI_ID = '__principali';
+function vistaAttiva() {
+  let id = ''; try { id = localStorage.getItem('smi_vista_par') || ''; } catch { }
+  if (id === PRINCIPALI_ID) return { id, nome: 'Parametri principali', parametri: PARAM_PRINCIPALI.map(([k]) => k) };
+  return S.viste.find(v => v.id === id) || null;
+}
+function scegliVista(id) { try { localStorage.setItem('smi_vista_par', id || ''); } catch { } applicaVista(); }
+// link ?parametri=nome → segnalibro scelto (una volta caricati i segnalibri)
+function vistaDaLink() {
+  const q = new URLSearchParams(location.search).get('parametri'); if (!q) return;
+  const v = q === 'principali' ? { id: PRINCIPALI_ID } : S.viste.find(x => x.id === q || x.nome.toLowerCase() === q.toLowerCase());
+  if (v) { try { localStorage.setItem('smi_vista_par', v.id); } catch { } }
+}
+function tuttiIParametri() {
+  const k = new Set(PARAM_PRINCIPALI.map(([x]) => x));
+  for (const prod of Object.values(S.modello?.parametri || {})) for (const cam of Object.values(prod || {})) for (const x of Object.keys(cam || {})) k.add(x);
+  return [...k];
+}
+function barraViste() {
+  const a = vistaAttiva();
+  return `<div class="barra-viste"><span class="nota" style="margin:0">Segnalibro</span>
+    <select class="sel-vista"><option value="">Tutti i parametri</option><option value="${PRINCIPALI_ID}" ${a?.id === PRINCIPALI_ID ? 'selected' : ''}>Parametri principali</option>
+      ${S.viste.map(v => `<option value="${esc(v.id)}" ${a?.id === v.id ? 'selected' : ''}>🔖 ${esc(v.nome)} (${v.parametri.length})</option>`).join('')}</select>
+    <button type="button" class="btn piccolo" data-vista="nuovo">+ Nuovo</button>
+    <button type="button" class="btn piccolo" data-vista="modifica" ${a && a.id !== PRINCIPALI_ID ? '' : 'hidden'}>Modifica</button>
+    <button type="button" class="btn piccolo" data-vista="link" ${a ? '' : 'hidden'} title="Link da salvare nei preferiti del browser">🔗 Link</button>
+    <span class="nota vista-info" style="margin:0"></span></div>`;
+}
+// nasconde gli elementi [data-pk] che non sono nel segnalibro scelto e aggiorna tutte le barre
+function applicaVista() {
+  const a = vistaAttiva(), set = a ? new Set(a.parametri) : null;
+  document.querySelectorAll('[data-pk]').forEach(el => el.classList.toggle('fuori-vista', !!set && !set.has(el.dataset.pk)));
+  document.querySelectorAll('.barra-viste').forEach(b => { if (b.querySelector('.sel-vista').options.length !== S.viste.length + 2) b.outerHTML = barraViste(); });
+  document.querySelectorAll('.barra-viste').forEach(b => {
+    b.querySelector('.sel-vista').value = a?.id || '';
+    b.querySelector('[data-vista=modifica]').hidden = !(a && a.id !== PRINCIPALI_ID);
+    b.querySelector('[data-vista=link]').hidden = !a;
+    b.querySelector('.vista-info').textContent = a ? `${a.parametri.length} parametri nel segnalibro` : '';
+  });
+  collegaBarreViste();
+}
+function collegaBarreViste() {
+  document.querySelectorAll('.barra-viste').forEach(b => {
+    b.querySelector('.sel-vista').onchange = e => scegliVista(e.target.value);
+    b.querySelector('[data-vista=nuovo]').onclick = () => editorVista(null);
+    b.querySelector('[data-vista=modifica]').onclick = () => editorVista(vistaAttiva());
+    b.querySelector('[data-vista=link]').onclick = async () => {
+      const a = vistaAttiva(); const url = `${location.origin}${location.pathname}?parametri=${encodeURIComponent(a.id === PRINCIPALI_ID ? 'principali' : a.nome)}`;
+      try { await navigator.clipboard.writeText(url); toast('Link copiato: salvalo nei preferiti del browser (Ctrl+D dopo averlo aperto)'); }
+      catch { prompt('Copia questo link e salvalo nei preferiti:', url); }
+    };
+  });
+}
+async function salvaViste(modifica) {
+  const { data, error } = await sb().from('smi_dati').select('dati').eq('id', 'viste_parametri');
+  if (error) { toast('Non riesco a leggere i segnalibri: ' + esc(error.message)); return false; }
+  const lista = modifica((data?.[0]?.dati?.lista || []).slice()); if (!lista) return false;
+  const { error: e2 } = await sb().from('smi_dati').upsert({ id: 'viste_parametri', dati: { lista }, aggiornato: new Date().toISOString() });
+  if (e2) { toast('Non riesco a salvare: ' + esc(e2.message)); return false; }
+  S.viste = lista; return true;
+}
+function editorVista(vista) {
+  if (S.modo !== 'remoto') { toast('I segnalibri si salvano solo con l\'accesso ai dati del PC della linea'); return; }
+  const tutti = tuttiIParametri(), scelti = new Set(vista?.parametri || []);
+  const ord = PARAM_PRINCIPALI.map(([k]) => k).filter(k => tutti.includes(k)).concat(tutti.filter(k => !PARAM_PRINCIPALI.some(([x]) => x === k)).sort());
+  const v = sovra(`<h2>${vista ? 'Modifica segnalibro' : 'Nuovo segnalibro'}</h2>
+    <div class="nota" style="margin-top:4px">Scegli i parametri da vedere: con questo segnalibro attivo, nelle schede dei parametri compaiono solo questi. Il segnalibro è condiviso con tutti gli utenti.</div>
+    <form id="fVista" class="form-prova">
+      <label class="campo">Nome<input type="text" name="nome" required value="${esc(vista?.nome || '')}" placeholder="es. Controllo Goleador" autocomplete="off"></label>
+      <div class="barra-filtri" style="margin:0"><input type="search" id="vCerca" placeholder="Cerca parametro…" style="flex:1"><button type="button" class="btn piccolo" id="vPrinc">Solo principali</button><button type="button" class="btn piccolo" id="vNessuno">Nessuno</button><span class="nota" id="vConta" style="margin:0"></span></div>
+      <div class="lista-check">${ord.map(k => `<label data-k="${esc((k + ' ' + etichettaParam(k)).toLowerCase())}"><input type="checkbox" value="${esc(k)}" ${scelti.has(k) ? 'checked' : ''}><span>${esc(etichettaParam(k))}${etichettaParam(k) !== k ? ` <small>${esc(k)}</small>` : ''}</span></label>`).join('')}</div>
+      <div class="escl-piede">${vista ? '<button type="button" class="btn" id="vElimina" style="color:#ffb4ae">Elimina</button>' : ''}<span class="spazio"></span><button type="button" class="btn" id="vAnn">Annulla</button><button class="btn primario">Salva segnalibro</button></div>
+    </form>`, 'media');
+  const conta = () => { v.querySelector('#vConta').textContent = `${v.querySelectorAll('.lista-check input:checked').length} scelti`; };
+  v.querySelectorAll('.lista-check input').forEach(c => c.onchange = conta); conta();
+  v.querySelector('#vCerca').oninput = e => { const q = e.target.value.toLowerCase().trim(); v.querySelectorAll('.lista-check label').forEach(l => l.style.display = !q || l.dataset.k.includes(q) ? '' : 'none'); };
+  v.querySelector('#vPrinc').onclick = () => { const p = new Set(PARAM_PRINCIPALI.map(([k]) => k)); v.querySelectorAll('.lista-check input').forEach(c => c.checked = p.has(c.value)); conta(); };
+  v.querySelector('#vNessuno').onclick = () => { v.querySelectorAll('.lista-check input').forEach(c => c.checked = false); conta(); };
+  v.querySelector('#vAnn').onclick = () => v.remove();
+  v.querySelector('#vElimina')?.addEventListener('click', async () => {
+    if (!confirm(`Eliminare il segnalibro "${vista.nome}" per tutti?`)) return;
+    if (await salvaViste(l => l.filter(x => x.id !== vista.id))) { toast('Segnalibro eliminato'); v.remove(); scegliVista(''); }
+  });
+  v.querySelector('#fVista').onsubmit = async e => {
+    e.preventDefault();
+    const nome = new FormData(e.target).get('nome').trim(), parametri = [...v.querySelectorAll('.lista-check input:checked')].map(c => c.value);
+    if (!parametri.length) { toast('Scegli almeno un parametro'); return; }
+    const id = vista?.id || 'v' + Date.now().toString(36);
+    const ok = await salvaViste(l => {
+      if (l.some(x => x.id !== id && x.nome.toLowerCase() === nome.toLowerCase())) { toast('Esiste già un segnalibro con questo nome'); return null; }
+      const rec = { id, nome, parametri, chi: S.utente?.email || '', aggiornato: SMI.adesso() };
+      const i = l.findIndex(x => x.id === id); if (i >= 0) l[i] = rec; else l.push(rec);
+      return l;
+    });
+    if (ok) { toast('Segnalibro salvato'); v.remove(); scegliVista(id); }
   };
 }
 

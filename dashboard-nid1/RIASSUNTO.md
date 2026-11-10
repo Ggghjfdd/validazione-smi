@@ -1,7 +1,7 @@
 # Dashboard produzione – Linea NID 1 (Perfetti Van Melle)
 
 > **Prompt per riprendere il lavoro in una nuova conversazione.** Incolla tutto questo testo (o allega il file) come primo messaggio.
-> Stato aggiornato al **10 novembre 2026**. Versione pubblicata: **v22 · 10 nov 12:30**.
+> Stato aggiornato al **10 novembre 2026**. Versione pubblicata: **v23 · 10 nov 14:00**.
 > Lingua di lavoro: **italiano**. L'utente lavora in produzione (non è uno sviluppatore): spiegazioni semplici, passi concreti sul PC della linea, niente gergo.
 
 ---
@@ -181,3 +181,9 @@ Pagina web "in vetro" (tema scuro) che mostra in tempo reale la produzione della
 6. **Registro dell'ispezione** per turno (proposto, non fatto): riga temporale con ispezione ON/OFF, espulsione ON/OFF, learning, con evidenza dei periodi lunghi a ispezione spenta.
 7. **Storico parametri passato**: farsi mandare **D:\backup** zippato per ricostruire le modifiche delle ultime settimane.
 8. Correzione esatta dei totali per turno e del `COUNTERS RESET` usando i trace (proposto, non fatto).
+
+## Aggiornamento v23 (10 nov 2026)
+- **Nuova prova a mano** (pulsante "+ Nuova prova" nella pagina Prove, oppure "+ Nuova prova su questo colaggio" nel Riepilogo di una produzione): data/ora, prodotto, colaggio, codice, operatore, tipo, esito, note, allegati; i parametri sono quelli del prodotto a quell'ora.
+- **Colaggio** = una produzione della dashboard (campo `produzione` della prova: {id, inizio, fine, prodotto, t, r}) + campo libero `codiceColaggio` (lotto). Si sceglie dall'elenco (ultime 300 produzioni), proposto in automatico in base all'ora. Raggruppamento "Colaggio" nella pagina Prove; pannello "Prove su questo colaggio" nella finestra della produzione; "Apri colaggio" dal dettaglio della prova.
+- **Allegati** (foto e documenti, max 50 MB l'uno) nello spazio privato Supabase **`smi-allegati`** → va creato eseguendo **`dashboard-nid1/supabase_allegati.sql`** (consegnato il 10/11, da confermare che sia stato eseguito). Campo `allegati: [{percorso, nome, tipo, dimensione, caricato, chi}]`; percorsi `prove/<id>/…` o `gruppi/<gruppo>/…` (condivisi tra le prove salvate insieme: si cancellano solo quando nessuna prova li usa). Nel dettaglio: aggiungi/togli/scarica; le immagini si ingrandiscono. Lo zip delle prove ha una cartella per prova con foto, allegati e prove.csv.
+- **Segnalibri dei parametri**: elenchi di parametri condivisi (riga `viste_parametri` di smi_dati: {lista:[{id, nome, parametri:[chiavi], chi, aggiornato}]}). Barra "Segnalibro" nella scheda Parametri di una produzione, nel dettaglio e nel confronto delle prove: scegliendo un segnalibro si vedono solo quei parametri (classe `fuori-vista` sugli elementi `[data-pk]`). Scelta ricordata nel browser; link `produzione.html?parametri=<nome>` (o `?parametri=principali`) da salvare nei preferiti. Preimpostato "Parametri principali".

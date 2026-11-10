@@ -504,3 +504,40 @@ tr.cliccabile{cursor:pointer} tr.cliccabile:hover td{background:rgba(255,255,255
 .ore-col i{display:block;background:linear-gradient(180deg,#ec835a,#e5534b);border-radius:4px 4px 0 0;min-height:1px}
 .ore-col span{font-size:10.5px;color:var(--text-3);text-align:center;height:12px}
 .val-barra{font-size:11px;fill:var(--text-2)}
+
+/* prove: form, allegati */
+.sovra-box.media{width:min(760px,100%)}
+.due-campi{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:600px){.due-campi{grid-template-columns:1fr}}
+input[type=datetime-local]{width:100%}
+.file-zona{position:relative;display:flex;align-items:center;justify-content:center;text-align:center;min-height:64px;padding:12px;border:1.5px dashed var(--line);border-radius:12px;background:rgba(255,255,255,.03);cursor:pointer}
+.file-zona:hover{border-color:var(--glass-hi);background:rgba(255,255,255,.06)}
+.file-zona input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
+.file-lista{display:flex;flex-wrap:wrap;gap:6px}
+.allegati{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.allegato{position:relative;cursor:pointer;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.04);overflow:hidden;margin:0}
+.allegato:hover{border-color:var(--glass-hi)}
+.allegato.img .foto-img{aspect-ratio:4/3}
+.allegato figcaption{display:flex;align-items:center;gap:6px;font-size:12px;padding:6px 8px;color:var(--text-2)}
+.allegato figcaption span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.allegato.doc{display:flex;align-items:center;gap:10px;padding:10px}
+.doc-nome{display:flex;flex-direction:column;min-width:0;flex:1}
+.doc-nome b{font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.doc-nome small{font-size:11px;color:var(--text-3)}
+.ico-doc{flex:none;display:inline-flex;align-items:center;justify-content:center;width:38px;height:44px;border-radius:6px;background:rgba(57,135,229,.18);color:#cfe2ff;font-size:10.5px;font-weight:700;letter-spacing:.4px}
+.ico-doc.grande{width:auto;height:auto;padding:10px 14px;font-size:22px;background:none}
+.allegato .x{flex:none;appearance:none;border:0;background:rgba(0,0,0,.4);color:var(--text-1);width:22px;height:22px;border-radius:6px;cursor:pointer;font-size:15px;line-height:1}
+.allegato .x:hover{background:var(--crit)}
+.btn.piccolo{padding:4px 10px;font-size:12px;margin-left:6px}
+.foto-griglia.piccola{grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}
+
+/* segnalibri parametri */
+.fuori-vista{display:none!important}
+.barra-viste{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 12px;padding:8px 10px;border-radius:12px;background:rgba(57,135,229,.08);border:1px solid rgba(57,135,229,.25)}
+.barra-viste select{padding:6px 30px 6px 10px;font-size:13px}
+.barra-viste .btn.piccolo{margin-left:0}
+.lista-check{max-height:46vh;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:2px 12px;padding:8px;border:1px solid var(--line-soft);border-radius:12px;background:rgba(255,255,255,.03)}
+.lista-check label{display:flex;gap:8px;align-items:flex-start;font-size:13px;padding:5px 4px;border-radius:8px;cursor:pointer}
+.lista-check label:hover{background:rgba(255,255,255,.05)}
+.lista-check input{accent-color:#3987e5;margin-top:2px}
+.lista-check small{color:var(--text-3);font-size:11px}
