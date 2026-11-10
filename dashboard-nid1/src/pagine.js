@@ -7,6 +7,10 @@ const TIPI_PROVA = ['Prova parametri', 'Campione difettoso', 'Cassette neutre', 
 const ESITI = { valutare: 'Da valutare', corretto: 'Scarto corretto', falso: 'Falso scarto' };
 const COL_ESITO = { valutare: 'var(--text-3)', corretto: 'var(--good)', falso: 'var(--crit)' };
 const urlFoto = new Map();
+const POSIZIONI = [['sx', 'SX'], ['centro', 'CENTRO'], ['dx', 'DX']];
+const campoPosizioni = (sel = []) => `<div class="campo">Dove si trova il difetto<span class="pos-difetto">${POSIZIONI.map(([k, l]) => `<label><input type="checkbox" name="pos_${k}" ${sel.includes(k) ? 'checked' : ''}><span>${l}</span></label>`).join('')}</span></div>`;
+const posizioniDa = d => POSIZIONI.map(([k]) => k).filter(k => d['pos_' + k]);
+const testoPosizioni = p => (p.posizioneDifetto || []).map(k => (POSIZIONI.find(x => x[0] === k) || [, k])[1]).join(' · ');
 const oraSec = t => new Date(t).toISOString().slice(11, 19);
 const isoG = t => new Date(t).toISOString().slice(0, 10);
 const nomeSicuro = s => String(s || 'prodotto').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase();
@@ -159,7 +163,7 @@ async function salvaProva(base, campi, gruppo, allegati = []) {
   const rec = {
     id, t: base.t, foto, fotoOrig: base.fotoSrc || null, prodotto, gruppo,
     operatore: campi.operatore.trim(), tipo: campi.tipo.trim(), esito: campi.esito, note: (campi.note || '').trim(),
-    produzione: datiColaggio(campi.colaggio), codiceColaggio: (campi.codice || '').trim(), allegati,
+    produzione: datiColaggio(campi.colaggio), codiceColaggio: (campi.codice || '').trim(), allegati, posizioneDifetto: posizioniDa(campi),
     parametri: parametriAl(prodotto, base.t),
     parametriCerti: !!(S.storiaParDa && base.t >= S.storiaParDa),
     chi: S.utente?.email || '', creato: SMI.adesso(),
@@ -207,7 +211,7 @@ function apriFormProva(fs, dopo, opz = {}) {
         <label class="campo">Tipo di prova<input type="text" name="tipo" list="dlTipo" required autocomplete="off" placeholder="Scegli o scrivi"></label></div>
       <datalist id="dlOp">${ops.map(o => `<option value="${esc(o)}">`).join('')}</datalist>
       <datalist id="dlTipo">${tipi.map(o => `<option value="${esc(o)}">`).join('')}</datalist>
-      <label class="campo">Esito<select name="esito">${Object.entries(ESITI).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label>
+      <div class="due-campi">${campoPosizioni()}<label class="campo">Esito<select name="esito">${Object.entries(ESITI).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label></div>
       <label class="campo">Note<textarea name="note" rows="3" placeholder="Cosa si stava provando, cosa si è visto…"></textarea></label>
       ${campoFile('fpFile')}
       <div class="escl-piede"><span id="fpErr" class="nota" style="margin:0;color:#ffb4ae"></span><span class="spazio"></span><button type="button" class="btn" id="fpAnn">Annulla</button><button class="btn primario" id="fpOk">Salva ${fs.length > 1 ? fs.length + ' prove' : 'prova'}</button></div>
@@ -322,7 +326,7 @@ function filtraProve() {
   return tutteLeProve().filter(p => p.t >= da && p.t < a
     && (!f.prodotto || p.prodotto === f.prodotto) && (!f.tipo || p.tipo === f.tipo)
     && (!f.operatore || p.operatore === f.operatore) && (!f.esito || p.esito === f.esito)
-    && (!q || [p.prodotto, p.tipo, p.operatore, p.note, ESITI[p.esito], p.chi, p.codiceColaggio, ...(p.allegati || []).map(a => a.nome)].join(' ').toLowerCase().includes(q))
+    && (!q || [p.prodotto, p.tipo, p.operatore, p.note, ESITI[p.esito], p.chi, p.codiceColaggio, testoPosizioni(p), ...(p.allegati || []).map(a => a.nome)].join(' ').toLowerCase().includes(q))
   ).sort((x, y) => y.t - x.t);
 }
 const opzioni = (valori, sel, tutti) => `<option value="">${tutti}</option>` + valori.map(v => `<option value="${esc(v)}" ${v === sel ? 'selected' : ''}>${esc(v)}</option>`).join('');
@@ -349,7 +353,8 @@ function vistaProve() {
       <span class="spazio"></span>
       <button class="btn primario" id="pvNuova">+ Nuova prova</button>
       <button class="btn" id="pvConfronta" disabled>Confronta parametri</button>
-      <button class="btn" id="pvCsv">Esporta Excel (CSV)</button>
+      <button class="btn primario" id="pvXlsx">⬇ Excel prove</button>
+      <button class="btn" id="pvCsv" title="Tutti i campi e tutti i parametri">CSV completo</button>
       <button class="btn" id="pvZip">⬇ Scarica foto e documenti</button>
     </div>
     <div id="pvRisultati"></div>
@@ -383,14 +388,15 @@ function aggiornaRisultatiProve() {
       <label class="foto-sel" title="Seleziona per confrontare o scaricare"><input type="checkbox" data-psel="${p.id}" ${f.sel.has(p.id) ? 'checked' : ''}></label>
       <figcaption class="prova-cap"><div class="prova-tit"><b>${esc(p.tipo)}</b><span class="esito" style="color:${COL_ESITO[p.esito]}">● ${ESITI[p.esito] || ''}</span></div>
         <div><span style="text-transform:capitalize">${esc(p.prodotto)}</span> · ${esc(p.operatore)}${p.allegati?.length ? ` · <span title="Allegati">📎 ${p.allegati.length}</span>` : ''}</div>
+        ${p.posizioneDifetto?.length ? `<div class="nota" style="margin:2px 0 0">Difetto: <b>${testoPosizioni(p)}</b></div>` : ''}
         ${p.produzione || p.codiceColaggio ? `<div class="nota" style="margin:2px 0 0">Colaggio ${esc(testoColaggio(p.produzione))}${p.codiceColaggio ? ' · ' + esc(p.codiceColaggio) : ''}</div>` : ''}
         <div class="nota" style="margin:2px 0 0">${giornoCorto(p.t)} ${oraSec(p.t)}${p.note ? ' · ' + esc(p.note.slice(0, 60)) + (p.note.length > 60 ? '…' : '') : ''}</div></figcaption></figure>`;
-  const riga = p => `<tr data-prova="${p.id}" class="cliccabile"><td><input type="checkbox" data-psel="${p.id}" ${f.sel.has(p.id) ? 'checked' : ''}></td><td>${giornoCorto(p.t)} ${oraSec(p.t)}</td><td class="sx" style="text-transform:capitalize">${esc(p.prodotto)}</td><td class="sx">${esc(p.tipo)}</td><td class="sx">${esc(p.operatore)}</td><td class="sx" style="color:${COL_ESITO[p.esito]}">${ESITI[p.esito] || ''}</td><td class="sx">${esc(testoColaggio(p.produzione))}${p.codiceColaggio ? '<br><small>' + esc(p.codiceColaggio) + '</small>' : ''}</td><td class="sx note-cella">${p.allegati?.length ? `📎${p.allegati.length} ` : ''}${esc(p.note)}</td><td class="sx">${principali(p.parametri, 3)}</td></tr>`;
+  const riga = p => `<tr data-prova="${p.id}" class="cliccabile"><td><input type="checkbox" data-psel="${p.id}" ${f.sel.has(p.id) ? 'checked' : ''}></td><td>${giornoCorto(p.t)} ${oraSec(p.t)}</td><td class="sx" style="text-transform:capitalize">${esc(p.prodotto)}</td><td class="sx">${esc(p.tipo)}</td><td class="sx">${esc(p.operatore)}</td><td class="sx" style="color:${COL_ESITO[p.esito]}">${ESITI[p.esito] || ''}</td><td class="sx">${testoPosizioni(p) || '—'}</td><td class="sx">${esc(testoColaggio(p.produzione))}${p.codiceColaggio ? '<br><small>' + esc(p.codiceColaggio) + '</small>' : ''}</td><td class="sx note-cella">${p.allegati?.length ? `📎${p.allegati.length} ` : ''}${esc(p.note)}</td><td class="sx">${principali(p.parametri, 3)}</td></tr>`;
   box.innerHTML = riassuntoProve(lista) + ordine.map(k => {
     const ps = gruppi.get(k);
     return `<div class="sezione"><h3 class="gruppo-tit"><span style="text-transform:${f.gruppo === 'tempo' ? 'none' : 'capitalize'}">${esc(etichettaGruppo(k, f.gruppo))}</span><span class="chip">${ps.length}</span></h3>
       ${f.vista === 'schede' ? `<div class="foto-griglia">${ps.map(scheda).join('')}</div>`
-        : `<div class="scroll-x"><table class="tabella tab-prove"><thead><tr><th></th><th>Quando</th><th class="sx">Prodotto</th><th class="sx">Tipo</th><th class="sx">Operatore</th><th class="sx">Esito</th><th class="sx">Colaggio</th><th class="sx">Note</th><th class="sx">Parametri principali (cam. 0 / 1)</th></tr></thead><tbody>${ps.map(riga).join('')}</tbody></table></div>`}</div>`;
+        : `<div class="scroll-x"><table class="tabella tab-prove"><thead><tr><th></th><th>Quando</th><th class="sx">Prodotto</th><th class="sx">Tipo</th><th class="sx">Operatore</th><th class="sx">Esito</th><th class="sx">Difetto</th><th class="sx">Colaggio</th><th class="sx">Note</th><th class="sx">Parametri principali (cam. 0 / 1)</th></tr></thead><tbody>${ps.map(riga).join('')}</tbody></table></div>`}</div>`;
   }).join('');
   collegaRisultatiProve(lista);
 }
@@ -404,12 +410,13 @@ function collegaRisultatiProve(lista) {
   const imgs = [...box.querySelectorAll('[data-img]')];
   urlFirmati(imgs.map(i => i.dataset.img)).then(() => imgs.forEach(i => { const u = urlFoto.get(i.dataset.img); i.innerHTML = u ? `<img loading="lazy" src="${u}" alt="">` : `<span class="ico-doc grande">${i.dataset.img ? '—' : '📎'}</span>`; }));
   $('#pvCsv').onclick = () => esportaProveCsv(lista);
+  $('#pvXlsx').onclick = () => esportaProveXlsx(f.sel.size ? lista.filter(p => f.sel.has(p.id)) : lista);
   $('#pvZip').onclick = () => {
     const ps = f.sel.size ? lista.filter(p => f.sel.has(p.id)) : lista;
     if (!ps.length) return;
     scaricaZipProve(ps);
   };
-  $('#pvNuova').onclick = () => apriFormProva([], () => aggiornaRisultatiProve());
+  $('#pvNuova').onclick = () => apriFormProva([], () => render());
   $('#pvConfronta').onclick = () => confrontaProve(lista.filter(p => f.sel.has(p.id)));
 }
 function collegaProve() {
@@ -451,6 +458,7 @@ async function apriDettaglioProva(id) {
         <label class="campo">Codice colaggio / lotto<input type="text" name="codice" value="${esc(p.codiceColaggio || '')}"></label>
         <label class="campo">Operatore<input type="text" name="operatore" list="dlOp2" required value="${esc(p.operatore)}"></label><datalist id="dlOp2">${ops.map(o => `<option value="${esc(o)}">`).join('')}</datalist>
         <label class="campo">Tipo di prova<input type="text" name="tipo" list="dlTipo2" required value="${esc(p.tipo)}"></label><datalist id="dlTipo2">${tipi.map(o => `<option value="${esc(o)}">`).join('')}</datalist>
+        ${campoPosizioni(p.posizioneDifetto || [])}
         <label class="campo">Esito<select name="esito">${Object.entries(ESITI).map(([k, l]) => `<option value="${k}" ${p.esito === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
         <label class="campo">Note<textarea name="note" rows="4">${esc(p.note)}</textarea></label>
         <div class="escl-piede"><button type="button" class="btn" id="dElimina" style="color:#ffb4ae">Elimina</button><span class="spazio"></span>${p.foto ? '<button type="button" class="btn" id="dScarica">⬇ Foto</button>' : ''}<button class="btn primario">Salva modifiche</button></div>
@@ -459,7 +467,7 @@ async function apriDettaglioProva(id) {
     <div class="nota" style="margin-top:0">${!p.parametri ? '' : p.parametriCerti ? 'Valori esatti di quel momento.' : 'Ricostruiti dai valori attuali e dallo storico delle modifiche: la registrazione delle modifiche non copriva ancora quel momento, quindi potrebbero non essere esatti.'}${att && p.parametri ? ` ${nDiff ? `<b>${nDiff}</b> valori diversi da quelli attuali (evidenziati).` : 'Tutti uguali ai valori attuali.'}` : ''}</div>
     <div class="sezione" style="margin-top:8px">${barraViste()}${tabellaParametri(p.parametri, att)}</div>
     <div class="escl-piede" style="margin-top:12px"><span class="spazio"></span><button class="btn" id="dChiudi">Chiudi</button></div>`, 'larga');
-  const riapri = () => { v.remove(); apriDettaglioProva(id); if (location.hash === '#prove') aggiornaRisultatiProve(); };
+  const riapri = () => { v.remove(); apriDettaglioProva(id); if (location.hash === '#prove') render(); };
   const rimuovi = async i => {
     const a = p.allegati[i]; if (!confirm(`Togliere "${a.nome}" da questa prova?`)) return;
     if (await modificaProva(id, { allegati: p.allegati.filter((_, j) => j !== i) })) {
@@ -484,7 +492,7 @@ async function apriDettaglioProva(id) {
   v.querySelector('#fDett').onsubmit = async e => {
     e.preventDefault(); const d = Object.fromEntries(new FormData(e.target));
     const nuovoCol = d.colaggio === col?.id ? col : datiColaggio(d.colaggio);
-    if (await modificaProva(id, { operatore: d.operatore.trim(), tipo: d.tipo.trim(), esito: d.esito, note: d.note.trim(), produzione: nuovoCol, codiceColaggio: d.codice.trim() })) { toast('Prova aggiornata'); v.remove(); if (location.hash === '#prove') aggiornaRisultatiProve(); }
+    if (await modificaProva(id, { operatore: d.operatore.trim(), tipo: d.tipo.trim(), esito: d.esito, note: d.note.trim(), produzione: nuovoCol, codiceColaggio: d.codice.trim(), posizioneDifetto: posizioniDa(d) })) { toast('Prova aggiornata'); v.remove(); if (location.hash === '#prove') render(); }
   };
   v.querySelector('#dElimina').onclick = async () => {
     if (!confirm('Eliminare questa prova dall\'archivio? La foto e gli allegati verranno cancellati.')) return;
@@ -492,7 +500,7 @@ async function apriDettaglioProva(id) {
       if (p.foto) await sb().storage.from('smi-foto').remove([p.foto]);
       const soli = (p.allegati || []).filter(a => !tutteLeProve().some(x => (x.allegati || []).some(y => y.percorso === a.percorso))).map(a => a.percorso);
       if (soli.length) await sb().storage.from('smi-allegati').remove(soli);
-      S.pv.sel.delete(id); toast('Prova eliminata'); v.remove(); if (location.hash === '#prove') aggiornaRisultatiProve();
+      S.pv.sel.delete(id); toast('Prova eliminata'); v.remove(); if (location.hash === '#prove') render();
     }
   };
 }
@@ -538,8 +546,8 @@ function csvProve(ps) {
   const cams = [...new Set(ps.flatMap(p => Object.keys(p.parametri || {})))].sort();
   const chiavi = [...new Set(ps.flatMap(p => cams.flatMap(c => Object.keys(p.parametri?.[c] || {}))))].sort();
   const colPar = cams.flatMap(c => chiavi.map(k => [c, k]));
-  const testa = ['Data', 'Ora', 'Prodotto', 'Tipo di prova', 'Operatore', 'Esito', 'Note', 'Colaggio (inizio)', 'Codice colaggio / lotto', 'Cassette colaggio', '% scarti colaggio', 'Allegati', 'Parametri esatti', 'Salvata da', 'Foto', ...colPar.map(([c, k]) => `cam${c} ${k}`)];
-  const righe = ps.map(p => [isoG(p.t), oraSec(p.t), p.prodotto, p.tipo, p.operatore, ESITI[p.esito] || '', p.note, p.produzione ? `${isoG(p.produzione.inizio)} ${SMI.fmtOra(p.produzione.inizio)}` : '', p.codiceColaggio || '', p.produzione?.t ?? '', p.produzione?.t ? n1(100 * p.produzione.r / p.produzione.t) : '', (p.allegati || []).map(a => a.nome).join(', '), p.parametriCerti ? 'sì' : 'ricostruiti', p.chi, p.foto || '', ...colPar.map(([c, k]) => p.parametri?.[c]?.[k] ?? '')]);
+  const testa = ['Data', 'Ora', 'Prodotto', 'Tipo di prova', 'Operatore', 'Esito', 'Note', 'Colaggio (inizio)', 'Codice colaggio / lotto', 'Posizione difetto', 'Cassette colaggio', '% scarti colaggio', 'Allegati', 'Parametri esatti', 'Salvata da', 'Foto', ...colPar.map(([c, k]) => `cam${c} ${k}`)];
+  const righe = ps.map(p => [isoG(p.t), oraSec(p.t), p.prodotto, p.tipo, p.operatore, ESITI[p.esito] || '', p.note, p.produzione ? `${isoG(p.produzione.inizio)} ${SMI.fmtOra(p.produzione.inizio)}` : '', p.codiceColaggio || '', testoPosizioni(p), p.produzione?.t ?? '', p.produzione?.t ? n1(100 * p.produzione.r / p.produzione.t) : '', (p.allegati || []).map(a => a.nome).join(', '), p.parametriCerti ? 'sì' : 'ricostruiti', p.chi, p.foto || '', ...colPar.map(([c, k]) => p.parametri?.[c]?.[k] ?? '')]);
   return '\ufeff' + [testa, ...righe].map(r => r.map(csvCella).join(';')).join('\r\n');
 }
 function esportaProveCsv(ps) { if (!ps.length) return toast('Nessuna prova da esportare'); scaricaBlob(new Blob([csvProve(ps)], { type: 'text/csv;charset=utf-8' }), `prove_${isoG(SMI.adesso())}.csv`); }
@@ -846,4 +854,48 @@ function editorVista(vista) {
     });
     if (ok) { toast('Segnalibro salvato'); v.remove(); scegliVista(id); }
   };
+}
+
+/* ---------- Excel delle prove (struttura concordata) ----------
+   Una riga per prova (quelle filtrate, o solo le selezionate). Conteggi = produzione (colaggio) della prova. */
+let sheetjsP = null;
+function caricaSheetJS() {
+  return sheetjsP ||= new Promise((ok, ko) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload = () => ok(window.XLSX); s.onerror = () => { sheetjsP = null; ko(new Error('libreria Excel non caricata')); };
+    document.head.appendChild(s);
+  });
+}
+const COLONNE_XLSX = ['', 'Prodotto', 'Data', 'Turno', 'Total', 'Accepted products', 'Rejected products', 'SMI', 'Starch', 'Residual',
+  'Largest defect threshold pixels', 'Largest defect threshold pixels', 'Greylevel threshold',
+  'Erodi / dilata dimensione orrizontale pixel', 'Erodi / dilata dimensione orrizontale pixel',
+  'Difetto stampa \nSX', 'Difetto stampa \nCENTRO', 'Difetto stampa \nDX', 'Umidità amido colaggio'];
+function righeXlsx(ps) {
+  const num = v => v == null || v === '' ? '' : isNaN(+v) ? v : +v;
+  return ps.slice().sort((a, b) => a.t - b.t).map((p, i) => {
+    const pr = (S.modello?.produzioni || []).find(x => x.id === p.produzione?.id) || (p.produzione ? null : produzioneAl(p.t));
+    const tot = pr ? pr.t : p.produzione?.t, rej = pr ? pr.r : p.produzione?.r;
+    const par = k => p.parametri?.['0']?.[k] ?? p.parametri?.['-']?.[k] ?? Object.values(p.parametri || {}).find(c => c?.[k] != null)?.[k];
+    const [y, m, d] = isoG(p.t).split('-').map(Number);
+    const pos = new Set(p.posizioneDifetto || []);
+    return [i + 1, maiusc(p.prodotto), new Date(y, m - 1, d), SMI.turnoDi(p.t).nome,
+      tot ?? '', tot != null && rej != null ? tot - rej : '', rej ?? '', '', pr?.s ?? '', pr?.re ?? '',
+      num(par('MINIMUM_DEFECT_SIZE')), num(par('MINIMUM_SUM_OF_DEFECT_SIZES')), num(par('GREYLEVEL_THRESHOLD')),
+      num(par('ERODE_DILATE_HOR_SIZE')), num(par('ERODE_DILATE_VER_SIZE')),
+      pos.has('sx') ? 'X' : '', pos.has('centro') ? 'X' : '', pos.has('dx') ? 'X' : '', ''];
+  });
+}
+async function esportaProveXlsx(ps) {
+  if (!ps.length) return toast('Nessuna prova da esportare');
+  try {
+    const XLSX = await caricaSheetJS();
+    const ws = XLSX.utils.aoa_to_sheet([COLONNE_XLSX, ...righeXlsx(ps)], { cellDates: true });
+    for (let r = 1; r <= ps.length; r++) { const c = ws[XLSX.utils.encode_cell({ r, c: 2 })]; if (c) c.z = 'dd/mm/yyyy'; }
+    ws['!cols'] = COLONNE_XLSX.map((h, i) => ({ wch: i === 0 ? 4 : Math.max(10, Math.min(24, h.replace('\n', '').length + 2)) }));
+    ws['!rows'] = [{ hpt: 32 }];
+    ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: ps.length, c: COLONNE_XLSX.length - 1 } }) };
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Prove');
+    XLSX.writeFile(wb, `prove_NID1_${isoG(SMI.adesso())}.xlsx`, { compression: true });
+  } catch (e) { toast('Excel non creato: ' + esc(e.message)); }
 }

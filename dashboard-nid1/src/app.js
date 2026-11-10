@@ -5,7 +5,7 @@ const CONFIG = {
   SUPABASE_URL: 'https://sszxyritwrkxaictcaaa.supabase.co',
   SUPABASE_KEY: 'sb_publishable_HkYiyUEqlWXJo_CDyD9Eqw_k8-4cY-3',
   NOME_LINEA: 'Linea NID 1',
-  VERSIONE: 'v23 · 10 nov 14:00',
+  VERSIONE: 'v24 · 10 nov 16:00',
 };
 const S = {
   modo: null,             // 'demo' | 'remoto' | 'file' | 'lettore'
