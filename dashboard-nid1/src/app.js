@@ -5,7 +5,7 @@ const CONFIG = {
   SUPABASE_URL: 'https://sszxyritwrkxaictcaaa.supabase.co',
   SUPABASE_KEY: 'sb_publishable_HkYiyUEqlWXJo_CDyD9Eqw_k8-4cY-3',
   NOME_LINEA: 'Linea NID 1',
-  VERSIONE: 'v25 · 10 nov 16:20',
+  VERSIONE: 'v27 · 13 nov 09:20',
 };
 const S = {
   modo: null,             // 'demo' | 'remoto' | 'file' | 'lettore'
@@ -438,6 +438,13 @@ function produzioniFiltrate() {
   const lim = { oggi: SMI.turnoDi(r).giorno, '7': r - 7 * 864e5, '30': r - 30 * 864e5, tutto: -Infinity }[S.periodo];
   return p.filter(x => x.fine >= lim);
 }
+/* % scarti coerente: gli scarti dai contatori SMI sono aggiornati solo ogni ora, quindi se non ci sono gli scarti
+   in diretta la % si calcola sulle cassette contate allo stesso momento (non su quelle in diretta) e lo si dice. */
+function pcScarti(p, p0) {
+  if (!p.extraLive || p.scartiLive != null) return pc(p.r, p.t);
+  const ts = S.modello?.stato?.ultimiContatoriTs;
+  return `<span title="Gli scarti sono quelli dei contatori SMI${ts ? ' delle ' + SMI.fmtOra(ts) : ''} (si aggiornano ogni ora): la % è calcolata sulle ${n0(p0.t)} cassette contate in quel momento, non sulle ${n0(p.t)} di adesso.">${pc(p.r, p0.t)} <small style="opacity:.75">alle ${ts ? SMI.fmtOra(ts) : '—'}</small></span>`;
+}
 function conLive(p, isUltima) {
   if (!isUltima || !S.vivo?.extra?.cassette || S.modo === 'demo' || S.modo === 'file' || cambioInCorso()) return p;
   const sc = Math.min(S.vivo.extra.scarti || 0, S.vivo.extra.cassette);
@@ -478,7 +485,7 @@ function vistaDashboard() {
         : `<div class="sotto"><span>Iniziata ${giornoLungo(ultima.inizio)} alle ${SMI.fmtOra(ultima.inizio)}</span><span>·</span><span>In marcia ${durata(ultima.marciaMin)}</span><span>·</span><span>${(() => { const f = fermiDi(ultima); return `${f.n} fermi (${durata(f.min)})`; })()}</span></div>`}
       <div class="kpi">
         <div class="tile"><div class="lab">Cassette contate</div><div class="val">${n0(ultima.t)}</div><div class="det">${ultima.nuova ? 'dalla prima cassetta del nuovo prodotto' : `contatori SMI delle ${m.stato?.ultimiContatoriTs ? SMI.fmtOra(m.stato.ultimiContatoriTs) : '—'}${ultima.extraLive ? ` + ≈${n0(ultima.extraLive)} in diretta` : ''}`}</div></div>
-        <div class="tile scarti"><div class="lab">Cassette scartate</div><div class="val">${n0(ultima.r)}<small>${pc(ultima.r, ultima.scartiLive != null ? ultima.t : ultimaRaw.t)}</small></div><div class="det">${ultima.setupT ? `${pc(scartiNetti, totNetti)} senza avviamento` : `Amido ${n0(ultima.s)} · Residui ${n0(ultima.re)}`}<br><span style="color:var(--text-3)">${ultima.scartiLive != null ? `contatori delle ${m.stato?.ultimiContatoriTs ? SMI.fmtOra(m.stato.ultimiContatoriTs) : '—'} + ≈${n0(ultima.scartiLive)} in diretta (foto degli scarti)` : `aggiornati alle ${m.stato?.ultimiContatoriTs ? SMI.fmtOra(m.stato.ultimiContatoriTs) : '—'} (ogni ora)`}</span></div></div>
+        <div class="tile scarti"><div class="lab">Cassette scartate</div><div class="val">${n0(ultima.r)}<small>${pcScarti(ultima, ultimaRaw)}</small></div><div class="det">${ultima.setupT ? `${pc(scartiNetti, totNetti)} senza avviamento` : `Amido ${n0(ultima.s)} · Residui ${n0(ultima.re)}`}<br><span style="color:var(--text-3)">${ultima.scartiLive != null ? `contatori delle ${m.stato?.ultimiContatoriTs ? SMI.fmtOra(m.stato.ultimiContatoriTs) : '—'} + ≈${n0(ultima.scartiLive)} in diretta (foto degli scarti)` : `aggiornati alle ${m.stato?.ultimiContatoriTs ? SMI.fmtOra(m.stato.ultimiContatoriTs) : '—'} (ogni ora)`}</span></div></div>
         <div class="tile"><div class="lab">Pedane</div><div class="val">${n0(SMI.pedane(ultima.t))}<small>+ ${resto}/80</small></div><div class="barra"><i style="width:${resto / 80 * 100}%"></i></div></div>
         <div class="tile"><div class="lab">Velocità</div><div class="val">${n1(v)}<small>/min</small></div><div class="barra vel ${velCls}"><i style="width:${Math.min(100, v / SMI.VELOCITA_STD * 100)}%"></i></div><div class="det">${vel && (inMarcia || S.modo === 'demo') ? vel.fonte : 'media produzione'} · resa ${Math.round(resa * 100)}%</div></div>
       </div>
@@ -600,7 +607,7 @@ function elencoProduzioni() {
       h += `<div class="vetro prod" data-id="${esc(p.id)}">
         <div class="principale"><div class="nome">${esc(p.prodotto)} ${vivo ? '<span class="live-badge">IN CORSO</span>' : ''}</div><div class="quando">${giornoCorto(p.inizio)} ${SMI.fmtOra(p.inizio)} → ${SMI.isoGiorno(p.inizio) !== SMI.isoGiorno(p.fine) ? giornoCorto(p.fine) + ' ' : ''}${SMI.fmtOra(p.fine)} · ${durata(p.marciaMin)} in marcia${p.escluse ? ` · <span title="Periodi esclusi dal conteggio">✂︎ ${n0(p.escluse.t)} escluse</span>` : ''}</div></div>
         <div class="c"><div class="lab">Cassette</div><div class="v">${n0(p.t)}</div></div>
-        <div class="c"><div class="lab">Scarti</div><div class="v r">${n0(p.r)} <span style="font-size:12px;color:var(--text-2);font-weight:500">${pc(p.r, p0.t)}</span></div></div>
+        <div class="c"><div class="lab">Scarti</div><div class="v r">${n0(p.r)} <span style="font-size:12px;color:var(--text-2);font-weight:500">${pcScarti(p, p0)}</span></div></div>
         <div class="c"><div class="lab">Pedane</div><div class="v">${n0(SMI.pedane(p.t))}</div></div>
         <div class="c"><div class="lab">Resa vel.</div><div class="v">${resa}%</div></div>
         <div class="turni-chip">${p.turni.map(t => `<span class="tchip">${t.nome.slice(0, 3)} ${giornoCorto(t.giorno)} <b>${n0(t.t)}</b></span>`).join('')}</div>
@@ -852,7 +859,7 @@ function apriProduzione(id) {
   const riepilogo = `
     <div class="kpi" style="margin-top:0">
       <div class="tile"><div class="lab">Cassette contate</div><div class="val">${n0(p.t)}</div><div class="det">${n0(p.t - p.r)} buone${p.extraLive ? ` · ≈${n0(p.extraLive)} in diretta` : ''}</div></div>
-      <div class="tile scarti"><div class="lab">Scartate</div><div class="val">${n0(p.r)}<small>${pc(p.r, p0.t)}</small></div><div class="det">${n0(p.u)} non ispezionate${p.escluse ? ` · ${n0(p.escluse.t)} cassette escluse` : ''}</div></div>
+      <div class="tile scarti"><div class="lab">Scartate</div><div class="val">${n0(p.r)}<small>${pcScarti(p, p0)}</small></div><div class="det">${n0(p.u)} non ispezionate${p.escluse ? ` · ${n0(p.escluse.t)} cassette escluse` : ''}</div></div>
       <div class="tile"><div class="lab">Pedane</div><div class="val">${n0(SMI.pedane(p.t))}<small>+ ${p.t % 80}/80</small></div><div class="barra"><i style="width:${p.t % 80 / 80 * 100}%"></i></div></div>
       <div class="tile"><div class="lab">Resa velocità</div><div class="val">${Math.round(resa * 100)}<small>%</small></div><div class="det">media ${n1(p.marciaMin ? p.t / p.marciaMin : 0)}/min su 24</div></div>
     </div>
