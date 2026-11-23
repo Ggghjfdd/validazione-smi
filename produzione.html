@@ -651,7 +651,13 @@ const SMI = (() => {
   const fmtOra = t => { const d = new Date(t); return `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`; };
   const isoGiorno = t => new Date(t).toISOString().slice(0, 10);
   // "adesso" nello stesso sistema pseudo-UTC (ora locale del browser)
-  const adesso = () => { const d = new Date(); return ms(d.getFullYear(), d.getMonth() + 1, d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds()); };
+  /* Orologi sbagliati: il PC della linea può essere indietro (es. 4 min). corrOrologio = ora vera − ora di questo
+     dispositivo (misurata dall'app); corrLog = stessa cosa per il PC che ha scritto i log SMI (si usa solo nel lettore,
+     che gira su quel PC). Tutti gli orari letti dai file SMI vengono spostati di corrLog. */
+  let corrOrologio = 0, corrLog = 0;
+  const impostaOrologio = (o, log) => { corrOrologio = o || 0; if (log != null) corrLog = log || 0; };
+  const correzioneLog = () => corrLog;
+  const adesso = () => { const d = new Date(Date.now() + corrOrologio); return ms(d.getFullYear(), d.getMonth() + 1, d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds()); };
 
   function turnoDi(t) {
     const d = new Date(t), h = d.getUTCHours();
@@ -678,7 +684,7 @@ const SMI = (() => {
     const lines = text.split(/\r?\n/);
     for (const line of lines) {
       const m = RE_EV.exec(line); if (!m) continue;
-      const ts = ms(m[1], m[2], m[3], m[4], m[5], m[6]);
+      const ts = ms(m[1], m[2], m[3], m[4], m[5], m[6]) + corrLog;
       const tipo = m[7].trim(), msg = m[9];
       ultimoTs = ts;
       switch (tipo) {
@@ -793,11 +799,11 @@ const SMI = (() => {
       const isT = line.includes('InspectTriggerReceived'), isE = !isT && line.includes('Perform eject');
       if (!isT && !isE) continue;
       const m = RE_TR.exec(line); if (!m) continue;
-      const k = ms(m[1], m[2], m[3], m[4], m[5]) + corr;
+      const k = ms(m[1], m[2], m[3], m[4], m[5]) + corr + Math.round(corrLog / 60e3) * 60e3;
       let b = minuti.get(k); if (!b) minuti.set(k, b = [0, 0]);
       if (isT) {
         b[0]++; n++;
-        if (trigger) trigger.push(ms(m[1], m[2], m[3], m[4], m[5], m[6]) + corr);
+        if (trigger) trigger.push(ms(m[1], m[2], m[3], m[4], m[5], m[6]) + corr + corrLog);
       } else { b[1]++; e++; }
       if (primo == null) primo = k; ultimo = k;
     }
@@ -828,12 +834,12 @@ const SMI = (() => {
   function parseErrorLog(text, giorni = 30, riferimento) {
     const righe = text.split(/\r?\n/);
     let fine = riferimento || 0;
-    if (!fine) for (let i = righe.length - 1; i >= 0; i--) { const m = RE_ERR.exec(righe[i]); if (m) { fine = ms(m[1], m[2], m[3], m[4], m[5], m[6]); break; } }
+    if (!fine) for (let i = righe.length - 1; i >= 0; i--) { const m = RE_ERR.exec(righe[i]); if (m) { fine = ms(m[1], m[2], m[3], m[4], m[5], m[6]) + corrLog; break; } }
     const da = fine - giorni * 864e5;
     const eventi = [];
     for (const line of righe) {
       const m = RE_ERR.exec(line); if (!m) continue;
-      const ts = ms(m[1], m[2], m[3], m[4], m[5], m[6]); if (ts < da) continue;
+      const ts = ms(m[1], m[2], m[3], m[4], m[5], m[6]) + corrLog; if (ts < da) continue;
       const tipo = traduci(m[9]);
       eventi.push([ts, tipo, RUMORE.has(tipo) ? 1 : 0, m[9].slice(0, 160)]);
     }
@@ -1080,7 +1086,7 @@ const SMI = (() => {
   const pedane = n => Math.floor(n / CASSETTE_PER_PEDANA);
   const perc = (a, b) => b > 0 ? (100 * a / b) : 0;
 
-  return { diffParametri, dataModifiche, applicaEsclusioni, periodiSospetti, MAX_PAUSA, calcolaCambi, calcolaFermi, CASSETTE_PER_PEDANA, VELOCITA_STD, TURNI, ms, fmtData, fmtOra, isoGiorno, adesso, turnoDi, parseEventLog, costruisciProduzioni, parseTrace, parseErrorLog, parseIni, parametriPerProdotto, costruisciModello, pedane, perc, traduci };
+  return { impostaOrologio, correzioneLog, diffParametri, dataModifiche, applicaEsclusioni, periodiSospetti, MAX_PAUSA, calcolaCambi, calcolaFermi, CASSETTE_PER_PEDANA, VELOCITA_STD, TURNI, ms, fmtData, fmtOra, isoGiorno, adesso, turnoDi, parseEventLog, costruisciProduzioni, parseTrace, parseErrorLog, parseIni, parametriPerProdotto, costruisciModello, pedane, perc, traduci };
 })();
 if (typeof module !== 'undefined') module.exports = SMI;
 
@@ -1093,7 +1099,7 @@ const CONFIG = {
   SUPABASE_URL: 'https://sszxyritwrkxaictcaaa.supabase.co',
   SUPABASE_KEY: 'sb_publishable_HkYiyUEqlWXJo_CDyD9Eqw_k8-4cY-3',
   NOME_LINEA: 'Linea NID 1',
-  VERSIONE: 'v33 · 23 nov 13:55',
+  VERSIONE: 'v34 · 23 nov 14:30',
 };
 const S = {
   modo: null,             // 'demo' | 'remoto' | 'file' | 'lettore'
@@ -2391,8 +2397,7 @@ function htmlPedane() {
   // in grande le pedane buone; sotto, in rosso, le pedane totali comprese le scartate; poi buone · totali
   const cella = (v, i) => `<td class="${i ? 'ora' : ''}">${v.tot > 0 ? `<b>${n2(v.buone / P)}</b><span class="ped-totali">${n2(v.tot / P)} pedane totali</span><small>${n0(v.buone)} buone · ${n0(v.tot)} totali</small>` : '<span class="zero">—</span>'}</td>`;
   const somma = i => righe.reduce((s, r) => ({ tot: s.tot + r[1][i].tot, buone: s.buone + r[1][i].buone }), { tot: 0, buone: 0 });
-  return `${!d.azzerato ? `<div class="ped-avviso">⚠ Contatore non azzerato in questo turno<br><small>Su SMI premere <b>Stop</b> e poi <b>Reset counters</b></small></div>` : ''}
-    <div class="ped-tit">Pedane prodotte</div>
+  return `<div class="ped-tit">Pedane prodotte</div>
     ${righe.length ? `<table class="ped-tab grande">
       <thead><tr><th></th>${turni.map((q, i) => `<th class="${i ? 'ora' : ''}">${i ? 'Turno attuale' : 'Turno precedente'}<small>${q.nome} ${giornoCorto(q.giorno)}</small></th>`).join('')}</tr></thead>
       <tbody>${righe.map(([k, v]) => `<tr><td>${esc(maiuscola(k))}</td>${v.map(cella).join('')}</tr>`).join('')}</tbody>
@@ -2408,10 +2413,32 @@ setInterval(() => {
   const t = $('#ncInfo'); if (t) t.textContent = infoInvio();
   const pd = $('#ncPedane'); if (pd) pd.innerHTML = htmlPedane();
 }, 3000);
+/* ---------- orologio: confronto con l'ora del server (intestazione Date di GitHub Pages) ---------- */
+let correzioneOra = (() => { try { return +localStorage.getItem('smi_corr_orologio') || 0; } catch { return 0; } })();
+function applicaOrologio() {
+  const lettore = S.modo === 'lettore' || location.hash === '#lettore';
+  const prima = SMI.correzioneLog();
+  SMI.impostaOrologio(correzioneOra, lettore ? correzioneOra : 0);
+  if (lettore && Math.abs(prima - SMI.correzioneLog()) > 5000) { L.ultimoModello = null; L.cache?.clear?.(); }
+}
+async function misuraOrologio() {
+  try {
+    const t0 = Date.now();
+    const r = await fetch(location.pathname + '?orologio=' + t0, { method: 'HEAD', cache: 'no-store' });
+    const t1 = Date.now(), h = r.headers.get('date'); if (!h) return;
+    const d = Date.parse(h) + 500 - (t0 + t1) / 2; // Date ha la precisione del secondo
+    if (!isFinite(d) || Math.abs(d) > 6 * 3600e3) return;
+    correzioneOra = Math.abs(d) < 3000 ? 0 : Math.round(d / 1000) * 1000;
+    try { localStorage.setItem('smi_corr_orologio', String(correzioneOra)); } catch { }
+    applicaOrologio();
+  } catch { }
+}
+applicaOrologio(); misuraOrologio(); setInterval(misuraOrologio, 30 * 60e3);
+const testoOrologio = () => { const c = SMI.correzioneLog(); if (Math.abs(c) < 3000) return ''; const m = Math.floor(Math.abs(c) / 60e3), sec = Math.round(Math.abs(c) / 1000) % 60; return ` · orologio PC ${c > 0 ? 'indietro' : 'avanti'} di ${m}:${String(sec).padStart(2, '0')} (corretto)`; };
 function infoInvio() {
   const ora = x => new Date(x).toLocaleTimeString('it-IT');
   if (L.testoErrore) return `errore alle ${ora(L.ultimoErrore)}: ${L.testoErrore}`.slice(0, 120);
-  return L.ultimoOk ? `ultimo invio ${ora(L.ultimoOk)} · ${CONFIG.VERSIONE.split(' ')[0]}` : `in avvio… · ${CONFIG.VERSIONE.split(' ')[0]}`;
+  return (L.ultimoOk ? `ultimo invio ${ora(L.ultimoOk)} · ${CONFIG.VERSIONE.split(' ')[0]}` : `in avvio… · ${CONFIG.VERSIONE.split(' ')[0]}`) + testoOrologio();
 }
 setInterval(() => {
   if (!L.attivo) return;
@@ -2616,7 +2643,7 @@ async function aggiornaStoriaParametri(m) {
   log(!st.ultimo ? 'Storico parametri: prima fotografia salvata' : nuove.length ? `Parametri cambiati: ${nuove.length} valori (${[...new Set(nuove.map(x => x.prodotto))].join(', ')})` : 'Storico parametri aggiornato');
 }
 
-const msLocale = t => { const d = new Date(t); return SMI.ms(d.getFullYear(), d.getMonth() + 1, d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds()); };
+const msLocale = t => { const d = new Date(t + SMI.correzioneLog()); return SMI.ms(d.getFullYear(), d.getMonth() + 1, d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds()); };
 async function leggiProgressivoImmagini(v) {
   const f = await v.h.getFile(), b = new Uint8Array(await f.arrayBuffer());
   const txt = new TextDecoder('latin1').decode(b).trim();

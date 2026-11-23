@@ -5,7 +5,7 @@ const CONFIG = {
   SUPABASE_URL: 'https://sszxyritwrkxaictcaaa.supabase.co',
   SUPABASE_KEY: 'sb_publishable_HkYiyUEqlWXJo_CDyD9Eqw_k8-4cY-3',
   NOME_LINEA: 'Linea NID 1',
-  VERSIONE: 'v33 · 23 nov 13:55',
+  VERSIONE: 'v34 · 23 nov 14:30',
 };
 const S = {
   modo: null,             // 'demo' | 'remoto' | 'file' | 'lettore'
@@ -1303,8 +1303,7 @@ function htmlPedane() {
   // in grande le pedane buone; sotto, in rosso, le pedane totali comprese le scartate; poi buone · totali
   const cella = (v, i) => `<td class="${i ? 'ora' : ''}">${v.tot > 0 ? `<b>${n2(v.buone / P)}</b><span class="ped-totali">${n2(v.tot / P)} pedane totali</span><small>${n0(v.buone)} buone · ${n0(v.tot)} totali</small>` : '<span class="zero">—</span>'}</td>`;
   const somma = i => righe.reduce((s, r) => ({ tot: s.tot + r[1][i].tot, buone: s.buone + r[1][i].buone }), { tot: 0, buone: 0 });
-  return `${!d.azzerato ? `<div class="ped-avviso">⚠ Contatore non azzerato in questo turno<br><small>Su SMI premere <b>Stop</b> e poi <b>Reset counters</b></small></div>` : ''}
-    <div class="ped-tit">Pedane prodotte</div>
+  return `<div class="ped-tit">Pedane prodotte</div>
     ${righe.length ? `<table class="ped-tab grande">
       <thead><tr><th></th>${turni.map((q, i) => `<th class="${i ? 'ora' : ''}">${i ? 'Turno attuale' : 'Turno precedente'}<small>${q.nome} ${giornoCorto(q.giorno)}</small></th>`).join('')}</tr></thead>
       <tbody>${righe.map(([k, v]) => `<tr><td>${esc(maiuscola(k))}</td>${v.map(cella).join('')}</tr>`).join('')}</tbody>
@@ -1320,10 +1319,32 @@ setInterval(() => {
   const t = $('#ncInfo'); if (t) t.textContent = infoInvio();
   const pd = $('#ncPedane'); if (pd) pd.innerHTML = htmlPedane();
 }, 3000);
+/* ---------- orologio: confronto con l'ora del server (intestazione Date di GitHub Pages) ---------- */
+let correzioneOra = (() => { try { return +localStorage.getItem('smi_corr_orologio') || 0; } catch { return 0; } })();
+function applicaOrologio() {
+  const lettore = S.modo === 'lettore' || location.hash === '#lettore';
+  const prima = SMI.correzioneLog();
+  SMI.impostaOrologio(correzioneOra, lettore ? correzioneOra : 0);
+  if (lettore && Math.abs(prima - SMI.correzioneLog()) > 5000) { L.ultimoModello = null; L.cache?.clear?.(); }
+}
+async function misuraOrologio() {
+  try {
+    const t0 = Date.now();
+    const r = await fetch(location.pathname + '?orologio=' + t0, { method: 'HEAD', cache: 'no-store' });
+    const t1 = Date.now(), h = r.headers.get('date'); if (!h) return;
+    const d = Date.parse(h) + 500 - (t0 + t1) / 2; // Date ha la precisione del secondo
+    if (!isFinite(d) || Math.abs(d) > 6 * 3600e3) return;
+    correzioneOra = Math.abs(d) < 3000 ? 0 : Math.round(d / 1000) * 1000;
+    try { localStorage.setItem('smi_corr_orologio', String(correzioneOra)); } catch { }
+    applicaOrologio();
+  } catch { }
+}
+applicaOrologio(); misuraOrologio(); setInterval(misuraOrologio, 30 * 60e3);
+const testoOrologio = () => { const c = SMI.correzioneLog(); if (Math.abs(c) < 3000) return ''; const m = Math.floor(Math.abs(c) / 60e3), sec = Math.round(Math.abs(c) / 1000) % 60; return ` · orologio PC ${c > 0 ? 'indietro' : 'avanti'} di ${m}:${String(sec).padStart(2, '0')} (corretto)`; };
 function infoInvio() {
   const ora = x => new Date(x).toLocaleTimeString('it-IT');
   if (L.testoErrore) return `errore alle ${ora(L.ultimoErrore)}: ${L.testoErrore}`.slice(0, 120);
-  return L.ultimoOk ? `ultimo invio ${ora(L.ultimoOk)} · ${CONFIG.VERSIONE.split(' ')[0]}` : `in avvio… · ${CONFIG.VERSIONE.split(' ')[0]}`;
+  return (L.ultimoOk ? `ultimo invio ${ora(L.ultimoOk)} · ${CONFIG.VERSIONE.split(' ')[0]}` : `in avvio… · ${CONFIG.VERSIONE.split(' ')[0]}`) + testoOrologio();
 }
 setInterval(() => {
   if (!L.attivo) return;
@@ -1528,7 +1549,7 @@ async function aggiornaStoriaParametri(m) {
   log(!st.ultimo ? 'Storico parametri: prima fotografia salvata' : nuove.length ? `Parametri cambiati: ${nuove.length} valori (${[...new Set(nuove.map(x => x.prodotto))].join(', ')})` : 'Storico parametri aggiornato');
 }
 
-const msLocale = t => { const d = new Date(t); return SMI.ms(d.getFullYear(), d.getMonth() + 1, d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds()); };
+const msLocale = t => { const d = new Date(t + SMI.correzioneLog()); return SMI.ms(d.getFullYear(), d.getMonth() + 1, d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds()); };
 async function leggiProgressivoImmagini(v) {
   const f = await v.h.getFile(), b = new Uint8Array(await f.arrayBuffer());
   const txt = new TextDecoder('latin1').decode(b).trim();

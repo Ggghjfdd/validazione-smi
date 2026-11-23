@@ -21,7 +21,13 @@ const SMI = (() => {
   const fmtOra = t => { const d = new Date(t); return `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`; };
   const isoGiorno = t => new Date(t).toISOString().slice(0, 10);
   // "adesso" nello stesso sistema pseudo-UTC (ora locale del browser)
-  const adesso = () => { const d = new Date(); return ms(d.getFullYear(), d.getMonth() + 1, d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds()); };
+  /* Orologi sbagliati: il PC della linea può essere indietro (es. 4 min). corrOrologio = ora vera − ora di questo
+     dispositivo (misurata dall'app); corrLog = stessa cosa per il PC che ha scritto i log SMI (si usa solo nel lettore,
+     che gira su quel PC). Tutti gli orari letti dai file SMI vengono spostati di corrLog. */
+  let corrOrologio = 0, corrLog = 0;
+  const impostaOrologio = (o, log) => { corrOrologio = o || 0; if (log != null) corrLog = log || 0; };
+  const correzioneLog = () => corrLog;
+  const adesso = () => { const d = new Date(Date.now() + corrOrologio); return ms(d.getFullYear(), d.getMonth() + 1, d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds()); };
 
   function turnoDi(t) {
     const d = new Date(t), h = d.getUTCHours();
@@ -48,7 +54,7 @@ const SMI = (() => {
     const lines = text.split(/\r?\n/);
     for (const line of lines) {
       const m = RE_EV.exec(line); if (!m) continue;
-      const ts = ms(m[1], m[2], m[3], m[4], m[5], m[6]);
+      const ts = ms(m[1], m[2], m[3], m[4], m[5], m[6]) + corrLog;
       const tipo = m[7].trim(), msg = m[9];
       ultimoTs = ts;
       switch (tipo) {
@@ -163,11 +169,11 @@ const SMI = (() => {
       const isT = line.includes('InspectTriggerReceived'), isE = !isT && line.includes('Perform eject');
       if (!isT && !isE) continue;
       const m = RE_TR.exec(line); if (!m) continue;
-      const k = ms(m[1], m[2], m[3], m[4], m[5]) + corr;
+      const k = ms(m[1], m[2], m[3], m[4], m[5]) + corr + Math.round(corrLog / 60e3) * 60e3;
       let b = minuti.get(k); if (!b) minuti.set(k, b = [0, 0]);
       if (isT) {
         b[0]++; n++;
-        if (trigger) trigger.push(ms(m[1], m[2], m[3], m[4], m[5], m[6]) + corr);
+        if (trigger) trigger.push(ms(m[1], m[2], m[3], m[4], m[5], m[6]) + corr + corrLog);
       } else { b[1]++; e++; }
       if (primo == null) primo = k; ultimo = k;
     }
@@ -198,12 +204,12 @@ const SMI = (() => {
   function parseErrorLog(text, giorni = 30, riferimento) {
     const righe = text.split(/\r?\n/);
     let fine = riferimento || 0;
-    if (!fine) for (let i = righe.length - 1; i >= 0; i--) { const m = RE_ERR.exec(righe[i]); if (m) { fine = ms(m[1], m[2], m[3], m[4], m[5], m[6]); break; } }
+    if (!fine) for (let i = righe.length - 1; i >= 0; i--) { const m = RE_ERR.exec(righe[i]); if (m) { fine = ms(m[1], m[2], m[3], m[4], m[5], m[6]) + corrLog; break; } }
     const da = fine - giorni * 864e5;
     const eventi = [];
     for (const line of righe) {
       const m = RE_ERR.exec(line); if (!m) continue;
-      const ts = ms(m[1], m[2], m[3], m[4], m[5], m[6]); if (ts < da) continue;
+      const ts = ms(m[1], m[2], m[3], m[4], m[5], m[6]) + corrLog; if (ts < da) continue;
       const tipo = traduci(m[9]);
       eventi.push([ts, tipo, RUMORE.has(tipo) ? 1 : 0, m[9].slice(0, 160)]);
     }
@@ -450,6 +456,6 @@ const SMI = (() => {
   const pedane = n => Math.floor(n / CASSETTE_PER_PEDANA);
   const perc = (a, b) => b > 0 ? (100 * a / b) : 0;
 
-  return { diffParametri, dataModifiche, applicaEsclusioni, periodiSospetti, MAX_PAUSA, calcolaCambi, calcolaFermi, CASSETTE_PER_PEDANA, VELOCITA_STD, TURNI, ms, fmtData, fmtOra, isoGiorno, adesso, turnoDi, parseEventLog, costruisciProduzioni, parseTrace, parseErrorLog, parseIni, parametriPerProdotto, costruisciModello, pedane, perc, traduci };
+  return { impostaOrologio, correzioneLog, diffParametri, dataModifiche, applicaEsclusioni, periodiSospetti, MAX_PAUSA, calcolaCambi, calcolaFermi, CASSETTE_PER_PEDANA, VELOCITA_STD, TURNI, ms, fmtData, fmtOra, isoGiorno, adesso, turnoDi, parseEventLog, costruisciProduzioni, parseTrace, parseErrorLog, parseIni, parametriPerProdotto, costruisciModello, pedane, perc, traduci };
 })();
 if (typeof module !== 'undefined') module.exports = SMI;
