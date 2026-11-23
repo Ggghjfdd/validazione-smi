@@ -1139,7 +1139,7 @@ const CONFIG = {
   SUPABASE_URL: 'https://sszxyritwrkxaictcaaa.supabase.co',
   SUPABASE_KEY: 'sb_publishable_HkYiyUEqlWXJo_CDyD9Eqw_k8-4cY-3',
   NOME_LINEA: 'Linea NID 1',
-  VERSIONE: 'v35 · 23 nov 14:40',
+  VERSIONE: 'v36 · 23 nov 15:05',
 };
 const S = {
   modo: null,             // 'demo' | 'remoto' | 'file' | 'lettore'
@@ -2768,7 +2768,7 @@ async function cicloLettore(comandoId) {
       // con la lettura ogni 2–5 s, usare l'ora di lettura gonfiava la velocità (fino a 27/min con la linea a 24)
       const n = (A.offset + righeAnalisi) / 4, ultimo = A.campioni[A.campioni.length - 1];
       let tc = ora;
-      if (modAnalisi && (!ultimo || n !== ultimo[1])) { const d = new Date(modAnalisi); tc = Math.min(ora, SMI.ms(d.getFullYear(), d.getMonth() + 1, d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds())); }
+      if (modAnalisi && (!ultimo || n !== ultimo[1])) tc = Math.min(ora, msLocale(modAnalisi)); // ora di scrittura del file, con la correzione dell'orologio del PC
       if (ultimo) tc = Math.max(tc, ultimo[0]);
       A.campioni.push(ultimo && n === ultimo[1] ? [tc, n] : [tc, n, 1]); // 1 = qui SMI ha appena scritto
       A.campioni = A.campioni.filter(c => c[0] > ora - 3 * 3600e3);
@@ -2819,7 +2819,7 @@ async function cicloLettore(comandoId) {
         extra.scarti = Math.max(0, Math.round((ultimoI[1] - baseI[1]) / 2));
         extra.ultimoScarto = ultimoI[0];
       }
-      if (modAnalisi) { const d = new Date(modAnalisi); extra.ultimaCassetta = SMI.ms(d.getFullYear(), d.getMonth() + 1, d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds()); }
+      if (modAnalisi) extra.ultimaCassetta = msLocale(modAnalisi);
     }
     L.extraUltimo = extra;
     const vivo = { battito: ora, intervallo: L.intervallo, stato: m.stato, extra, versione: 1, file: [...L.file.values()].map(v => [v.nome, v.size, v.mod]), erroriFile: L.erroriFile || {}, nParametri: Object.keys(m.parametri || {}).length, app: CONFIG.VERSIONE.split(' ')[0] };
