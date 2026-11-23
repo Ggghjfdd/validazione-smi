@@ -114,7 +114,41 @@ const SMI = (() => {
     return o;
   }
 
-  function costruisciProduzioni(ev, oraFine) {
+  /* Un contatore orario copre l'intervallo [h.da, h.ts]. Se l'intervallo scavalca un cambio turno (succede sempre
+     quando l'orologio del PC è sfasato: SMI scrive "alle ore" del suo orologio), le cassette si dividono tra i turni:
+     con i trace minuto per minuto se coprono quell'ora, altrimenti in proporzione al tempo con l'ispezione in marcia.
+     Restituisce [[chiaveTurno, frazione], …] oppure null se l'ora sta tutta in un turno. */
+  function quoteTurni(h, intervalliMarcia, minuti, fineAperta) {
+    const T1 = turnoDi(h.da + 1000), T2 = turnoDi(h.ts - 1000);
+    if (T1.key === T2.key) return null;
+    const pezzi = [];
+    for (let t = h.da + 1000; t < h.ts; ) { const T = turnoDi(t); pezzi.push([T.key, Math.max(h.da, T.inizio), Math.min(h.ts, T.fine)]); t = T.fine + 1000; }
+    let pesi = null;
+    if (minuti && minuti.size) {
+      const somma = (a, b) => { let n = 0; for (let k = Math.floor(a / 60e3) * 60e3; k < b; k += 60e3) n += (minuti.get(k)?.[0] || 0); return n; };
+      const tot = somma(h.da, h.ts);
+      if (tot > 0 && Math.abs(tot - h.t) <= Math.max(3, 0.1 * h.t)) pesi = pezzi.map(([, a, b]) => somma(a, b));
+    }
+    if (!pesi) {
+      pesi = pezzi.map(([, a, b]) => sovrapposizione(intervalliMarcia, a, b, fineAperta));
+      if (!pesi.some(x => x > 0)) pesi = pezzi.map(([, a, b]) => b - a);
+    }
+    const tot = pesi.reduce((x, y) => x + y, 0) || 1;
+    return pezzi.map(([k], i) => [k, pesi[i] / tot]).filter(([, f]) => f > 0);
+  }
+  // divide un'ora (oggetto o array delle ore) secondo le quote, con numeri interi che sommano al totale
+  function dividiOra(h, quote) {
+    const campi = ['t', 'r', 'u', 's', 're'], out = quote.map(([k]) => ({ ...h, chiaveTurno: k }));
+    for (const c of campi) {
+      let resto = h[c];
+      quote.forEach(([, f], i) => { const v = i === quote.length - 1 ? resto : Math.round(h[c] * f); out[i][c] = v; resto -= v; });
+    }
+    return out;
+  }
+
+  function turnoDaChiave(k, h) { for (let t = h.da + 1000; t < h.ts; ) { const T = turnoDi(t); if (T.key === k) return T; t = T.fine + 1000; } return turnoDi(h.ts - 1000); }
+
+  function costruisciProduzioni(ev, oraFine, minuti) {
     const { runs, intervalliMarcia, cambiImpostazioni, fermi } = ev;
     const fineAperta = oraFine || ev.stato.ultimoTs;
     return runs.map((run, i) => {
@@ -126,9 +160,12 @@ const SMI = (() => {
       const tot = somma(run.ore);
       const segmenti = new Map();
       for (const h of run.ore) {
-        const T = turnoDi(h.ts - 1000);
-        if (!segmenti.has(T.key)) segmenti.set(T.key, { ...T, ore: [] });
-        segmenti.get(T.key).ore.push(h);
+        h.quote = quoteTurni(h, intervalliMarcia, minuti, fineAperta);
+        for (const x of h.quote ? dividiOra(h, h.quote) : [{ ...h, chiaveTurno: turnoDi(h.ts - 1000).key }]) {
+          const TT = turnoDaChiave(x.chiaveTurno, h);
+          if (!segmenti.has(TT.key)) segmenti.set(TT.key, { ...TT, ore: [] });
+          segmenti.get(TT.key).ore.push(x);
+        }
       }
       const turni = [...segmenti.values()].map(s => {
         const a = Math.max(s.inizio, inizio), b = Math.min(s.fine, fine);
@@ -142,7 +179,7 @@ const SMI = (() => {
         fermi: fermi.filter(t => t > inizio && t < fine).length,
         cambiImpostazioni: cambiImpostazioni.filter(c => c.ts >= inizio - 3600e3 && c.ts <= fine && c.prodotto === run.prodotto).map(c => c.ts),
         turni,
-        ore: run.ore.map(h => [h.da, h.ts, h.t, h.r, h.s, h.re, h.u, h.setup ? 1 : 0]),
+        ore: run.ore.map(h => h.quote ? [h.da, h.ts, h.t, h.r, h.s, h.re, h.u, h.setup ? 1 : 0, h.quote] : [h.da, h.ts, h.t, h.r, h.s, h.re, h.u, h.setup ? 1 : 0]),
       };
     });
   }
@@ -302,10 +339,10 @@ const SMI = (() => {
   function costruisciModello(f) {
     // f = { eventLog, traces:[testo], errorLog, analysisIni, systemIni, giorniMinuti }
     const ev = parseEventLog(f.eventLog || '');
-    const produzioni = costruisciProduzioni(ev);
     const minuti = new Map(); const tracce = []; const trigger = [];
     // ogni trace è { nome, testo } (il nome serve a correggere l'ora); accetto anche il solo testo
     for (const t of f.traces || []) tracce.push(typeof t === 'string' ? parseTrace(t, minuti, trigger) : parseTrace(t.testo, minuti, trigger, t.nome));
+    const produzioni = costruisciProduzioni(ev, null, minuti);
     // i trace possono sovrapporsi: unisco tutte le cassette e cerco i buchi una volta sola
     trigger.sort((a, b) => a - b);
     const buchi = [];
@@ -394,9 +431,12 @@ const SMI = (() => {
       for (const h of ore) {
         const [, ts, t, r, s, re, u, setup] = h;
         tot.t += t; tot.r += r; tot.s += s; tot.re += re; tot.u += u; if (setup) { tot.setupT += t; tot.setupR += r; }
-        const k = turnoDi(ts - 1000).key; const o = perTurno.get(k) || { t: 0, r: 0, s: 0, re: 0, u: 0, setupT: 0, setupR: 0 };
-        o.t += t; o.r += r; o.s += s; o.re += re; o.u += u; if (setup) { o.setupT += t; o.setupR += r; }
-        perTurno.set(k, o);
+        const pezzi = h[8] ? dividiOra({ t, r, s, re, u }, h[8]) : [{ t, r, s, re, u, chiaveTurno: turnoDi(ts - 1000).key }];
+        for (const x of pezzi) {
+          const k = x.chiaveTurno; const o = perTurno.get(k) || { t: 0, r: 0, s: 0, re: 0, u: 0, setupT: 0, setupR: 0 };
+          o.t += x.t; o.r += x.r; o.s += x.s; o.re += x.re; o.u += x.u; if (setup) { o.setupT += x.t; o.setupR += x.r; }
+          perTurno.set(k, o);
+        }
       }
       const minIn = (a, b) => E.reduce((s, x) => s + Math.max(0, Math.min(b, x.a) - Math.max(a, x.da)), 0) / 60e3;
       const turni = p0.turni.map(tt => ({ ...tt, ...(perTurno.get(tt.key) || {}), marciaMin: Math.max(0, Math.round(tt.marciaMin - minIn(tt.inizio, tt.fine))) }));
