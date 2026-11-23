@@ -9,9 +9,9 @@ const SMI = (() => {
   const PAUSA_NUOVA_PRODUZIONE = 4 * 3600e3; // 4 h senza conteggi = nuova produzione
   const SOGLIA_SETUP = 0.30;            // intervallo con LEARNING e scarti > 30% = avviamento
   const TURNI = [
-    { n: 1, nome: 'Mattino', da: 6, a: 14 },
-    { n: 2, nome: 'Pomeriggio', da: 14, a: 22 },
-    { n: 3, nome: 'Notte', da: 22, a: 6 },
+    { n: 1, nome: 'Turno 1', da: 6, a: 14 },
+    { n: 2, nome: 'Turno 2', da: 14, a: 22 },
+    { n: 3, nome: 'Turno 3', da: 22, a: 6 },
   ];
 
   /* ---------- tempo ---------- */

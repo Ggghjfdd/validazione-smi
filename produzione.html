@@ -621,9 +621,9 @@ const SMI = (() => {
   const PAUSA_NUOVA_PRODUZIONE = 4 * 3600e3; // 4 h senza conteggi = nuova produzione
   const SOGLIA_SETUP = 0.30;            // intervallo con LEARNING e scarti > 30% = avviamento
   const TURNI = [
-    { n: 1, nome: 'Mattino', da: 6, a: 14 },
-    { n: 2, nome: 'Pomeriggio', da: 14, a: 22 },
-    { n: 3, nome: 'Notte', da: 22, a: 6 },
+    { n: 1, nome: 'Turno 1', da: 6, a: 14 },
+    { n: 2, nome: 'Turno 2', da: 14, a: 22 },
+    { n: 3, nome: 'Turno 3', da: 22, a: 6 },
   ];
 
   /* ---------- tempo ---------- */
@@ -1075,7 +1075,7 @@ const CONFIG = {
   SUPABASE_URL: 'https://sszxyritwrkxaictcaaa.supabase.co',
   SUPABASE_KEY: 'sb_publishable_HkYiyUEqlWXJo_CDyD9Eqw_k8-4cY-3',
   NOME_LINEA: 'Linea NID 1',
-  VERSIONE: 'v31 · 23 nov 12:15',
+  VERSIONE: 'v32 · 23 nov 12:20',
 };
 const S = {
   modo: null,             // 'demo' | 'remoto' | 'file' | 'lettore'
@@ -3330,7 +3330,7 @@ function esportaProveCsv(ps) { if (!ps.length) return toast('Nessuna prova da es
    PAGINA ANALISI EFFICIENZE E FERMI  (#analisi)
    ========================================================================== */
 S.an ||= { da: '', a: '', turno: '', prodotto: '' };
-const NOMI_TURNI = ['Mattino', 'Pomeriggio', 'Notte'];
+const NOMI_TURNI = ['Turno 1', 'Turno 2', 'Turno 3'];
 function intervalloAnalisi() {
   const r = rif(), oggi = isoG(SMI.turnoDi(r).giorno);
   if (!S.an.a) S.an.a = oggi;

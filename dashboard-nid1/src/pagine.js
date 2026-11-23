@@ -556,7 +556,7 @@ function esportaProveCsv(ps) { if (!ps.length) return toast('Nessuna prova da es
    PAGINA ANALISI EFFICIENZE E FERMI  (#analisi)
    ========================================================================== */
 S.an ||= { da: '', a: '', turno: '', prodotto: '' };
-const NOMI_TURNI = ['Mattino', 'Pomeriggio', 'Notte'];
+const NOMI_TURNI = ['Turno 1', 'Turno 2', 'Turno 3'];
 function intervalloAnalisi() {
   const r = rif(), oggi = isoG(SMI.turnoDi(r).giorno);
   if (!S.an.a) S.an.a = oggi;
