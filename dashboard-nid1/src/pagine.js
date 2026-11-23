@@ -923,7 +923,7 @@ async function esportaProveXlsx(ps) {
       const [y, m, d] = isoG(p0.t).split('-').map(Number);
       const turni = [...new Set(gr.prove.map(p => SMI.turnoDi(p.t).nome))].join(', ');
       const num = v => v === '' || v == null ? null : isNaN(+v) ? v : +v;
-      const row = ws.addRow([i + 1, maiusc(gr.prodotto), new Date(Date.UTC(y, m - 1, d)), turni, tot ?? null, tot != null && rej != null ? tot - rej : null, rej ?? null, rej ?? null, pr?.s ?? null, pr?.re ?? null, ...gr.par.map(num), null, null, null, null]);
+      const row = ws.addRow([i + 1, maiusc(gr.prodotto), new Date(Date.UTC(y, m - 1, d)), turni, tot ?? null, tot != null && rej != null ? tot - rej - (pr?.u || 0) : null, rej ?? null, rej ?? null, pr?.s ?? null, pr?.re ?? null, ...gr.par.map(num), null, null, null, null]);
       r++;
       const conFoto = POSIZIONI.some(([k]) => gr.foto[k]);
       row.height = conFoto ? ALT_FOTO : 22;

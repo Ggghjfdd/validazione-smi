@@ -5,7 +5,7 @@ const CONFIG = {
   SUPABASE_URL: 'https://sszxyritwrkxaictcaaa.supabase.co',
   SUPABASE_KEY: 'sb_publishable_HkYiyUEqlWXJo_CDyD9Eqw_k8-4cY-3',
   NOME_LINEA: 'Linea NID 1',
-  VERSIONE: 'v27 · 13 nov 09:20',
+  VERSIONE: 'v28 · 23 nov 12:00',
 };
 const S = {
   modo: null,             // 'demo' | 'remoto' | 'file' | 'lettore'
@@ -1248,6 +1248,7 @@ function vistaNonChiudere() {
       <div class="nc-en">DO NOT CLOSE</div>
       <div class="nc-sub">this page</div>
     </div>
+    <div class="nc-pedane" id="ncPedane">${htmlPedane()}</div>
     ${BTN_GESTIONE}
     <span class="nc-info" id="ncInfo">${esc(infoInvio())}</span><span class="nc-dot ${statoInvio()}" id="ncDot" title="Stato invio dati"></span>
   </div>`;
@@ -1270,11 +1271,50 @@ function vistaSostituito() {
     <div class="nc-sub">Il PC della linea adesso è <b>${esc(L.sostituito)}</b>. Questo PC non invia più dati.<br>This PC no longer sends data. You can close this page.</div>
   </div>${BTN_GESTIONE}</div>`;
 }
+/* ---------- contatore pedane (OPL: cassette accettate da SMI / 80) ----------
+   Contatori SMI dall'ultimo "Reset counters" + cassette e scarti in diretta dopo l'ultimo contatore orario. */
+function datiPedane() {
+  const m = L.ultimoModello; if (!m?.stato) return null;
+  const st = m.stato, c = st.ultimiContatori || { t: 0, r: 0, u: 0 }, x = L.extraUltimo || {};
+  // come su SMI: Accepted = Total − Rejected − Uninspected
+  const tot = c.t + (x.cassette || 0), rej = c.r + (x.scarti || 0), nonIsp = c.u || 0, acc = Math.max(0, tot - rej - nonIsp);
+  const ora = SMI.adesso(), T = SMI.turnoDi(ora);
+  // azzerato in questo turno? (tolleranza: 30 min prima dell'inizio turno)
+  const azzerato = st.resetTs != null && st.resetTs >= T.inizio - 30 * 60e3;
+  // per articolo nel turno, dalle produzioni (indipendente dall'azzeramento)
+  const perProd = new Map();
+  for (const p of m.produzioni || []) for (const tt of p.turni || []) if (tt.key === T.key) {
+    const o = perProd.get(p.prodotto) || { t: 0, r: 0, u: 0 }; o.t += tt.t; o.r += tt.r; o.u += tt.u || 0; perProd.set(p.prodotto, o);
+  }
+  if (st.prodotto && x.cassette) { const o = perProd.get(st.prodotto) || { t: 0, r: 0, u: 0 }; o.t += x.cassette; o.r += x.scarti || 0; perProd.set(st.prodotto, o); }
+  return { tot, rej, nonIsp, acc, pedane: acc / SMI.CASSETTE_PER_PEDANA, prodotto: st.prodotto, resetTs: st.resetTs, azzerato, turno: T, perProd, diretta: x.scarti != null };
+}
+function htmlPedane() {
+  const d = datiPedane();
+  if (!d) return `<div class="ped-tit">Contatore pedane</div><div class="ped-vuoto">In attesa dei dati di SMI…</div>`;
+  const P = SMI.CASSETTE_PER_PEDANA, intere = Math.floor(d.acc / P), resto = d.acc - intere * P;
+  const n2 = v => v.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const righe = [...d.perProd.entries()].filter(([, o]) => o.t > 0).sort((a, b) => b[1].t - a[1].t);
+  return `${!d.azzerato ? `<div class="ped-avviso">⚠ Contatore non azzerato in questo turno${d.resetTs ? ` (ultimo azzeramento: ${giornoCorto(d.resetTs)} ${SMI.fmtOra(d.resetTs)})` : ''}<br><small>Su SMI premere <b>Stop</b> e poi <b>Reset counters</b></small></div>` : ''}
+    <div class="ped-tit">Pedane prodotte <span>${esc(maiuscola(d.prodotto || ''))}</span></div>
+    <div class="ped-num">${n2(d.pedane)}</div>
+    <div class="ped-sub">${intere} pedane complete + ${resto} cassette · prossima pedana tra ${P - resto} cassette</div>
+    <div class="ped-righe">
+      <div><span>Accettate</span><b>${n0(d.acc)}</b></div>
+      <div><span>Scartate</span><b>${n0(d.rej)}</b></div>
+      ${d.nonIsp ? `<div><span>Non ispezionate</span><b>${n0(d.nonIsp)}</b></div>` : ''}
+      <div><span>Totale</span><b>${n0(d.tot)}</b></div>
+    </div>
+    <div class="ped-nota">${n0(d.acc)} : ${P} = ${n2(d.pedane)} pedane · dall'azzeramento ${d.resetTs ? `del ${giornoCorto(d.resetTs)} alle ${SMI.fmtOra(d.resetTs)}` : '—'}${d.diretta ? '' : ' · scarti aggiornati ogni ora'}</div>
+    ${righe.length > 1 || (righe.length === 1 && righe[0][0] !== d.prodotto) ? `<div class="ped-art"><div class="ped-art-tit">Turno ${d.turno.nome.toLowerCase()} · per articolo</div>${righe.map(([k, o]) => `<div><span>${esc(maiuscola(k))}</span><b>${n2(Math.max(0, o.t - o.r - (o.u || 0)) / P)}</b></div>`).join('')}</div>` : ''}`;
+}
+const maiuscola = x => String(x).replace(/^./, c => c.toUpperCase());
 function statoInvio() { return L.ultimoOk && Date.now() - L.ultimoOk < Math.max(30e3, L.intervallo * 3000 + 15e3) ? 'ok' : L.ultimoErrore ? 'ko' : ''; }
 function collegaNonChiudere() { $('#btnGestione').onclick = chiediPassword; }
 setInterval(() => {
   const d = $('#ncDot'); if (d) d.className = 'nc-dot ' + statoInvio();
   const t = $('#ncInfo'); if (t) t.textContent = infoInvio();
+  const pd = $('#ncPedane'); if (pd) pd.innerHTML = htmlPedane();
 }, 3000);
 function infoInvio() {
   const ora = x => new Date(x).toLocaleTimeString('it-IT');
@@ -1622,6 +1662,7 @@ async function cicloLettore(comandoId) {
       }
       if (modAnalisi) { const d = new Date(modAnalisi); extra.ultimaCassetta = SMI.ms(d.getFullYear(), d.getMonth() + 1, d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds()); }
     }
+    L.extraUltimo = extra;
     const vivo = { battito: ora, intervallo: L.intervallo, stato: m.stato, extra, versione: 1, file: [...L.file.values()].map(v => [v.nome, v.size, v.mod]), erroriFile: L.erroriFile || {}, nParametri: Object.keys(m.parametri || {}).length, app: CONFIG.VERSIONE.split(' ')[0] };
     const righe = [
       ['storico', { versione: m.versione, generato: m.generato, fineDati: m.fineDati, stato: m.stato, produzioni: m.produzioni, minuti: m.minuti, fermi: m.fermi, prodotti: m.prodotti }],

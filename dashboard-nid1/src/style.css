@@ -546,3 +546,24 @@ input[type=datetime-local]{width:100%}
 .pos-difetto label{display:flex;align-items:center;gap:6px;padding:8px 14px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.05);cursor:pointer;font-size:13px;color:var(--text-1)}
 .pos-difetto label:has(input:checked){background:rgba(57,135,229,.22);border-color:rgba(57,135,229,.6)}
 .pos-difetto input{accent-color:#3987e5}
+
+/* contatore pedane nella schermata NON CHIUDERE */
+.non-chiudere{grid-template-columns:auto;gap:24px;align-content:center}
+@media (min-width:1100px){.non-chiudere{grid-template-columns:auto auto;justify-content:center;align-items:center}}
+.nc-pedane{position:relative;color:#141826;min-width:min(440px,92vw);max-width:92vw;padding:26px 32px;border-radius:32px;background:rgba(255,255,255,.9);border:1px solid #fff;box-shadow:0 30px 80px -20px rgba(20,24,38,.35);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);text-align:center}
+.ped-tit{font-size:18px;font-weight:700;color:#5a6070;text-transform:uppercase;letter-spacing:.06em}
+.ped-tit span{display:block;text-transform:none;letter-spacing:0;color:#141826;font-size:22px;margin-top:2px}
+.ped-num{font-size:clamp(64px,9vw,112px);font-weight:800;line-height:1;margin:10px 0 6px;color:#1f3a5f;font-variant-numeric:tabular-nums}
+.ped-sub{font-size:16px;color:#3a4050;font-weight:600}
+.ped-righe{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:10px;margin:18px 0 10px}
+.ped-righe div{background:#f1f4f8;border-radius:14px;padding:10px 8px}
+.ped-righe span{display:block;font-size:13px;color:#5a6070}
+.ped-righe b{font-size:24px;font-variant-numeric:tabular-nums}
+.ped-nota{font-size:13px;color:#6a7080}
+.ped-avviso{background:#d0202a;color:#fff;border-radius:16px;padding:12px 14px;margin-bottom:16px;font-size:17px;font-weight:700;line-height:1.35;animation:pedLampo 1.6s ease-in-out infinite}
+.ped-avviso small{font-size:14px;font-weight:500}
+@keyframes pedLampo{50%{opacity:.75}}
+.ped-art{margin-top:14px;border-top:1px solid #e3e7ee;padding-top:10px;text-align:left}
+.ped-art-tit{font-size:13px;color:#5a6070;font-weight:700;margin-bottom:4px}
+.ped-art div:not(.ped-art-tit){display:flex;justify-content:space-between;font-size:15px;padding:3px 0}
+.ped-vuoto{color:#6a7080;margin-top:12px}

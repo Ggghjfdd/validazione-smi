@@ -42,6 +42,7 @@ const SMI = (() => {
     let prodotto = null, prev = { ...ZERO }, prevTs = null, learn = false, modo = 'ANALYSIS';
     let inMarcia = false, marciaDa = null, cur = null, ultimoTs = null;
     let espulsione = null, espulsioneDa = null; const storiaEspulsione = [];
+    let resetTs = null; // ultimo azzeramento dei contatori SMI
 
     const chiudi = () => { if (cur && cur.ore.length) runs.push(cur); cur = null; };
     const lines = text.split(/\r?\n/);
@@ -56,7 +57,7 @@ const SMI = (() => {
           break;
         case 'COUNTERS RESET':
         case 'SYSTEM STARTUP INITIALISATION COMPLETED':
-          prev = { ...ZERO }; prevTs = ts; break;
+          prev = { ...ZERO }; prevTs = ts; resetTs = ts; break;
         case 'ANALYSIS MODE SET':
           modo = msg; if (msg === 'LEARNING' || msg === 'UPDATE') learn = true; break;
         case 'REJECT SIGNAL': { // comando di espulsione delle cassette scartate acceso/spento
@@ -76,6 +77,7 @@ const SMI = (() => {
           const c = RE_CNT.exec(msg); if (!c) break;
           const v = { t: +c[1], r: +c[2], u: +c[3], s: +c[4], re: +c[5] };
           const base = (v.t < prev.t || v.r < prev.r) ? ZERO : prev;
+          if (base === ZERO && prev.t) resetTs = ts;
           const d = { t: v.t - base.t, r: Math.max(0, v.r - base.r), u: Math.max(0, v.u - base.u), s: Math.max(0, v.s - base.s), re: Math.max(0, v.re - base.re) };
           if (d.t > 0 || d.r > 0) {
             if (cur && cur.ultimo && ts - cur.ultimo > PAUSA_NUOVA_PRODUZIONE) chiudi();
@@ -91,7 +93,7 @@ const SMI = (() => {
     }
     if (inMarcia) intervalliMarcia.push([marciaDa, null]);
     chiudi();
-    return { runs, intervalliMarcia, cambiImpostazioni, fermi, storiaProdotti, stato: { prodotto, inMarcia, modo, ultimoTs, ultimiContatori: prev, ultimiContatoriTs: prevTs, espulsione, espulsioneDa, storiaEspulsione: storiaEspulsione.slice(-200), cambioProdottoTs: storiaProdotti.length ? storiaProdotti[storiaProdotti.length - 1][0] : null } };
+    return { runs, intervalliMarcia, cambiImpostazioni, fermi, storiaProdotti, stato: { prodotto, inMarcia, modo, ultimoTs, ultimiContatori: prev, ultimiContatoriTs: prevTs, resetTs, espulsione, espulsioneDa, storiaEspulsione: storiaEspulsione.slice(-200), cambioProdottoTs: storiaProdotti.length ? storiaProdotti[storiaProdotti.length - 1][0] : null } };
   }
 
   function sovrapposizione(intervalli, a, b, fineAperta) {
