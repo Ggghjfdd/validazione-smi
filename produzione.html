@@ -601,6 +601,24 @@ input[type=datetime-local]{width:100%}
 .ped-tab.grande td small{display:block;font-size:12.5px;font-weight:500;color:#6a7080;margin-top:2px;white-space:nowrap}
 .ped-tab.grande td{vertical-align:middle}
 
+/* v33: NON CHIUDERE più piccolo, riquadro pedane più grande */
+@media (min-width:1100px){.non-chiudere{grid-template-columns:minmax(0,.8fr) minmax(0,1.6fr);gap:28px;justify-content:stretch;padding:24px max(24px,calc((100vw - 1800px) / 2))}}
+.non-chiudere .nc-card{padding:clamp(20px,2.5vw,36px) clamp(20px,3vw,44px);border-radius:28px}
+.non-chiudere .nc-logo{width:min(200px,50vw);margin-bottom:clamp(12px,2vw,22px)}
+.non-chiudere .nc-it,.non-chiudere .nc-en{font-size:clamp(28px,3.6vw,54px);letter-spacing:-.5px}
+.non-chiudere .nc-sub{font-size:clamp(13px,1.3vw,17px);margin-top:4px}
+.non-chiudere .nc-sep{margin:clamp(10px,1.6vw,18px) auto}
+.nc-pedane{min-width:0;width:100%;padding:clamp(22px,2.6vw,40px) clamp(22px,3vw,48px)}
+.nc-pedane .ped-tit{font-size:clamp(18px,1.8vw,24px)}
+.ped-tab.grande{font-size:clamp(22px,2.4vw,34px)}
+.ped-tab.grande th{font-size:clamp(16px,1.6vw,22px)}
+.ped-tab.grande th small{font-size:clamp(13px,1.1vw,16px)}
+.ped-tab.grande td{padding:12px 18px}
+.ped-tab.grande td b{font-size:clamp(34px,3.8vw,58px)}
+.ped-tab.grande td .ped-totali{display:block;color:#d0202a;font-size:clamp(15px,1.5vw,21px);font-weight:700;margin-top:2px;white-space:nowrap}
+.ped-tab.grande td small{font-size:clamp(12px,1vw,15px)}
+.ped-avviso{font-size:clamp(17px,1.6vw,22px)}
+
 </style>
 </head>
 <body>
@@ -1075,7 +1093,7 @@ const CONFIG = {
   SUPABASE_URL: 'https://sszxyritwrkxaictcaaa.supabase.co',
   SUPABASE_KEY: 'sb_publishable_HkYiyUEqlWXJo_CDyD9Eqw_k8-4cY-3',
   NOME_LINEA: 'Linea NID 1',
-  VERSIONE: 'v32 · 23 nov 12:20',
+  VERSIONE: 'v33 · 23 nov 13:55',
 };
 const S = {
   modo: null,             // 'demo' | 'remoto' | 'file' | 'lettore'
@@ -2370,7 +2388,8 @@ function htmlPedane() {
   const n2 = v => v.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const val = o => ({ tot: o ? o.t : 0, buone: o ? Math.max(0, o.t - o.r - (o.u || 0)) : 0 });
   const righe = [...d.perProd.entries()].map(([k, mm]) => [k, turni.map(q => val(mm.get(q.key)))]).filter(r => r[1].some(v => v.tot > 0)).sort((a, b) => b[1][1].tot - a[1][1].tot || b[1][0].tot - a[1][0].tot);
-  const cella = (v, i) => `<td class="${i ? 'ora' : ''}">${v.tot > 0 ? `<b>${n2(v.buone / P)}</b><small>${n0(v.buone)} buone · ${n0(v.tot)} totali</small>` : '<span class="zero">—</span>'}</td>`;
+  // in grande le pedane buone; sotto, in rosso, le pedane totali comprese le scartate; poi buone · totali
+  const cella = (v, i) => `<td class="${i ? 'ora' : ''}">${v.tot > 0 ? `<b>${n2(v.buone / P)}</b><span class="ped-totali">${n2(v.tot / P)} pedane totali</span><small>${n0(v.buone)} buone · ${n0(v.tot)} totali</small>` : '<span class="zero">—</span>'}</td>`;
   const somma = i => righe.reduce((s, r) => ({ tot: s.tot + r[1][i].tot, buone: s.buone + r[1][i].buone }), { tot: 0, buone: 0 });
   return `${!d.azzerato ? `<div class="ped-avviso">⚠ Contatore non azzerato in questo turno<br><small>Su SMI premere <b>Stop</b> e poi <b>Reset counters</b></small></div>` : ''}
     <div class="ped-tit">Pedane prodotte</div>
@@ -2379,7 +2398,7 @@ function htmlPedane() {
       <tbody>${righe.map(([k, v]) => `<tr><td>${esc(maiuscola(k))}</td>${v.map(cella).join('')}</tr>`).join('')}</tbody>
       ${righe.length > 1 ? `<tfoot><tr><td>Totale</td>${turni.map((q, i) => cella(somma(i), i)).join('')}</tr></tfoot>` : ''}
     </table>
-    <div class="ped-nota" style="margin-top:8px">Pedane = cassette buone : ${P}</div>` : '<div class="ped-vuoto">Nessuna cassetta in questi due turni.</div>'}`;
+    <div class="ped-nota" style="margin-top:8px">Pedane = cassette buone : ${P} · <span style="color:#d0202a">in rosso: tutte le cassette (anche scartate) : ${P}</span></div>` : '<div class="ped-vuoto">Nessuna cassetta in questi due turni.</div>'}`;
 }
 const maiuscola = x => String(x).replace(/^./, c => c.toUpperCase());
 function statoInvio() { return L.ultimoOk && Date.now() - L.ultimoOk < Math.max(30e3, L.intervallo * 3000 + 15e3) ? 'ok' : L.ultimoErrore ? 'ko' : ''; }

@@ -5,7 +5,7 @@ const CONFIG = {
   SUPABASE_URL: 'https://sszxyritwrkxaictcaaa.supabase.co',
   SUPABASE_KEY: 'sb_publishable_HkYiyUEqlWXJo_CDyD9Eqw_k8-4cY-3',
   NOME_LINEA: 'Linea NID 1',
-  VERSIONE: 'v32 · 23 nov 12:20',
+  VERSIONE: 'v33 · 23 nov 13:55',
 };
 const S = {
   modo: null,             // 'demo' | 'remoto' | 'file' | 'lettore'
@@ -1300,7 +1300,8 @@ function htmlPedane() {
   const n2 = v => v.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const val = o => ({ tot: o ? o.t : 0, buone: o ? Math.max(0, o.t - o.r - (o.u || 0)) : 0 });
   const righe = [...d.perProd.entries()].map(([k, mm]) => [k, turni.map(q => val(mm.get(q.key)))]).filter(r => r[1].some(v => v.tot > 0)).sort((a, b) => b[1][1].tot - a[1][1].tot || b[1][0].tot - a[1][0].tot);
-  const cella = (v, i) => `<td class="${i ? 'ora' : ''}">${v.tot > 0 ? `<b>${n2(v.buone / P)}</b><small>${n0(v.buone)} buone · ${n0(v.tot)} totali</small>` : '<span class="zero">—</span>'}</td>`;
+  // in grande le pedane buone; sotto, in rosso, le pedane totali comprese le scartate; poi buone · totali
+  const cella = (v, i) => `<td class="${i ? 'ora' : ''}">${v.tot > 0 ? `<b>${n2(v.buone / P)}</b><span class="ped-totali">${n2(v.tot / P)} pedane totali</span><small>${n0(v.buone)} buone · ${n0(v.tot)} totali</small>` : '<span class="zero">—</span>'}</td>`;
   const somma = i => righe.reduce((s, r) => ({ tot: s.tot + r[1][i].tot, buone: s.buone + r[1][i].buone }), { tot: 0, buone: 0 });
   return `${!d.azzerato ? `<div class="ped-avviso">⚠ Contatore non azzerato in questo turno<br><small>Su SMI premere <b>Stop</b> e poi <b>Reset counters</b></small></div>` : ''}
     <div class="ped-tit">Pedane prodotte</div>
@@ -1309,7 +1310,7 @@ function htmlPedane() {
       <tbody>${righe.map(([k, v]) => `<tr><td>${esc(maiuscola(k))}</td>${v.map(cella).join('')}</tr>`).join('')}</tbody>
       ${righe.length > 1 ? `<tfoot><tr><td>Totale</td>${turni.map((q, i) => cella(somma(i), i)).join('')}</tr></tfoot>` : ''}
     </table>
-    <div class="ped-nota" style="margin-top:8px">Pedane = cassette buone : ${P}</div>` : '<div class="ped-vuoto">Nessuna cassetta in questi due turni.</div>'}`;
+    <div class="ped-nota" style="margin-top:8px">Pedane = cassette buone : ${P} · <span style="color:#d0202a">in rosso: tutte le cassette (anche scartate) : ${P}</span></div>` : '<div class="ped-vuoto">Nessuna cassetta in questi due turni.</div>'}`;
 }
 const maiuscola = x => String(x).replace(/^./, c => c.toUpperCase());
 function statoInvio() { return L.ultimoOk && Date.now() - L.ultimoOk < Math.max(30e3, L.intervallo * 3000 + 15e3) ? 'ok' : L.ultimoErrore ? 'ko' : ''; }
