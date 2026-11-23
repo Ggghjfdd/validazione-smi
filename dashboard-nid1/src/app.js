@@ -5,7 +5,7 @@ const CONFIG = {
   SUPABASE_URL: 'https://sszxyritwrkxaictcaaa.supabase.co',
   SUPABASE_KEY: 'sb_publishable_HkYiyUEqlWXJo_CDyD9Eqw_k8-4cY-3',
   NOME_LINEA: 'Linea NID 1',
-  VERSIONE: 'v30 · 23 nov 12:05',
+  VERSIONE: 'v31 · 23 nov 12:15',
 };
 const S = {
   modo: null,             // 'demo' | 'remoto' | 'file' | 'lettore'
@@ -1294,19 +1294,22 @@ function datiPedane() {
 }
 function htmlPedane() {
   const d = datiPedane();
-  if (!d) return `<div class="ped-tit">Cassette accettate</div><div class="ped-vuoto">In attesa dei dati di SMI…</div>`;
-  // solo turno precedente e turno attuale: cassette accettate (totale − scartate − non ispezionate) per articolo
-  const turni = d.turni.slice(-2);
-  const acc = o => o ? Math.max(0, o.t - o.r - (o.u || 0)) : 0;
-  const righe = [...d.perProd.entries()].map(([k, mm]) => [k, turni.map(q => acc(mm.get(q.key)))]).filter(r => r[1].some(v => v > 0)).sort((a, b) => b[1][1] - a[1][1] || b[1][0] - a[1][0]);
-  const cella = v => v > 0 ? n0(v) : '<span class="zero">—</span>';
+  if (!d) return `<div class="ped-tit">Pedane prodotte</div><div class="ped-vuoto">In attesa dei dati di SMI…</div>`;
+  // turno precedente e turno attuale, per articolo: pedane = cassette buone / 80 (buone = totale − scartate − non ispezionate)
+  const P = SMI.CASSETTE_PER_PEDANA, turni = d.turni.slice(-2);
+  const n2 = v => v.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const val = o => ({ tot: o ? o.t : 0, buone: o ? Math.max(0, o.t - o.r - (o.u || 0)) : 0 });
+  const righe = [...d.perProd.entries()].map(([k, mm]) => [k, turni.map(q => val(mm.get(q.key)))]).filter(r => r[1].some(v => v.tot > 0)).sort((a, b) => b[1][1].tot - a[1][1].tot || b[1][0].tot - a[1][0].tot);
+  const cella = (v, i) => `<td class="${i ? 'ora' : ''}">${v.tot > 0 ? `<b>${n2(v.buone / P)}</b><small>${n0(v.buone)} buone · ${n0(v.tot)} totali</small>` : '<span class="zero">—</span>'}</td>`;
+  const somma = i => righe.reduce((s, r) => ({ tot: s.tot + r[1][i].tot, buone: s.buone + r[1][i].buone }), { tot: 0, buone: 0 });
   return `${!d.azzerato ? `<div class="ped-avviso">⚠ Contatore non azzerato in questo turno<br><small>Su SMI premere <b>Stop</b> e poi <b>Reset counters</b></small></div>` : ''}
-    <div class="ped-tit">Cassette accettate</div>
+    <div class="ped-tit">Pedane prodotte</div>
     ${righe.length ? `<table class="ped-tab grande">
       <thead><tr><th></th>${turni.map((q, i) => `<th class="${i ? 'ora' : ''}">${i ? 'Turno attuale' : 'Turno precedente'}<small>${q.nome} ${giornoCorto(q.giorno)}</small></th>`).join('')}</tr></thead>
-      <tbody>${righe.map(([k, v]) => `<tr><td>${esc(maiuscola(k))}</td>${v.map((x, i) => `<td class="${i ? 'ora' : ''}">${cella(x)}</td>`).join('')}</tr>`).join('')}</tbody>
-      ${righe.length > 1 ? `<tfoot><tr><td>Totale</td>${turni.map((q, i) => `<td class="${i ? 'ora' : ''}">${cella(righe.reduce((s, r) => s + r[1][i], 0))}</td>`).join('')}</tr></tfoot>` : ''}
-    </table>` : '<div class="ped-vuoto">Nessuna cassetta in questi due turni.</div>'}`;
+      <tbody>${righe.map(([k, v]) => `<tr><td>${esc(maiuscola(k))}</td>${v.map(cella).join('')}</tr>`).join('')}</tbody>
+      ${righe.length > 1 ? `<tfoot><tr><td>Totale</td>${turni.map((q, i) => cella(somma(i), i)).join('')}</tr></tfoot>` : ''}
+    </table>
+    <div class="ped-nota" style="margin-top:8px">Pedane = cassette buone : ${P}</div>` : '<div class="ped-vuoto">Nessuna cassetta in questi due turni.</div>'}`;
 }
 const maiuscola = x => String(x).replace(/^./, c => c.toUpperCase());
 function statoInvio() { return L.ultimoOk && Date.now() - L.ultimoOk < Math.max(30e3, L.intervallo * 3000 + 15e3) ? 'ok' : L.ultimoErrore ? 'ko' : ''; }
