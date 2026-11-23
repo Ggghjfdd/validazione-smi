@@ -577,3 +577,10 @@ input[type=datetime-local]{width:100%}
 .ped-tab th.ora{border-radius:8px 8px 0 0}
 .ped-tab tfoot td{font-weight:700;border-top:2px solid #d5dbe4}
 .ped-tab .zero{color:#b5bcc8}
+
+.ped-tit{margin-bottom:10px}
+.ped-tab.grande{font-size:clamp(20px,2.2vw,30px)}
+.ped-tab.grande th{font-size:clamp(15px,1.4vw,18px)}
+.ped-tab.grande th small{font-size:13px}
+.ped-tab.grande td{padding:10px 14px;font-weight:700}
+.ped-tab.grande td:first-child{font-weight:600}
