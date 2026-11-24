@@ -5,7 +5,7 @@ const CONFIG = {
   SUPABASE_URL: 'https://sszxyritwrkxaictcaaa.supabase.co',
   SUPABASE_KEY: 'sb_publishable_HkYiyUEqlWXJo_CDyD9Eqw_k8-4cY-3',
   NOME_LINEA: 'Linea NID 1',
-  VERSIONE: 'v37 · 24 nov 11:10',
+  VERSIONE: 'v38 · 24 nov 11:15',
 };
 const S = {
   modo: null,             // 'demo' | 'remoto' | 'file' | 'lettore'
@@ -1433,12 +1433,22 @@ async function preparaLettore() {
 // se dopo 2 minuti è ancora in avvio, ricarico la pagina
 setTimeout(() => { if (location.hash === '#lettore' && !L.pronto) location.reload(); }, 120000);
 async function riattivaPermessi() {
-  let ok = true;
-  for (const h of L.cartelle) { const p = await h.requestPermission({ mode: 'read' }); if (p !== 'granted') ok = false; }
-  if (!ok) { toast('Serve il permesso sulla cartella per leggere i file'); return; }
-  localStorage.setItem('smi_perm_persistente', '0'); // dopo una ricarica manuale saprò se il permesso è rimasto
-  L.permessoDaRiattivare = false; await scansiona();
-  if (S.utente && L.config) avviaLettore(); else render();
+  // le richieste partono tutte insieme, dentro il clic: Edge vuole il clic dell'utente per ogni richiesta,
+  // e chiedendole una dopo l'altra la seconda (es. D:\images) veniva rifiutata e il lettore restava fermo
+  const b = $('#btnRiavvia'); if (b) { b.disabled = true; b.style.opacity = '.6'; }
+  const esiti = await Promise.all(L.cartelle.map(h => h.requestPermission({ mode: 'read' }).then(p => p, e => 'errore: ' + e.message)));
+  const ok = L.cartelle.filter((h, i) => esiti[i] === 'granted');
+  const no = L.cartelle.map((h, i) => [h.name, esiti[i]]).filter(([, e]) => e !== 'granted');
+  for (const [n, e] of no) log(`Permesso non dato per ${n} (${e})`);
+  if (!ok.length) { if (b) { b.disabled = false; b.style.opacity = ''; } toast('Serve il permesso sulla cartella per leggere i file: premi di nuovo e scegli "Consenti a ogni visita"'); return; }
+  if (no.length) toast(`Parto senza ${no.map(x => x[0]).join(', ')}: per riaggiungerla usa Gestione → Aggiungi cartella`);
+  L.cartelle = ok; // le cartelle salvate restano tutte: al prossimo avvio vengono richieste di nuovo
+  localStorage.setItem('smi_perm_persistente', '0');
+  L.permessoDaRiattivare = false;
+  L.pronto = false; fase('Lettura delle cartelle…'); render();
+  try { await conTimeout(scansiona(), 60000, 'lettura cartelle'); } catch (e) { log('Riavvio: ' + e.message); }
+  L.pronto = true; fase('');
+  if (S.utente && L.config) { render(); avviaLettore().catch(e => { log('Avvio: ' + e.message); render(); }); } else render();
 }
 async function scegliCartella() {
   try {
