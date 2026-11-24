@@ -619,6 +619,10 @@ input[type=datetime-local]{width:100%}
 .ped-tab.grande td small{font-size:clamp(12px,1vw,15px)}
 .ped-avviso{font-size:clamp(17px,1.6vw,22px)}
 
+.riav-stato{margin-top:14px;font-size:15px;color:#141826;line-height:1.4;background:#fff6e0;border:1px solid #f1d58a;border-radius:12px;padding:10px 12px}
+.btn-scegli{margin-top:12px;width:100%;appearance:none;border:0;border-radius:16px;padding:14px 18px;font:inherit;font-size:17px;font-weight:700;color:#fff;background:#1f3a5f;cursor:pointer}
+.btn-link{margin-top:10px;appearance:none;border:0;background:none;color:#5a6070;text-decoration:underline;font:inherit;font-size:14px;cursor:pointer}
+
 </style>
 </head>
 <body>
@@ -1139,7 +1143,7 @@ const CONFIG = {
   SUPABASE_URL: 'https://sszxyritwrkxaictcaaa.supabase.co',
   SUPABASE_KEY: 'sb_publishable_HkYiyUEqlWXJo_CDyD9Eqw_k8-4cY-3',
   NOME_LINEA: 'Linea NID 1',
-  VERSIONE: 'v38 · 24 nov 11:15',
+  VERSIONE: 'v39 · 24 nov 11:25',
 };
 const S = {
   modo: null,             // 'demo' | 'remoto' | 'file' | 'lettore'
@@ -2143,7 +2147,7 @@ function render() {
     if (L.sostituito) { app.innerHTML = vistaSostituito(); $('#btnGestione').onclick = chiediPassword; return; }
     if (L.chiediPw) { app.innerHTML = vistaLogin('', { titolo: 'Gestione lettore', testo: 'Per modificare il lettore inserisci email e password.', email: S.utente?.email, annulla: true }); collegaLogin(() => { L.chiediPw = false; L.autorizzato = true; L.impostazioni = true; render(); }); $('#btnAnnullaLogin').onclick = () => { L.chiediPw = false; render(); }; return; }
     if (L.attivo && !L.impostazioni) { app.innerHTML = vistaNonChiudere(); collegaNonChiudere(); return; }
-    if (L.config && L.permessoDaRiattivare && S.utente && !L.impostazioni) { app.innerHTML = vistaRiavvia(); $('#btnRiavvia').onclick = riattivaPermessi; $('#btnGestione').onclick = chiediPassword; return; }
+    if (L.config && L.permessoDaRiattivare && S.utente && !L.impostazioni) { app.innerHTML = vistaRiavvia(); $('#btnRiavvia').onclick = riattivaPermessi; $('#btnScegliDiNuovo')?.addEventListener('click', scegliDiNuovo); $('#btnPartiSenza')?.addEventListener('click', partiConCartelleOk); $('#btnGestione').onclick = chiediPassword; return; }
     // PC non ancora configurato (o sessione scaduta): si entra solo con email e password
     if (!L.autorizzato) { app.innerHTML = vistaLogin('', { titolo: 'Lettore ' + CONFIG.NOME_LINEA, testo: L.config ? 'Accedi per gestire il lettore di questo PC.' : 'Accedi per configurare <b>questo PC</b> come PC della linea. Serve solo la prima volta.', email: S.utente?.email }); collegaLogin(() => { L.autorizzato = true; render(); }); return; }
     app.innerHTML = header() + vistaLettore(); collegaHeader(); collegaLettore(); return;
@@ -2388,11 +2392,17 @@ function vistaNonChiudere() {
   </div>`;
 }
 function vistaRiavvia() {
+  const R = L.riav || {};
+  const nome = R.prossima ? ` (${esc(R.prossima)})` : '';
   return `<div class="non-chiudere"><div class="nc-card">
     <div class="nc-logo" role="img" aria-label="Logo"></div>
     <div class="nc-sub" style="margin:0 0 18px;color:#141826;font-weight:600">Il lettore è in pausa · The reader is paused</div>
-    <button class="btn-riavvia" id="btnRiavvia"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><span>CLICCA QUI PER RIAVVIARE<small>CLICK HERE TO RESTART</small></span></button>
+    <button class="btn-riavvia" id="btnRiavvia"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><span>${R.prossima && R.giaOk ? `CLICCA PER DARE IL PERMESSO ANCHE A ${esc(R.prossima.toUpperCase())}` : 'CLICCA QUI PER RIAVVIARE'}<small>CLICK HERE TO RESTART</small></span></button>
+    ${R.stato ? `<div class="riav-stato">${R.stato}</div>` : ''}
+    ${R.fallback ? `<button class="btn-scegli" id="btnScegliDiNuovo">📁 Scegli di nuovo la cartella${nome}</button>` : ''}
+    ${R.giaOk ? `<button class="btn-link" id="btnPartiSenza">Parti senza ${esc(R.prossima || '')}</button>` : ''}
     <div class="nc-sub" style="font-size:14px;margin-top:18px">Se Edge chiede il permesso, scegli <b>"Consenti a ogni visita"</b> · If Edge asks, choose <b>"Allow on every visit"</b></div>
+    <div class="nc-sub" style="font-size:12px;margin-top:8px;opacity:.6">${CONFIG.VERSIONE.split(' ')[0]}</div>
   </div>
   ${BTN_GESTIONE}</div>`;
 }
@@ -2496,7 +2506,8 @@ window.addEventListener('beforeunload', e => { if (L.attivo && !L.ricaricoAuto) 
    Ogni 3 minuti il PC della linea controlla se sul sito c'è una versione nuova della pagina.
    Se c'è, si ricarica da solo e il lettore riparte (serve il permesso "Consenti a ogni visita"). */
 async function controllaAggiornamento() {
-  if (S.modo !== 'lettore' || !L.attivo) return;
+  const inPausa = S.modo === 'lettore' && !L.attivo && L.permessoDaRiattivare && !L.riav?.stato; // in pausa non c'è niente da perdere
+  if (S.modo !== 'lettore' || (!L.attivo && !inPausa)) return;
   try {
     const r = await fetch(location.pathname + '?v=' + Date.now(), { cache: 'no-store' });
     if (!r.ok) return;
@@ -2504,7 +2515,7 @@ async function controllaAggiornamento() {
     const v = /VERSIONE: '([^']+)'/.exec(testo)?.[1];
     if (v && v !== CONFIG.VERSIONE) {
       // ricarico solo se so che Edge ridà il permesso sulla cartella da solo ("Consenti a ogni visita")
-      if (localStorage.getItem('smi_perm_persistente') !== '1') { if (!L.avvisatoVersione) log(`Nuova versione del sito (${v}): non ricarico da solo per non perdere il permesso sulla cartella`); L.avvisatoVersione = true; return; }
+      if (!inPausa && localStorage.getItem('smi_perm_persistente') !== '1') { if (!L.avvisatoVersione) log(`Nuova versione del sito (${v}): non ricarico da solo per non perdere il permesso sulla cartella`); L.avvisatoVersione = true; return; }
       log(`Nuova versione del sito (${v}): ricarico la pagina`);
       L.ricaricoAuto = true;
       setTimeout(() => location.reload(), 1500);
@@ -2566,23 +2577,49 @@ async function preparaLettore() {
 }
 // se dopo 2 minuti è ancora in avvio, ricarico la pagina
 setTimeout(() => { if (location.hash === '#lettore' && !L.pronto) location.reload(); }, 120000);
+/* Permessi dopo un riavvio del PC: una cartella per clic (Edge vuole un clic per ogni richiesta).
+   Se Edge non mostra la richiesta entro 10 s, si può scegliere di nuovo la cartella con la finestra di Windows. */
 async function riattivaPermessi() {
-  // le richieste partono tutte insieme, dentro il clic: Edge vuole il clic dell'utente per ogni richiesta,
-  // e chiedendole una dopo l'altra la seconda (es. D:\images) veniva rifiutata e il lettore restava fermo
-  const b = $('#btnRiavvia'); if (b) { b.disabled = true; b.style.opacity = '.6'; }
-  const esiti = await Promise.all(L.cartelle.map(h => h.requestPermission({ mode: 'read' }).then(p => p, e => 'errore: ' + e.message)));
-  const ok = L.cartelle.filter((h, i) => esiti[i] === 'granted');
-  const no = L.cartelle.map((h, i) => [h.name, esiti[i]]).filter(([, e]) => e !== 'granted');
-  for (const [n, e] of no) log(`Permesso non dato per ${n} (${e})`);
-  if (!ok.length) { if (b) { b.disabled = false; b.style.opacity = ''; } toast('Serve il permesso sulla cartella per leggere i file: premi di nuovo e scegli "Consenti a ogni visita"'); return; }
-  if (no.length) toast(`Parto senza ${no.map(x => x[0]).join(', ')}: per riaggiungerla usa Gestione → Aggiungi cartella`);
-  L.cartelle = ok; // le cartelle salvate restano tutte: al prossimo avvio vengono richieste di nuovo
+  const R = L.riav ||= {};
+  if (!L.salvate) L.salvate = L.cartelle.slice();
+  const stato = async h => { try { return await h.queryPermission({ mode: 'read' }); } catch { return 'errore'; } };
+  let manca = null; for (const h of L.salvate) if (await stato(h) !== 'granted') { manca = h; break; }
+  if (manca) {
+    R.prossima = manca.name; R.stato = `Richiesta del permesso per <b>${esc(manca.name)}</b>…`; R.fallback = false; render();
+    const esito = await Promise.race([manca.requestPermission({ mode: 'read' }).catch(e => 'errore: ' + e.message), new Promise(r => setTimeout(() => r('timeout'), 10000))]);
+    log(`Permesso ${manca.name}: ${esito}`);
+    if (esito === 'timeout' || esito.startsWith('errore')) {
+      R.stato = `Edge non ha mostrato la richiesta per <b>${esc(manca.name)}</b>${esito.startsWith('errore') ? ` (${esc(esito)})` : ''}.<br>Usa il pulsante qui sotto e scegli di nuovo la cartella.`;
+      R.fallback = true; render(); return;
+    }
+    if (esito !== 'granted') { R.stato = `Permesso per <b>${esc(manca.name)}</b> non dato: riprova e scegli <b>"Consenti a ogni visita"</b>.`; R.fallback = true; render(); return; }
+    // ci sono altre cartelle senza permesso? un altro clic
+    for (const h of L.salvate) if (h !== manca && await stato(h) !== 'granted') { R.prossima = h.name; R.giaOk = true; R.stato = `${esc(manca.name)}: ok ✓`; R.fallback = false; render(); return; }
+  }
+  await partiConCartelleOk();
+}
+async function partiConCartelleOk() {
+  const ok = [];
+  for (const h of L.salvate || L.cartelle) { try { if (await h.queryPermission({ mode: 'read' }) === 'granted') ok.push(h); } catch { } }
+  if (!ok.length) { (L.riav ||= {}).stato = 'Nessuna cartella con il permesso.'; render(); return; }
+  L.cartelle = ok; L.riav = null;
   localStorage.setItem('smi_perm_persistente', '0');
   L.permessoDaRiattivare = false;
   L.pronto = false; fase('Lettura delle cartelle…'); render();
   try { await conTimeout(scansiona(), 60000, 'lettura cartelle'); } catch (e) { log('Riavvio: ' + e.message); }
   L.pronto = true; fase('');
   if (S.utente && L.config) { render(); avviaLettore().catch(e => { log('Avvio: ' + e.message); render(); }); } else render();
+}
+async function scegliDiNuovo() {
+  try {
+    const h = await window.showDirectoryPicker({ id: 'smi', mode: 'read' });
+    const tutte = L.salvate || L.cartelle, i = tutte.findIndex(x => x.name === (L.riav?.prossima || h.name));
+    if (i >= 0) tutte[i] = h; else tutte.push(h);
+    L.salvate = tutte;
+    try { await IDB.set('cartelle', tutte); } catch { }
+    log(`Cartella scelta di nuovo: ${h.name}`);
+    L.riav = null; await riattivaPermessi();
+  } catch (e) { if (e.name !== 'AbortError') { (L.riav ||= {}).stato = 'Errore: ' + esc(e.message); render(); } }
 }
 async function scegliCartella() {
   try {
