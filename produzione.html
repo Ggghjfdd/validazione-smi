@@ -1139,7 +1139,7 @@ const CONFIG = {
   SUPABASE_URL: 'https://sszxyritwrkxaictcaaa.supabase.co',
   SUPABASE_KEY: 'sb_publishable_HkYiyUEqlWXJo_CDyD9Eqw_k8-4cY-3',
   NOME_LINEA: 'Linea NID 1',
-  VERSIONE: 'v36 · 23 nov 15:05',
+  VERSIONE: 'v37 · 24 nov 11:10',
 };
 const S = {
   modo: null,             // 'demo' | 'remoto' | 'file' | 'lettore'
@@ -2139,7 +2139,7 @@ function render() {
     if (!L.preparato) { L.preparato = true; preparaLettore(); }
     S.modo = 'lettore';
     document.title = L.attivo ? 'NON CHIUDERE · DO NOT CLOSE · NID 1' : 'Lettore · ' + CONFIG.NOME_LINEA;
-    if (!L.pronto) { app.innerHTML = `<div class="centro"><div class="pill"><span class="dot"></span>Avvio del lettore…</div></div>`; return; }
+    if (!L.pronto) { app.innerHTML = `<div class="centro" style="flex-direction:column;gap:10px"><div class="pill"><span class="dot"></span>Avvio del lettore…</div><div class="nota" id="faseLettore" style="color:#fff;opacity:.85">${esc(L.fase || '')}</div></div>`; return; }
     if (L.sostituito) { app.innerHTML = vistaSostituito(); $('#btnGestione').onclick = chiediPassword; return; }
     if (L.chiediPw) { app.innerHTML = vistaLogin('', { titolo: 'Gestione lettore', testo: 'Per modificare il lettore inserisci email e password.', email: S.utente?.email, annulla: true }); collegaLogin(() => { L.chiediPw = false; L.autorizzato = true; L.impostazioni = true; render(); }); $('#btnAnnullaLogin').onclick = () => { L.chiediPw = false; render(); }; return; }
     if (L.attivo && !L.impostazioni) { app.innerHTML = vistaNonChiudere(); collegaNonChiudere(); return; }
@@ -2529,21 +2529,43 @@ function collegaLettore() {
   $('#nomePc')?.addEventListener('change', async e => { if (L.config) { L.config.nome = e.target.value.trim() || 'PC visione NID 1'; try { await IDB.set('config', L.config); } catch { } rivendicaPc(); } });
   $('#selInt')?.addEventListener('change', e => { L.intervallo = +e.target.value; localStorage.setItem('smi_intervallo', L.intervallo); if (L.attivo) { avviaTicker(); render(); } });
 }
+/* Avvio del lettore dopo un riavvio del PC: ogni passo ha un tempo massimo, la scritta mostra a che punto è,
+   e se la rete non c'è ancora riprova da solo invece di restare fermo su "Avvio del lettore…". */
+const fase = t => { L.fase = t; const el = $('#faseLettore'); if (el) el.textContent = t; };
 async function preparaLettore() {
-  await utenteCorrente();
-  L.config = await IDB.get('config').catch(() => null);
-  try { const a = JSON.parse(localStorage.getItem('smi_analisi') || 'null'); if (a?.campioni?.length && SMI.adesso() - a.campioni[a.campioni.length - 1][0] < 3 * 3600e3) L.analisi = a; } catch { }
-  const salvate = await IDB.get('cartelle').catch(() => null);
-  if (salvate?.length && !L.cartelle.length) {
-    let tutteOk = true;
-    for (const h of salvate) { const p = await h.queryPermission({ mode: 'read' }); if (p !== 'granted') tutteOk = false; }
-    L.cartelle = salvate;
-    if (tutteOk) { localStorage.setItem('smi_perm_persistente', '1'); await scansiona(); if (L.config && S.utente && localStorage.getItem('smi_autostart') === '1') { L.pronto = true; await avviaLettore(); } }
-    else { L.permessoDaRiattivare = true; localStorage.setItem('smi_perm_persistente', '0'); }
+  fase('Controllo dell\'accesso…');
+  for (let tentativo = 1; ; tentativo++) {
+    try { await conTimeout(utenteCorrente(), 15000, 'accesso'); break; }
+    catch (e) {
+      if (tentativo >= 3 && !navigator.onLine) { fase('In attesa della rete… (riprovo ogni 15 s)'); }
+      else fase(`Accesso non riuscito (${e.message}), riprovo… [${tentativo}]`);
+      await new Promise(r => setTimeout(r, 15000));
+      if (tentativo >= 12) { location.reload(); return; } // dopo 3 minuti ricarico la pagina
+    }
   }
-  L.pronto = true;
+  fase('Lettura della configurazione…');
+  L.config = await conTimeout(IDB.get('config'), 10000, 'configurazione').catch(() => null);
+  try { const a = JSON.parse(localStorage.getItem('smi_analisi') || 'null'); if (a?.campioni?.length && SMI.adesso() - a.campioni[a.campioni.length - 1][0] < 3 * 3600e3) L.analisi = a; } catch { }
+  const salvate = await conTimeout(IDB.get('cartelle'), 10000, 'cartelle').catch(() => null);
+  let parti = false;
+  if (salvate?.length && !L.cartelle.length) {
+    fase('Controllo dei permessi delle cartelle…');
+    let tutteOk = true;
+    for (const h of salvate) { const p = await conTimeout(h.queryPermission({ mode: 'read' }), 10000, 'permesso').catch(() => 'prompt'); if (p !== 'granted') tutteOk = false; }
+    L.cartelle = salvate;
+    if (tutteOk) {
+      localStorage.setItem('smi_perm_persistente', '1');
+      fase('Lettura delle cartelle…');
+      try { await conTimeout(scansiona(), 60000, 'lettura cartelle'); } catch (e) { log('Avvio: ' + e.message); }
+      parti = !!(L.config && S.utente && localStorage.getItem('smi_autostart') === '1');
+    } else { L.permessoDaRiattivare = true; localStorage.setItem('smi_perm_persistente', '0'); }
+  }
+  L.pronto = true; fase('');
   if (location.hash === '#lettore') render();
+  if (parti) avviaLettore().catch(e => { log('Avvio: ' + e.message); setTimeout(() => { if (!L.attivo) avviaLettore().catch(() => { }); }, 20000); });
 }
+// se dopo 2 minuti è ancora in avvio, ricarico la pagina
+setTimeout(() => { if (location.hash === '#lettore' && !L.pronto) location.reload(); }, 120000);
 async function riattivaPermessi() {
   let ok = true;
   for (const h of L.cartelle) { const p = await h.requestPermission({ mode: 'read' }); if (p !== 'granted') ok = false; }
